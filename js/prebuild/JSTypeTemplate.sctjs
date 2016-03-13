@@ -1,0 +1,169 @@
+<%@ import java.util.List;
+    import sc.type.MethodBindSettings; %>
+<% if (!mergeTemplate) { 
+      %>// Generated JS from Java: <%= javaTypeName %> -----
+<% } else { 
+      %>// JS Updates for changed Java type: <%= javaTypeName %> -----
+<% } %><% 
+if (needsConstructor) {
+   %>function <%= typeName %>(<%= constructor.argNames %>) {<%= superClassInit %><%
+   if (needsClassInit) { %>
+   <%= typeName %>_c._clInit();
+<%
+   // Only set this.outer the first time.  It gets set the the real outer class the first time it is initialized in the instance class.
+   // If we set it again, we are overridding it with a potentially different and incorrect value in the base class (since we can inherit from the same class at different levels of the same inner class tree).
+   } %><%= outerInstCount == 0 ? "" : "\n   this._outer" + outerInstCount + " = _outer;\n   if (this.outer === undefined) this.outer = _outer;\n" %><%
+   for (JSStatement initStatement:preInitStatements) {%><%= replaceIndent(1, initStatement.toString()) %><% } %>
+<% if (!constructor.needsDispatch) {
+         if (constructor.varArgs) { %>
+         var <%= constructor.varArgsParamName %> = sc_vararg(arguments, <%= constructor.getNumParameters()-1 %>);<%
+         } %><%=
+         constructor.getMethodBody(1) %><%
+      }
+      else if (constructor.variableParamNum) {
+         boolean first = true;
+         for (List<JSMethod> paramMeths:constructor.methsByParamNum) { %>
+   <%= first ? "" : "else "
+            %>if (arguments.length == <%= (paramMeths.get(0).numParameters + paramMeths.get(0).outerParamOffset) %>) {<%
+               if (paramMeths.size() == 1) {
+                  int pct = paramMeths.get(0).outerParamOffset;
+                  JSMethod paramMeth = paramMeths.get(0);
+                  for (JSParameter param:paramMeth.parameters) { %>
+      var <%= param.name %> = arguments[<%= pct++ %>];<% } %><%= paramMeth.getMethodBody(2) %><%
+               }
+               else {
+                  int methCt = 0;
+                  for (JSMethod paramMeth:paramMeths) { %><%= methCt == 0 ? "\n      " : "else "%>if (<%
+                         int pct = 0;
+                         for (JSParameter param:paramMeth.parameters) {
+                            %><%= pct == paramMeth.outerParamOffset ? "" : " && "
+                            %><%= param.instanceOf%>(arguments[<%= pct++ %>], <%= param.type %><%= param.numDimsStr %>)<%
+                         }
+                     %>) { <%
+                     pct = 0;
+                     for (JSParameter param:paramMeth.parameters) { %>
+         var <%= param.name %> = arguments[<%= pct++ %>];<% } %><%=
+                       paramMeth.getMethodBody(3) %>}<% methCt++;
+                  }
+              } %>}<% first = false;
+         }
+      }
+      else { %><%
+         int methCt = 0;
+         for (JSMethod paramMeth:constructor.methAliases) {
+            %>
+      <%= methCt == 0 ? "" : "else "%>if (<%
+            int pct = paramMeth.outerParamOffset;
+            boolean first = true;
+            if (constructor.anyVarArgs) { %>arguments.length <%= paramMeth.varArgs ? ">=" : "==" %><%=(paramMeth.numNonVarArgsParameters+paramMeth.outerParamOffset)%><%
+               first = false;
+            }
+            for (JSParameter param:paramMeth.parameters) {
+               %><%= first ? "" : " && "
+               %><%= param.instanceOf%>(arguments[<%= pct++ %>], <%= param.type %><%= param.numDimsStr %>)<%
+               first = false;
+            }
+            %>) { <%
+            pct = 0;
+            for (JSParameter param:paramMeth.parameters) { %>
+      var <%= param.name %> = arguments[<%= pct++ %>];<% 
+            }
+            if (constructor.varArgs) { %>
+      var <%= constructor.varArgsParamName %> = sc_vararg(arguments, <%= pct %>);<%
+            } %><%= paramMeth.getMethodBody(2) %>}<% methCt++; 
+         }
+      }
+%>}<%
+} %>
+
+<% if (needsClassDef) { 
+%>var _c, <%= typeName %>_c = _c = <%= newClassMethodName %>("<%= javaTypeName %>", <%= typeName %>,<%= outerClassArg %> <%= extendsClass %>, <%= implementsClasses %>);
+<% } else if (hasTypeChanges) { 
+%>var _c = <%= typeName %>_c;
+<% } %>
+<%= annotations %><% for (JSMethod meth:methods) { %>_c.<%= meth.name%> = function (<%= meth.argNames %>) <%= meth.needsDispatch ? '/' + "* overloaded *" + '/' : "" %> {<%
+      if (meth.getWithArgs) { %>
+   if (arguments.length == 0) return;<% } %><%
+      if (meth.needsClassInit) { %>
+   <%= typeName %>_c._clInit();<% } %><%
+      if (!meth.needsDispatch) {
+         if (meth.varArgs) { %>
+         var <%= meth.varArgsParamName %> = sc_vararg(arguments, <%= meth.getNumParameters()-1 %>);<%
+         } %><%=
+         meth.getMethodBody(1) %><%
+      }
+      else if (meth.variableParamNum) {
+         boolean first = true;
+         for (List<JSMethod> paramMeths:meth.methsByParamNum) {
+            %>
+   <%= first ? "" : "else "
+            %>if (arguments.length == <%= paramMeths.get(0).numParameters %>) {<%
+               if (paramMeths.size() == 1) { 
+                  int pct = 0;
+                  JSMethod paramMeth = paramMeths.get(0);
+                  for (JSParameter param:paramMeth.parameters) { %>
+      var <%= param.name %> = arguments[<%= pct++ %>];<% } %><%= paramMeth.getMethodBody(2) %><%
+               }
+               else {
+                  int methCt = 0;
+                  for (JSMethod paramMeth:paramMeths) { %><%= methCt == 0 ? "\n      " : "else "%>if (<%
+                         int pct = 0;
+                         for (JSParameter param:paramMeth.parameters) { 
+                            %><%= pct == 0 ? "" : " && "
+                            %><%= param.instanceOf %>(arguments[<%= pct++ %>], <%= param.type %><%= param.numDimsStr %>)<%
+                         }
+                     %>) { <%
+                     pct = 0;
+                     for (JSParameter param:paramMeth.parameters) { %>
+         var <%= param.name %> = arguments[<%= pct++ %>];<% } %><%=
+                       paramMeth.getMethodBody(3) %>}<% methCt++;
+                  }
+             } %>   }<%           first = false;
+         } %>
+<%
+      } else { %><% 
+         int methCt = 0;
+         for (JSMethod paramMeth:meth.methAliases) {
+            %>
+      <%= methCt == 0 ? "" : "else "%>if (<%
+            int pct = 0;
+            boolean first = true;
+            if (meth.anyVarArgs) { %>arguments.length <%= paramMeth.varArgs ? ">=" : "==" %><%=paramMeth.numNonVarArgsParameters%><%
+               first = false;
+            }
+            for (JSParameter param:paramMeth.parameters) {
+               %><%= first ? "" : " && "
+               %><%= param.instanceOf %>(arguments[<%= pct++ %>], <%= param.type %><%= param.numDimsStr %>)<%
+               first = false;
+            }
+            %>) { <%
+            pct = 0;
+            for (JSParameter param:paramMeth.parameters) { %>
+      var <%= param.name %> = arguments[<%= pct++ %>];<%
+            }
+            if (meth.varArgs) { %>
+      var <%= meth.varArgsParamName %> = sc_vararg(arguments, <%= pct %>);<%
+            } %><%=
+            paramMeth.getMethodBody(2) %>}<% methCt++;  
+        }
+     }
+   %>};
+<% } %><% if (needsInstInit) { %>
+_c._<%= typeName%>Init = function() {
+<%
+   for (JSStatement initStatement:initStatements) {
+      %><%= replaceIndent(1, initStatement.toString()) %><%
+   } %>};<% } %><% if (needsClassInit) { %>
+_c._clInit = function() {
+   if (<%= typeName %>_c.hasOwnProperty("_clInited")) return;
+   <%= typeName %>_c._clInited = true;
+   <% for (JSMethod meth:methods) {
+   MethodBindSettings mbs = meth.getBindSettings();
+   if (mbs != null) { %>
+   <%= typeName %>_c._<%= meth.name %>MethBindSettings = new sc_MethodBindSettings(<%= typeName %>_c.<%= mbs.reverseMethodName %>, <%= mbs.reverseSlot %>, <%= mbs.forwardSlot %>, <%= mbs.modifyParam %>, <%= mbs.oneParamReverse %>, <%= mbs.reverseMethodStatic %>);
+<% } } %>
+<% for (JSStatement initStatement:staticInitStatements) {
+     %>   <%= initStatement %><%
+   }
+%>};
+<% } %>

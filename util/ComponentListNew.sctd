@@ -1,0 +1,19 @@
+<% if (!isAbstract) { %>
+<%=getModifiers%> <%=variableTypeName%> new<%=upperClassName%>(boolean doInit<%=nextConstructorDecls%>) {
+  <%=variableTypeName%> <%=lowerClassName%>;
+  <%=lowerClassName%> = <% if (typeIsComponentClass) { %><%=typeClassName%>.new<%=typeBaseName%>(false<%=nextConstructorParams%>)<% } 
+                           else { %>new <%=typeName%>(<%=constructorParams%>)<% } %>;
+  <%=lowerClassName%>.preInit();
+  <%=getDynamicTypeDefinition(lowerClassName, 2)%><%=propertyAssignments%>
+  java.util.List _children = java.util.Arrays.asList(<%=childrenNames%>);
+  for (Object _child : _children) {
+     <%=lowerClassName%>.add(_child);
+  }
+  if (doInit) {
+    <%=lowerClassName%>.init();
+    <%=lowerClassName%>.start();
+  }
+  return <%=lowerClassName%>;
+}
+<%=getModifiers%> <%=variableTypeName%> new<%=upperClassName%>(<%=constructorDecls%>) { return new<%=upperClassName%>(true<%=nextConstructorParams%>); }
+<% } %>

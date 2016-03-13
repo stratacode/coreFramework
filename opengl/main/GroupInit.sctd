@@ -1,0 +1,37 @@
+/** 
+ * Snippet to be inserted for each object definition which extends the swing JComponent class
+ * Accumulates the children objects and adds them.
+ */
+<% if (!overrideField && !overrideGet) { %>
+   <%=fieldModifiers%> <%=variableTypeName%> <%=lowerClassName%>;
+<% } %>
+<%=getModifiers%> <%=variableTypeName%> get<%=upperClassName%>(boolean doInit) {
+<% if (overrideGet) { %>
+   <%=variableTypeName%> <%=lowerClassName%> = (<%=variableTypeName%>) super.get<%=upperClassName%>();\
+<% } %>
+   if (<%=lowerClassName%> == null) {
+      <%=lowerClassName%> = <% if (typeIsComponentClass) { %><%=typeClassName%>.new<%=typeBaseName%>(false)<% } 
+                               else { %>new <%=typeName%>()<% } %>;
+
+<% if (overrideGet) { %>
+      set<%=upperClassName%>(<%=lowerClassName%>);
+<% } %>
+     <%=lowerClassName%>.preInit();
+     <%=getDynamicTypeDefinition(lowerClassName, 2)%><%=propertyAssignments%>
+     java.util.List _children = java.util.Arrays.asList(<%=childrenNames%>);
+     for (Object _child:_children) {
+        if (_child instanceof sc.opengl.IRenderNode) {
+           sc.opengl.IRenderNode _jc = (sc.opengl.IRenderNode) _child;
+           <%=lowerClassName%>.addChild(_jc);
+        }
+     }
+     if (doInit) {
+       <%=lowerClassName%>.init();
+       <%=lowerClassName%>.start();
+     }
+     return <%=returnCast%><%=lowerClassName%>;
+  }
+  else return <%=returnCast%><%=lowerClassName%>;
+}
+@sc.obj.TypeSettings(objectType=true)
+<%=getModifiers%> <%=variableTypeName%> get<%=upperClassName%>() { return <%=returnCast%>get<%=upperClassName%>(true); }

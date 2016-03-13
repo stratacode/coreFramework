@@ -1,0 +1,63 @@
+<%@
+import javax.servlet.Filter;
+import javax.servlet.FilterConfig;
+import javax.servlet.FilterChain;
+
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+
+import sc.sync.SyncManager;
+%><%!
+
+/** 
+  * The SyncServlet responds to the sync requests made by the client.  It receives a layer of changes, parses and applies
+  * that layer, then gathers up any response data to the sync in the response layer.  That layer gets converted to Java
+  * script before it's sent to the client so there's less work on that end.
+  */
+@PathServlet(path="/admin")
+class AdminServlet extends HttpServlet {
+
+   public void service(javax.servlet.http.HttpServletRequest request, 
+                                javax.servlet.http.HttpServletResponse response) 
+                           throws IOException, ServletException {
+
+
+      Context ctx = null;
+      try {
+         ctx = Context.initContext(request, response);
+
+         // Output the document start
+         ctx.write(%>
+<html>
+   <body>
+        <h2>StrataCode Server Administration</h2>
+
+         <%);
+
+         // Handle the commands sent in via parameters
+         String reset = request.getParameter("reset");
+         HttpSession session = request.getSession(false);
+         if (session != null && reset != null) {
+            if (SyncManager.trace)
+               System.out.println("Sync resetting session: " + session.getId());
+
+            ctx.write(%><p>Your session: <%= session.getId() %> has been reset.</p><%); 
+
+            session.invalidate();
+         }
+
+         ctx.write(%>
+      <a href="/admin?reset=true">Reset session</a><br>
+   </body>
+</html>
+         <%);
+
+      }
+      finally {
+         if (ctx != null) {
+            ctx.execLaterJobs();
+            Context.clearContext();
+         }
+      }
+   }
+} %>

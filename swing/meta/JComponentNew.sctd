@@ -1,0 +1,25 @@
+/** 
+ * Snippet to be inserted for each object definition which extends the awt Component class
+ * Accumulates the children objects and adds them.
+ */
+<% if (!isAbstract) { %>
+<%=getModifiers%> <%=variableTypeName%> new<%=upperClassName%>(boolean doInit<%=nextConstructorDecls%>) {
+  <%=variableTypeName%> <%=lowerClassName%>;
+  <%=lowerClassName%> = <% if (typeIsCompiledComponent) { %><%=typeClassName%>.new<%=typeBaseName%>(false<%=nextConstructorParams%>)<% } else { %>new <%=typeName%>(<%=constructorParams%>)<% } %>;
+  <%=lowerClassName%>.preInit();
+  <%=getDynamicTypeDefinition(lowerClassName, 1)%><%=propertyAssignments%>
+  java.util.List _children = (java.util.List) <%=lowerClassName%>.getClientProperty("sc.children");
+  if (_children == null)
+      _children = java.util.Arrays.asList(<%=childrenNames%>);
+  for (Object _child:_children) {
+     sc.swing.SwingUtil.addChild(<%=lowerClassName%>, _child);
+  }
+  if (doInit) {
+    <%=lowerClassName%>.init();
+    <%=lowerClassName%>.start();
+  }
+  return <%=lowerClassName%>;
+}
+
+<%=getModifiers%> <%=variableTypeName%> new<%=upperClassName%>(<%=constructorDecls%>) { return new<%=upperClassName%>(true<%=nextConstructorParams%>); }
+<% } %>

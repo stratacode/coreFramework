@@ -1,0 +1,19 @@
+<% 
+   if (!isAbstract) { 
+      boolean isPage = getAnnotationValue("sc.html.URL", "page") != null;
+      String url = (String) getAnnotationValue("sc.html.URL", "pattern");
+      String lockScope = (String) getAnnotationValue("sc.html.URL", "lockScope");
+      if (url == null) {
+         String suffix = getTemplateSuffix();
+         if (suffix != null)
+            url = "/" + typeBaseName + "." + suffix;
+         else
+            url = "/" + typeBaseName;
+      }
+%>
+        
+static {
+   sc.servlet.PageDispatcher.addPage("<%= typeName %>", "<%= url %>", <%= typeIsDynamic ? "sc.dyn.DynUtil.findType(\"" + typeName + "\")" : typeBaseName + ".class" %>, <%= isPage %>, <%= layer.layerPosition %>, <%= lockScope == null ? "null" : '"' + lockScope + '"' %>);
+}
+
+<% } %>

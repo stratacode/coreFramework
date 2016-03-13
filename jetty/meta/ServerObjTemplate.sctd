@@ -1,0 +1,44 @@
+<% if (!overrideField && !overrideGet) { %>
+   <%=fieldModifiers%> <%=variableTypeName%> <%=lowerClassName%>;
+<% } %>
+<%=getModifiers%> <%=variableTypeName%> get<%=upperClassName%>(boolean doInit) {
+<% if (overrideGet) { %>
+   <%=variableTypeName%> <%=lowerClassName%> = super.get<%=upperClassName%>();
+<% } %>
+   if (<%=lowerClassName%> == null) {
+      <%=variableTypeName%> _t = <%=lowerClassName%> = <% if (typeIsComponentClass) { %><%=typeClassName%>.new<%=typeBaseName%>(false)<% } else { %>new <%=typeName%>(<%=rootName%>)<% } %>;
+<% if (overrideGet) { %>
+      set<%=upperClassName%>(<%=lowerClassName%>);
+<% } %>
+     _t._preInit();
+     <%=propertyAssignments%>
+     java.util.List _children = java.util.Arrays.asList(<%=childrenNames%>);
+     org.eclipse.jetty.server.handler.ContextHandlerCollection coll = new org.eclipse.jetty.server.handler.ContextHandlerCollection();
+     for (Object _child:_children) {
+        if (_child instanceof org.eclipse.jetty.server.Connector)
+           _t.addConnector((org.eclipse.jetty.server.Connector) _child);
+        else if (_child instanceof org.eclipse.jetty.server.Handler) {
+            coll.addHandler((org.eclipse.jetty.server.Handler)_child);
+         }
+        //else if (_child instanceof org.eclipse.jetty.security.LoginService)
+        //   _t.addUserRealm((org.eclipse.jetty.security.LoginService)_child);
+        //else if (_child instanceof org.eclipse.jetty.util.component.LifeCycle)
+        //   _t.addLifeCycle((org.eclipse.jetty.util.component.LifeCycle)_child);
+     }
+     <%= lowerClassName %>.setHandler(coll);
+     if (doInit) {
+       _t._init();
+       try {
+          _t._start();
+          _t.start(); // Call the handler's start method
+       }
+       catch (Exception exc) {
+          throw new IllegalArgumentException(exc);
+       }
+     }
+     return _t;
+  }
+  else 
+     return <%=lowerClassName%>;
+}
+<%=getModifiers%> <%=variableTypeName%> get<%=upperClassName%>() { return get<%=upperClassName%>(true); }

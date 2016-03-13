@@ -1,0 +1,18 @@
+<html>
+<body>
+<div id="indexBody" class="appFrame">
+Default index page, replace by adding an index.schtml or index.html file to your project.
+<div id="pathDisplay" serverContent="true">
+   <p>
+      Template pages in this project:
+      <ul>
+         <li repeat="= URLPaths" repeatVarName="initType">
+            <a href=':= initType.url'><%= initType.name %></a>
+         </li>
+      </ul>
+   </p>
+   All pages with html tags are by default listed here.  Set the @URL annotation to define the URLs of classes and template pages.
+</div>
+</div>
+</body>
+</html>

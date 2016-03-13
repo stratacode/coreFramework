@@ -1,0 +1,28 @@
+<% if (!overrideField && !overrideGet) { %>
+   <%=fieldModifiers%> <%=variableTypeName%> <%=lowerClassName%>;
+<% } %>
+<%=getModifiers%> <%=variableTypeName%> get<%=upperClassName%>(boolean doInit) {
+<% if (overrideGet) { %>
+   <%=variableTypeName%> <%=lowerClassName%> = (<%=variableTypeName%>) super.get<%=upperClassName%>();
+<% } %>
+   if (<%=lowerClassName%> == null) {
+      <%=lowerClassName%> = <% if (typeIsComponentClass) { %><%=typeClassName%>.new<%=typeBaseName%>(false)<% } else { %>new <%=typeName%>()<% } %>;
+     <% if (overrideGet) { %>
+         set<%=upperClassName%>(<%=lowerClassName%>);
+     <% } %>
+     <%=lowerClassName%>.preInit();
+     <%=getDynamicTypeDefinition(lowerClassName, 2)%><%=propertyAssignments%>
+     java.util.List<? extends <%=childTypeName%>> _children = java.util.Arrays.asList(<%=childrenNames%>);
+     for (<%=childTypeName%> _child:_children) {
+        <%=lowerClassName%>.add(_child);
+     }
+     if (doInit) {
+       <%=lowerClassName%>.init();
+       <%=lowerClassName%>.start();
+     }
+     return <%=returnCast%><%=lowerClassName%>;
+  }
+  else return <%=returnCast%><%=lowerClassName%>;
+}
+@sc.obj.TypeSettings(objectType=true)
+<%=getModifiers%> <%=variableTypeName%> get<%=upperClassName%>() { return get<%=upperClassName%>(true); }

@@ -1,0 +1,18 @@
+/** Template for an activity.  Th _init method initializes the sc elements.  It is called first thing in onCreate via CompilerSettings.onInitMethod  */
+private void _init() {
+  <%=typeName%> <%=lowerClassName%> = this;
+  <%=propertyAssignments%>
+  java.util.List _children = java.util.Arrays.asList(<%=childrenNames%>);
+  boolean viewSet = false;
+  for (Object _child:_children) {
+     if (_child instanceof android.view.View) {
+        // TODO: replace this with a compile time check
+        if (viewSet) 
+           System.err.println("Activities can only have one view child - ignoring the second one");
+        else {
+           setContentView((android.view.View) _child);
+           viewSet = true;
+        }
+     }
+  }
+}

@@ -1,0 +1,119 @@
+import javax.swing.JComponent;
+import javax.swing.JFrame;
+import java.awt.Window;
+
+public class SwingDynChildManager implements ccake.dyn.IDynChildManager {
+
+   public void initChildren(Object parentObj, Object[] children) {
+      if (parentObj instanceof JFrame) {
+         JFrame frame = (JFrame) parentObj;
+
+         for (Object childObj:children) {
+            if (childObj instanceof JComponent) {
+               JComponent child = (JComponent) childObj;
+               frame.getContentPane().add(child);
+            }
+         }
+         frame.getContentPane().validate();
+         frame.validate();
+         //frame.getContentPane().doLayout();
+         //frame.getContentPane().validate();
+         //frame.getContentPane().repaint();
+      }
+      else if (parentObj instanceof JComponent) {
+         JComponent parent = (JComponent) parentObj;
+         java.util.List childrenList = (java.util.List) parent.getClientProperty("ccake.children");
+         if (childrenList != null)
+            children = childrenList.toArray();
+         for (Object childObj:children) {
+            if (childObj instanceof JComponent) {
+               JComponent child = (JComponent) childObj;
+               parent.add(child, child.getClientProperty("ccake.constraints"));
+            }
+         }
+      }
+      else if (parentObj instanceof Container) {
+         Container parent = (Container) parentObj;
+         for (Object childObj:children) {
+            if (childObj instanceof JComponent) {
+               JComponent child = (JComponent) childObj;
+               parent.add(child, child.getClientProperty("ccake.constraints"));
+            }
+         }
+      }
+   }
+
+   public void addChild(Object parentObj, Object childObj) {
+      addChild(-1, parentObj, childObj);
+   }
+
+   public void addChild(int ix, Object parentObj, Object childObj) {
+      if (!(childObj instanceof JComponent))
+         return;
+
+      JComponent child = (JComponent) childObj;
+      if (parentObj instanceof JFrame) {
+         JFrame frame = (JFrame) parentObj;
+         frame.getContentPane().add(child);
+         frame.getContentPane().validate();
+         //frame.getContentPane().repaint();
+      }
+      else if (parentObj instanceof Window) {
+         Window parent = (Window) parentObj;
+         parent.add(child, child.getClientProperty("ccake.constraints"), ix);
+         parent.pack();
+      }
+      else if (parentObj instanceof Container) {
+         Container parent = (Container) parentObj;
+         parent.add(child, child.getClientProperty("ccake.constraints"));
+      }
+      else
+         System.err.println("*** Unrecognized parent: " + parentObj);
+   }
+
+   public boolean removeChild(Object parentObj, Object childObj) {
+      if (!(childObj instanceof JComponent))
+         return false;
+      JComponent child = (JComponent) childObj;
+      if (parentObj instanceof JFrame) {
+         JFrame frame = (JFrame) parentObj;
+         frame.getContentPane().remove(child);
+         frame.getContentPane().validate();
+         //frame.getContentPane().doLayout();
+         frame.doLayout();
+         frame.getContentPane().repaint();
+         frame.repaint();
+      }
+      else if (parentObj instanceof Window) {
+         Window parent = (Window) parentObj;
+         parent.remove(child);
+         parent.validate();
+         //parent.doLayout();
+         parent.pack();
+         return true;
+      }
+      else if (parentObj instanceof Container) {
+         Container parent = (Container) parentObj;
+         parent.remove(child);
+      }
+      return false;
+   }
+
+   public Object[] getChildren(Object parentObj) {
+      if (parentObj instanceof JComponent) {
+         JComponent parent = (JComponent) parentObj;
+
+         synchronized(parent.getTreeLock()) {
+            return parent.getComponents();
+         }
+      }
+      else if (parentObj instanceof Container) {
+         Container parent = (Container) parentObj;
+
+         synchronized(parent.getTreeLock()) {
+            return parent.getComponents();
+         }
+      }
+      throw new UnsupportedOperationException();
+   }
+}

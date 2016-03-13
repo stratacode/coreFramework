@@ -1,0 +1,17 @@
+<%@ 
+// Exposes these components as a top-level page via the default URL, e.g. TypeName.html   Override the URL pattern, apply URL properties via the URL setting
+@URL(page=true, subTypesOnly=true) 
+@sc.obj.Scope(name="session")
+@MainInit(subTypesOnly=true)
+@sc.js.JSSettings(jsModulePattern="js/<%= typeName %>.js", dependentJSFiles="js/tags.js") %>
+<!DOCTYPE html>
+<html abstract="true">
+   <head serverContent="true">
+      <script type="text/javascript" noCache="true">
+         var sc_windowId = <%= sc.type.PTypeUtil.getWindowId() %>;
+      </script>
+   </head>
+   <body>
+   </body>
+   <script type="text/javascript" repeat="= JSFiles" src="= repeatVar"></script> 
+</html>

@@ -1,0 +1,30 @@
+/** 
+ * Snippet to be inserted for each object definition which extends the swing JComponent class
+ * Accumulates the children objects and adds them.
+ */
+<% if (!overrideField && !overrideGet) { %>
+   <%=modifiers%><%=variableTypeName%> <%=lowerClassName%>;
+<% } %>
+<%=modifiers%><%=variableTypeName%> get<%=upperClassName%>() {
+<% if (overrideGet) { %>
+   <%=variableTypeName%> <%=lowerClassName%> = super.get<%=upperClassName%>();\
+<% } %>
+   if (<%=lowerClassName%> == null) {
+      <%=lowerClassName%> = new <%=typeName%>();
+<% if (overrideGet) { %>
+      set<%=upperClassName%>(<%=lowerClassName%>);
+<% } %>
+     <%=propertyAssignments%>
+     java.util.List _children = (java.util.List) <%=lowerClassName%>.getClientProperty("sc.children");
+     if (_children == null)
+         _children = java.util.Arrays.asList(<%=childrenNames%>);
+     for (Object _child:_children) {
+        if (_child instanceof javax.swing.JComponent) {
+           javax.swing.JComponent _jc = (javax.swing.JComponent) _child;
+           <%=lowerClassName%>.add(_jc, _jc.getClientProperty("sc.constraints"));
+        }
+     }
+     return <%=lowerClassName%>;
+  }
+  else return <%=lowerClassName%>;
+}

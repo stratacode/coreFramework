@@ -1,0 +1,2 @@
+class AnnotationTypeDeclaration extends TypeDeclaration {
+}

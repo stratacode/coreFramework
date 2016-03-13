@@ -1,0 +1,2 @@
+class EnumConstant extends BodyTypeDeclaration {
+}

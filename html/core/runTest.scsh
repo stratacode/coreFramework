@@ -1,0 +1,25 @@
+<%@ 
+   import sc.js.URLPath;
+   import sc.layer.LayeredSystem;
+   import java.util.List;
+   import sc.util.FileUtil;
+%>#!/bin/sh
+
+<%
+  // A simple script which opens up each of the root pages, one by one
+  LayeredSystem sys = LayeredSystem.getCurrent();
+  List<URLPath> paths = sys.getURLPaths();
+  if (paths != null) {
+     for (URLPath path:paths) {
+         String url = path.url;
+         if (url.equals("") && !sys.serverEnabled)
+            url = "index.html";
+         if (url.startsWith("/"))
+            url = url.substring(1);
+         if (sys.testPatternMatches(path.name) && !url.equals("index.html")) { %>
+            sleep 3
+            open <%= FileUtil.concatNormalized(sys.serverURL, url) %>
+         <% } 
+     }
+  }
+%>

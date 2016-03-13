@@ -1,0 +1,34 @@
+/** 
+ * Snippet to be inserted for each new call for a Server
+ * Accumulates the children objects and adds them.
+ */
+<%=fieldModifiers%> <%=variableTypeName%> <%=lowerClassName%>;
+<%=getModifiers%> <%=variableTypeName%> new<%=upperClassName%>(boolean doInit) {
+  <%=variableTypeName%> <%=lowerClassName%> = <% if (typeIsComponentClass) { %><%=typeClassName%>.new<%=typeBaseName%>(false)<% } else { %>new <%=typeName%>()<% } %>;
+  <%=lowerClassName%>._preInit();
+  <%=propertyAssignments%>
+  java.util.List _children = java.util.Arrays.asList(<%=childrenNames%>);
+  for (Object _child:_children) {
+     if (_child instanceof org.eclipse.jetty.server.Connector)
+        <%=lowerClassName%>.addConnector((org.eclipse.jetty.server.Connector) _child);
+     //else if (_child instanceof org.eclipse.jetty.server.Handler)
+     //   System.out.println("*** No handler add"); // <%=lowerClassName%>.addHandler((org.eclipse.jetty.server.Handler)_child);
+     //else if (_child instanceof org.eclipse.jetty.security.LoginService)
+     //   <%=lowerClassName%>.addUserRealm((org.eclipse.jetty.security.LoginService)_child);
+     //else if (_child instanceof org.eclipse.jetty.util.component.LifeCycle)
+     //   <%=lowerClassName%>.addLifeCycle((org.eclipse.jetty.util.component.LifeCycle)_child);
+  }
+  if (doInit) {
+    <%=lowerClassName%>._init();
+    try {
+       <%=lowerClassName%>._start();
+       <%=lowerClassName%>.start(); // Call Jetty's start method
+    }
+    catch (Exception exc) {
+       throw new IllegalArgumentException(exc);
+    }
+  }
+  return <%=lowerClassName%>;
+}
+
+<%=getModifiers%> <%=variableTypeName%> new<%=upperClassName%>() { return new<%=upperClassName%>(true); }

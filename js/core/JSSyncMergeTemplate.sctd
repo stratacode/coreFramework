@@ -1,0 +1,32 @@
+<%@ import java.util.List;
+    import sc.type.MethodBindSettings;
+%>
+// Updating <%= javaTypeName %>
+<% if (needsInit) {
+   if (!globalType) { %><%=
+      runtimeTypeName %>_c._update = function() { <% } %>
+<%
+   for (JSStatement initStatement:preInitStatements) {
+   %>   <%= initStatement %>
+<% }
+   for (JSStatement initStatement:initStatements) {
+   %>   <%= initStatement %><%
+   } %>
+<%= !globalType ? "}" : "" %>
+<% } %><% if (needsClassInit) { %><%=
+   runtimeTypeName %>_c._clUpdate = function() {
+<% for (JSStatement initStatement:staticInitStatements) {
+   %>   <%= initStatement %><% }
+%>}
+<%= runtimeTypeName %>_c._clUpdate();
+<% } %><% if (newObject) {
+%>var _inst = sc_SyncManager_c.resolveOrCreateSyncInst("<%= javaTypeName %>", <%= runtimeTypeName %>, null<%= outerInstCount == 0 ? "" : ", this"%>);
+<% if (needsInit) {
+   %>_inst._update();<%
+} %><% } else if (needsRuntimeInit && !globalType) {
+%>var _inst = sc_SyncManager_c.resolveSyncInst("<%= javaTypeName %>");
+<% if (needsInit) {
+      %>if (_inst != null)
+   _inst._update();<%
+   }
+} %>

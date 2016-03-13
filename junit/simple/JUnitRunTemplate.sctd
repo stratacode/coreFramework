@@ -1,0 +1,62 @@
+<%@ 
+import sc.lang.java.ModelUtil; 
+import sc.dyn.DynUtil;
+import sc.type.CTypeUtil;
+import java.util.HashMap;
+%><%
+  // Get the global list of type members, turn them into object definitions automatically
+  sc.layer.LayeredSystem system = sc.layer.LayeredSystem.getCurrent();
+  // Use current build layer's buildInfo, so we don't end up referring to types which have not been defined yet when we are building a base layer
+  sc.layer.BuildInfo bi = system.currentBuildLayer.buildInfo;
+  java.util.List<sc.layer.TypeGroupMember> testMembers = bi.getTypeGroupMembers("junitTestClasses");
+%>
+   // Run the tests marked with @Test annotations
+   public void initTypes() {<%
+   HashMap<String,Integer> used = new HashMap<String,Integer>();
+   boolean first = true;
+   for (sc.layer.TypeGroupMember mi:testMembers) {
+      String typeName = mi.typeName;
+      Object type = system.getTypeDeclaration(typeName);
+      String varName = CTypeUtil.getClassName(typeName);
+      Integer ct = used.get(typeName);
+      if (ct != null) {
+         varName = varName + "_" + ct;
+         ct++;
+      }
+      else
+         ct = 1;
+      used.put(typeName, ct);
+
+      // Use the dynamic type code to deal with packageless types
+      boolean useDyn = !typeName.contains(".") || mi.isDynamicType();
+
+      if (type != null) { 
+         if (!useDyn) { %>
+      <%= typeName %> <%= varName %> = new <%= typeName %>(); <%
+         }
+         else { %>
+      <%= first ? "Object " : "" %>_type = sc.dyn.DynUtil.findType("<%= typeName %>");
+      Object <%= varName %> = sc.dyn.DynUtil.createInstance(_type, null); <%
+
+         }
+         Object[] methods = ModelUtil.getAllMethods(type, "public", true, false, false);
+         if (methods != null) {
+            for (int m = 0; m < methods.length; m++) {
+               Object meth = methods[m];
+               if (ModelUtil.getAnnotation(meth, "sc.junit.Test") != null) {
+                  String name = ModelUtil.getMethodName(meth); %>
+      System.out.println("Running test: <%= typeName + "." + name %>");<%
+                  if (!useDyn) { %>
+      <%= varName %>.<%= name %>();<%
+                  }
+                  else { %>
+      sc.dyn.DynUtil.invokeMethod(<%= varName %>, "<%= name %>");<%
+                  }
+               }
+            }
+         }
+      }
+      first = false;
+   }
+%>
+   }

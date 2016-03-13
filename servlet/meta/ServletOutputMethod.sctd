@@ -1,0 +1,4 @@
+public StringBuilder output(javax.servlet.http.HttpServletRequest request, javax.servlet.http.HttpServletResponse response) {
+   StringBuilder out = new StringBuilder();
+   return out;
+}

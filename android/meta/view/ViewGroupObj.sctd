@@ -1,0 +1,38 @@
+/** 
+ * Snippet to be inserted for each object definition which extends the android ViewGroup  class
+ * Verifies that we are a child of an activity.  Gets the activity from the root type name.
+ * Accumulates the children objects and adds them.
+ */
+<% if (rootName == null) throw new IllegalArgumentException("Objects of type: " + typeName + " must be children of an Activity/Service"); %>
+<% if (!overrideField && !overrideGet) { %>
+   <%=fieldModifiers%> <%=variableTypeName%> <%=lowerClassName%>;
+<% } %>
+<%=getModifiers%> <%=variableTypeName%> get<%=upperClassName%>(boolean doInit) {
+<% if (overrideGet) { %>
+   <%=variableTypeName%> <%=lowerClassName%> = super.get<%=upperClassName%>();\
+<% } %>
+   if (<%=lowerClassName%> == null) {
+   <%=lowerClassName%> = <% if (typeIsComponentClass) { %><%=typeClassName%>.new<%=typeBaseName%>(false, <%=rootName%>)<% } else { %>new <%=typeName%>(<%=rootName%>)<% } %>;
+<% if (overrideGet) { %>
+      set<%=upperClassName%>(<%=lowerClassName%>);
+<% } %>
+     <%=lowerClassName%>.preInit();
+     <%=propertyAssignments%>
+     <% if (numChildren > 0) { %>
+     Object[] _children = new Object[] {<%=childrenNames%>};
+     for (Object _child:_children) {
+        if (_child instanceof android.view.View) {
+           android.view.View _cv = (android.view.View) _child;
+           <%=lowerClassName%>.addView(_cv);
+        }
+     }
+     <% } %>
+     if (doInit) {
+       <%=lowerClassName%>.init();
+       <%=lowerClassName%>.start();
+     }
+     return <%=lowerClassName%>;
+  }
+  else return <%=lowerClassName%>;
+}
+<%=getModifiers%> <%=variableTypeName%> get<%=upperClassName%>() { return get<%=upperClassName%>(true); }

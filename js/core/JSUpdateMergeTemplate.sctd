@@ -1,0 +1,22 @@
+// Updating <%= javaTypeName %>
+<% if (needsInit) { %><%=
+      runtimeTypeName %>_c._updateInst = function() {
+<%= updateInstSuper %>
+<%
+   for (JSStatement initStatement:preInitStatements) {
+   %>   <%= initStatement %>
+<% }
+   for (JSStatement initStatement:initStatements) {
+   %>   <%= initStatement %><%
+   } %>
+};
+<% } %><% if (needsClassInit) { %><%=
+   runtimeTypeName %>_c._clUpdate = function() {
+<% for (JSStatement initStatement:staticInitStatements) {
+   %>   <%= initStatement %><% }
+%>};
+<%= runtimeTypeName %>_c._clUpdate();
+<% }
+   if (needsInit) { %>
+sc_DynUtil_c.updateInstances("<%= javaTypeName %>");
+<% } %>

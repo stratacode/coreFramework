@@ -1,0 +1,8 @@
+<% if (!isAbstract) { %> 
+
+protected Object[] _initChildrenForElement(Object val, int index, Object[] prev) {
+   Object[] ret = {<%=childNamesByScope.get("ListItem")%>};
+   return ret;
+}
+
+<% } %>

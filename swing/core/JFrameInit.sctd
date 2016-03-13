@@ -1,0 +1,40 @@
+/** 
+ * Snippet to be inserted for each object definition which extends the swing JComponent class
+ * Accumulates the children objects and adds them.
+ */
+<% if (!overrideField && !overrideGet) { %>
+   <%=fieldModifiers%> <%=variableTypeName%> <%=lowerClassName%>;
+<% } %>
+<%=getModifiers%> <%=variableTypeName%> get<%=upperClassName%>(boolean doInit) {
+<% if (overrideGet) { %>
+   <%=variableTypeName%> <%=lowerClassName%> = (<%=variableTypeName%>) super.get<%=upperClassName%>();\
+<% } %>
+   if (<%=lowerClassName%> == null) {
+      <%=lowerClassName%> = <% if (typeIsCompiledComponent) { %><%=typeClassName%>.new<%=typeBaseName%>(false)<% } 
+                               else { %>new <%=typeName%>()<% } %>;
+
+<% if (overrideGet) { %>
+      set<%=upperClassName%>(<%=lowerClassName%>);
+<% } %>
+     <%=lowerClassName%>.preInit();
+     <%=getDynamicTypeDefinition(lowerClassName, 2)%><%=propertyAssignments%>
+     java.util.List _children = java.util.Arrays.asList(<%=childrenNames%>);
+     javax.swing.JMenuBar mb = <%=lowerClassName%>.getJMenuBar();
+     for (Object _child:_children) {
+        if (_child instanceof java.awt.Component) {
+           java.awt.Component _jc = (java.awt.Component) _child;
+           // Don't add the menu bar to the content pane
+           if (_jc != mb)
+              <%=lowerClassName%>.getContentPane().add(_jc);
+        }
+     }
+     if (doInit) {
+       <%=lowerClassName%>.init();
+       <%=lowerClassName%>.start();
+     }
+     return <%=returnCast%><%=lowerClassName%>;
+  }
+  else return <%=returnCast%><%=lowerClassName%>;
+}
+@sc.obj.TypeSettings(objectType=true)
+<%=getModifiers%> <%=variableTypeName%> get<%=upperClassName%>() { return get<%=upperClassName%>(true); }

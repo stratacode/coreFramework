@@ -1,0 +1,17 @@
+/** 
+ * Snippet to be inserted for each object definition which extends the android ViewGroup class
+ * Accumulates the children objects and adds them.
+ */
+<%=fieldModifiers%> <%=variableTypeName%> <%=lowerClassName%>;
+<%=getModifiers%> <%=variableTypeName%> new<%=upperClassName%>(boolean doInit<%=nextConstructorDecls%>) {
+<%=variableTypeName%> <%=lowerClassName%> = <% if (typeIsComponentClass) { %><%=typeClassName%>.new<%=typeBaseName%>(false<%=nextConstructorParams%>)<% } else { %>new <%=typeName%>(<%=constructorParams%>)<% } %>;
+  <%=lowerClassName%>.preInit();
+  <%=propertyAssignments%>
+  if (doInit) {
+    <%=lowerClassName%>.init();
+    <%=lowerClassName%>.start();
+  }
+  return <%=lowerClassName%>;
+}
+
+<%=getModifiers%> <%=variableTypeName%> new<%=upperClassName%>(<%=constructorDecls%>) { return new<%=upperClassName%>(true<%=nextConstructorParams%>); }

@@ -1,0 +1,2 @@
+class EnumDeclaration extends TypeDeclaration {
+}

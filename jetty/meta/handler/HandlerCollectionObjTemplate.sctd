@@ -1,0 +1,29 @@
+<% if (!overrideField && !overrideGet) { %>
+   <%=fieldModifiers%> <%=variableTypeName%> <%=lowerClassName%>;
+<% } %>
+<%=getModifiers%> <%=variableTypeName%> get<%=upperClassName%>(boolean doInit) {
+<% if (overrideGet) { %>
+   <%=variableTypeName%> <%=lowerClassName%> = super.get<%=upperClassName%>();
+<% } %>
+   if (<%=lowerClassName%> == null) {
+   <%=lowerClassName%> = <% if (typeIsComponentClass) { %><%=typeClassName%>.new<%=typeBaseName%>(false)<% } else { %>new <%=typeName%>()<% } %>;
+<% if (overrideGet) { %>
+      set<%=upperClassName%>(<%=lowerClassName%>);
+<% } %>
+      <%=lowerClassName%>._preInit();
+      <%=propertyAssignments%>
+      <%=lowerClassName%>.setHandlers(new org.eclipse.jetty.server.Handler[] {<%=childrenNames%>});
+      if (doInit) {
+         <%=lowerClassName%>._init();
+         try {
+            <%=lowerClassName%>._start();
+         }
+         catch (Exception exc) {
+            throw new IllegalArgumentException();
+         }
+      }
+      return <%=lowerClassName%>;
+  }
+  else return <%=lowerClassName%>;
+}
+<%=getModifiers%> <%=variableTypeName%> get<%=upperClassName%>() { return get<%=upperClassName%>(true); }

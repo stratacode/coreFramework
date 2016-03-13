@@ -1,0 +1,43 @@
+<%! web {
+   public StringBuilder outputServletTags() {
+      StringBuilder out = super.outputServletTags();
+
+      sc.layer.LayeredSystem system = sc.layer.LayeredSystem.getCurrent();
+      sc.layer.BuildInfo bi = system.currentBuildLayer.buildInfo;
+      java.util.List<sc.layer.TypeGroupMember> scPages = bi.getTypeGroupMembers("scPages");
+
+      for (sc.layer.TypeGroupMember scPage:scPages) { %>
+         <servlet>
+            <servlet-name><%= scPage.typeName%></servlet-name>
+            <servlet-class><%= scPage.typeName%></servlet-class>
+         </servlet>
+      <% }
+      return out;
+   }
+
+   public StringBuilder outputServletMappingTags() {
+      StringBuilder out = super.outputServletMappingTags();
+
+      sc.layer.LayeredSystem system = sc.layer.LayeredSystem.getCurrent();
+      sc.layer.BuildInfo bi = system.currentBuildLayer.buildInfo;
+      java.util.List<sc.layer.TypeGroupMember> scPages = bi.getTypeGroupMembers("scPages");
+
+      for (sc.layer.TypeGroupMember scPage:scPages) { %>
+         <servlet-mapping>
+            <servlet-name><%= scPage.typeName%></servlet-name>
+            <url-pattern><%= scPage.typeName.replace(".","/")%></url-pattern>
+         </servlet-mapping>
+      <% }
+      return out;
+   }
+
+   public StringBuilder outputListeners() { 
+     StringBuilder out = super.outputListeners(); %>
+      <listener>
+         <listener-class>sc.servlet.PageInit</listener-class>
+      </listener>
+   <% return out; 
+   } 
+} %>
+
+<%= super.output() %>

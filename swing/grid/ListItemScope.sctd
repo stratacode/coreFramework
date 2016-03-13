@@ -1,0 +1,43 @@
+public int listItemIndex;
+
+<%=getEnclosingParamType("T")%> _listItemValue;
+
+public <%=getEnclosingParamType("T")%> getListItemValue() {
+   return _listItemValue;
+}
+
+@Bindable(manual=true)
+public void setListItemValue(<%=getEnclosingParamType("T")%> itemValue) {
+   _listItemValue = itemValue;
+}
+
+<%=typeName%> _listItemPrev;
+
+public <%=typeName%> getListItemPrev() {
+   return _listItemPrev;
+}
+
+public void setListItemPrev(Object itemPrev) {
+   _listItemPrev = (<%=typeName%>) itemPrev;
+}
+
+private java.awt.Component parentComponent;
+void setParentComponent(java.awt.Component comp) {
+   parentComponent = comp;
+}
+
+java.awt.Component getParentComponent() {
+   return parentComponent;
+}
+
+public Object[] getChildren() {
+  return getObjChildren(true);
+}
+
+public Object[] getObjChildren(boolean create) {
+   <% if (numChildren == 0) { %>
+      return null;
+   <% } else { %>
+     return new Object[] { <%=childrenNames%> };
+   <% } %>
+}

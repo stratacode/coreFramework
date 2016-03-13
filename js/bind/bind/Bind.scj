@@ -1,0 +1,781 @@
+import sc.dyn.DynUtil;
+
+import sc.type.PTypeUtil;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.TreeSet;
+
+public class Bind {
+   public static boolean trace = false;
+   public static boolean traceAll = false;
+   public static boolean info = true;
+
+   // Need to pull in the dependency on this class
+   private static final MethodBindSettings dummy = null;
+
+   public static Object bind(Object dstObj, String dstProp, Object srcObj, IBinding[] boundProps, BindingDirection dir) {
+      VariableBinding binding = new VariableBinding(dstObj, dstProp, srcObj, boundProps, dir);
+      return bindInternal(dstObj, binding);
+   }
+
+   public static int bindInt(Object dstObj, String dstProp, Object srcObj, IBinding[] boundProps, BindingDirection dir) {
+      VariableBinding binding = new VariableBinding(dstObj, dstProp, srcObj, boundProps, dir);
+      Object val = bindInternal(dstObj, binding);
+      if (val == null)
+         return 0;
+      return ((Number) val).intValue();
+   }
+
+   public static Object method(Object dstObj, String dstProp, Object method, IBinding[] args, BindingDirection dir) {
+      MethodBinding binding = new MethodBinding(dstObj, dstProp, dstObj, method, args, dir);
+      return bindInternal(dstObj, binding);
+   }
+
+   public static Object method(Object dstObj, String dstProp, Object methObj, Object method, IBinding[] args, BindingDirection dir) {
+      MethodBinding binding = new MethodBinding(dstObj, dstProp, methObj, method, args, dir);
+      return bindInternal(dstObj, binding);
+   }
+
+   public static Object arith(Object dstObj, String dstProp, String operator, IBinding[] args, BindingDirection dir) {
+      ArithmeticBinding binding = new ArithmeticBinding(dstObj, dstProp, operator, args, dir);
+      return bindInternal(dstObj, binding);
+   }
+
+   public static Object condition(Object dstObj, String dstProp, String operator, IBinding[] args, BindingDirection dir) {
+      ConditionalBinding binding = new ConditionalBinding(dstObj, dstProp, operator, args, dir);
+      return bindInternal(dstObj, binding);
+   }
+
+   public static Object unary(Object dstObj, String dstProp, String operator, IBinding[] args, BindingDirection dir) {
+      UnaryBinding binding = new UnaryBinding(dstObj, dstProp, operator, args, dir);
+      return bindInternal(dstObj, binding);
+   }
+
+   public static Object ternary(Object dstObj, String dstProp, IBinding[] args, BindingDirection dir) {
+      TernaryBinding binding = new TernaryBinding(dstObj, dstProp, args, dir);
+      return bindInternal(dstObj, binding);
+   }
+
+   public static Object arrayElement(Object dstObj, String dstProp, Object srcObj, Object[] args, IBinding[] arrayDims, BindingDirection dir) {
+      ArrayElementBinding binding = new ArrayElementBinding(dstObj, dstProp, srcObj, args, arrayDims, dir);
+      return bindInternal(dstObj, binding);
+   }
+
+   public static Object cast(Object dstObj, String dstProp, Object theClass, IBinding arg, BindingDirection dir) {
+      CastBinding binding = new CastBinding(dstObj, dstProp, theClass, arg, dir);
+      return bindInternal(dstObj, binding);
+   }
+
+   public static Object selector(Object dstObj, String dstProp, Object[] boundProps, BindingDirection dir) {
+      SelectorBinding binding = new SelectorBinding(dstObj, dstProp, boundProps, dir);
+      return bindInternal(dstObj, binding);
+   }
+
+   public static Object bindNew(Object dstObj, String dstProp, Object newType, String paramSig, IBinding[] args, BindingDirection dir) {
+      NewBinding binding = new NewBinding(dstObj, dstProp, newType, paramSig, args, dir);
+      return bindInternal(dstObj, binding);
+   }
+
+   public static Object newArray(Object dstObj, String dstProp, Object compType, IBinding[] args, BindingDirection dir) {
+      NewArrayBinding binding = new NewArrayBinding(dstObj, dstProp, compType, args, dir);
+      return bindInternal(dstObj, binding);
+   }
+
+   public static Object assign(Object dstObj, String dstProp, Object srcObj, IBinding lhsBinding, Object rhs, BindingDirection dir) {
+     AssignmentBinding binding = rhs instanceof IBinding ? 
+          new AssignmentBinding(dstObj, dstProp, srcObj, (VariableBinding) lhsBinding, 
+                                (IBinding) rhs, dir) :
+          new AssignmentBinding(dstObj, dstProp, srcObj, (VariableBinding) lhsBinding, rhs, dir);
+      return bindInternal(dstObj, binding);
+   }
+
+   public static Object constant(Object dstObj, String dstProp, Object value, BindingDirection dir) {
+      if (dir.doForward())
+         removePropertyBindings(dstObj, dstProp, true, false);  // Only remove the existing forward binding
+      return value;
+   }
+
+   /**
+    * This implements overriding of bindings.  When you add a binding for a specific property, it removes
+    * any binding already defined for that property. 
+    */
+   private static void bindToList(List<DestinationListener> bindings, DestinationListener binding, Object dstObj) {
+      int sz = bindings.size();
+      int i;
+
+      // Only bindings with := cause the automatic overriding. =: bindings must be removed explicitly using the api
+      if (binding.direction.doForward()) {
+         for (i = 0; i < sz; i++) {
+            DestinationListener oldBinding = bindings.get(i);
+            if (PBindUtil.equalProps(oldBinding.dstProp, binding.dstProp) && oldBinding.direction.doForward()) {
+               if (trace) {
+                  if (logBindingMessage("replaced", oldBinding, dstObj, null, binding))
+                     endPropMessage();
+               }
+               oldBinding.removeListener();
+               bindings.set(i, binding);
+               break;
+            }
+         }
+         if (i == sz)
+            bindings.add(binding);
+      }
+      else
+         bindings.add(binding);
+   }
+
+   /** Removes the bindings on the object specified for the property specified.  You may remove just the forward, just the reverse or all types of bindings on this property */
+   public static int removePropertyBindings(Object dstObj, String dstProp, boolean removeForward, boolean removeReverse) {
+      List<DestinationListener> bindings = PBindUtil.getBindings(dstObj);
+      if (bindings == null) {
+         return 0;
+      }
+      int sz = bindings.size();
+      int ct = 0;
+      for (int i = 0; i < sz; i++) {
+         DestinationListener oldBinding = bindings.get(i);
+         if (PBindUtil.equalProps(oldBinding.dstProp, dstProp) && ((removeForward && oldBinding.direction.doForward()) || (removeReverse && oldBinding.direction.doReverse()))) {
+            oldBinding.removeListener();
+            bindings.remove(i);
+            ct++;
+            i--;
+            sz--;
+         }
+      }
+      return ct;
+   }
+
+   private static Object bindInternal(Object dstObj, DestinationListener binding) {
+      List<DestinationListener> bindings = PBindUtil.getBindings(dstObj);
+      if (bindings == null) {
+         bindings = new ArrayList<DestinationListener>();
+         PBindUtil.setBindings(dstObj, bindings);
+      }
+      bindToList(bindings, binding, dstObj);
+      return binding.initializeBinding();
+   }
+
+   public static IBinding bindP(Object srcObj, IBinding[] boundProps) {
+      if (boundProps.length == 0) 
+         return new ConstantBinding(srcObj);
+      return new VariableBinding(srcObj, boundProps);
+   }
+
+   public static IBinding methodP(Object method, IBinding[] boundArgs) {
+      return new MethodBinding(method, boundArgs);
+   }
+
+   public static IBinding methodP(Object methObj, Object method, IBinding[] boundArgs) {
+      return new MethodBinding(methObj, method, boundArgs);
+   }
+
+   public static IBinding arithP(String operator, IBinding[] boundArgs) {
+      return new ArithmeticBinding(operator, boundArgs);
+   }
+
+   public static IBinding conditionP(String operator, IBinding[] boundArgs) {
+      return new ConditionalBinding(operator, boundArgs);
+   }
+
+   public static IBinding unaryP(String operator, IBinding[] boundArgs) {
+      return new UnaryBinding(operator, boundArgs);
+   }
+
+   public static IBinding ternaryP(IBinding[] boundArgs) {
+      return new TernaryBinding(boundArgs);
+   }
+
+   public static IBinding arrayElementP(Object srcObj, Object[] boundArgs, IBinding[] arrayDims) {
+      return new ArrayElementBinding(srcObj, boundArgs, arrayDims);
+   }
+
+   public static IBinding castP(Object theClass, IBinding boundArg) {
+      return new CastBinding(theClass, boundArg);
+   }
+
+   public static IBinding selectorP(Object[] boundProps) {
+      return new SelectorBinding(boundProps);
+   }
+
+   public static IBinding constantP(Object value) {
+      return new ConstantBinding(value);
+   }
+
+   public static IBinding bindNewP(Object newClass, String paramSig, IBinding[] boundProps) {
+      return new NewBinding(newClass, paramSig, boundProps);
+   }
+
+   public static IBinding newArrayP(Object newClass, IBinding[] boundProps) {
+      return new NewArrayBinding(newClass, boundProps);
+   }
+
+   public static IBinding assignP(Object srcObj, IBinding lhsBinding, Object rhsValue) {
+      return new AssignmentBinding(srcObj, (VariableBinding) lhsBinding, rhsValue);
+   }
+
+   public static int refreshBindings(Object dstObj) {
+      boolean endLogIndent = false;
+      int ct = 0;
+      long startTime = 0;
+      if (trace) {
+         endLogIndent = logPropMessage("Refresh", dstObj, null, null);
+         startTime = System.currentTimeMillis();
+      }
+      try {
+         ct = refreshBindings(dstObj, true);
+      }
+      finally {
+         if (endLogIndent) {
+            System.out.println(indent(getIndentLevel()) + "refreshed: " + ct + " in: " + (System.currentTimeMillis() - startTime) + " millis");
+            endPropMessage();
+         }
+      }
+      return ct;
+   }
+
+   public static int refreshBindings(Object dstObj, boolean refreshChildren) {
+      List<DestinationListener> bindings = PBindUtil.getBindings(dstObj);  
+      int ct = 0;
+      if (bindings != null) {
+         for (int i = 0; i < bindings.size(); i++)
+            ct += ((DestinationListener)bindings.get(i)).refreshBinding();
+      }
+      if (refreshChildren) {
+         Object[] children = DynUtil.getObjChildren(dstObj, null, false);
+         if (children != null) {
+            for (Object child:children) {
+               if (child != null)
+                  ct += refreshBindings(child, refreshChildren);
+            }
+         }
+      }
+      return ct;
+   }
+
+   public static void removeBindings(Object dstObj) {
+      removeBindings(dstObj, true);
+   }
+
+   public static void removeBindings(Object dstObj, boolean removeChildren) {
+      List<DestinationListener> bindings = PBindUtil.getBindings(dstObj);  
+      PBindUtil.setBindings(dstObj, null);
+      if (bindings == null)
+         return;
+      for (int i = 0; i < bindings.size(); i++)
+         bindings.get(i).removeListener();
+
+      // We'll also remove all of the bindings on any child objects so this method becomes a simple way to dispose of
+      // a declarative tree.
+      if (removeChildren) {
+         Object[] children = DynUtil.getObjChildren(dstObj, null, false);
+         if (children != null) {
+            for (Object child:children) {
+               if (child != null)
+                  removeBindings(child);
+            }
+         }
+      }
+   }
+
+   /**
+    * Like addDynamicListener but takes an explicit type to use for this object.  In the case where you might select and
+    * retrieve the static properties for a subtype and want to add a listener for those values, you pass in the subtype.
+    */
+   public static void addDynamicListener(Object obj, Object typeObj, String propName, IListener listener, int eventMask) {
+      addListener(obj, propName, listener, eventMask);
+   }
+
+   public static void addDynamicListener(Object obj, String propName, IListener listener, int eventMask) {
+      Object typeObj = DynUtil.getType(obj);
+      addDynamicListener(obj, typeObj, propName, listener, eventMask);
+   }
+
+   public static void addListener(Object obj, Object propName, IListener listener, int eventMask) {
+      addListener(obj, propName, listener, eventMask, 0);
+   }
+
+   public static void addListener(Object obj, Object propName, IListener listener, int eventMask, int priority) {
+      PBindUtil.addListener(obj, propName, listener, eventMask, priority);
+   }
+
+   /*
+   public static Method getChangeListener(Object obj, boolean add) {
+      if (obj instanceof Class) return null;
+
+      String methodName = add ? "addPropertyChangeListener" : "removePropertyChangeListener";
+      
+      Method addListener = TypeUtil.getMethod(obj.getClass(), methodName, PROP_LISTENER_ARGS);
+      if (addListener == null) {
+         addListener = TypeUtil.getMethod(obj.getClass(), methodName, COMMON_LISTENER_ARGS);
+      }
+      return addListener;
+   }
+   */
+   public static void removeDynamicListener(Object obj, String propName, IListener listener, int eventMask) {
+      Object typeObj = DynUtil.getType(obj);
+      removeDynamicListener(obj, typeObj, propName, listener, eventMask);
+   }
+
+   public static void removeDynamicListener(Object obj, Object typeObj, String propName, IListener listener, int eventMask) {
+      removeListener(obj, propName, listener, eventMask);
+   }
+
+   public static void removeListener(Object obj, Object prop, IListener listener, int eventMask) {
+      PBindUtil.removeListener(obj, prop, listener, eventMask);
+   }
+
+   public static Object NO_VALUE_EVENT_DETAIL = new String("<noValueInEventSentinel>");
+
+   public static void sendDynamicEvent(int event, Object obj, String propName) {
+      sendEvent(event, obj, propName, NO_VALUE_EVENT_DETAIL);
+   }
+
+   /** The easiest method to send a change event for a given property on a given object. If the property is null, the default event for that object is sent instead.  The property supplied must refer to an actual defined property on the object. */
+   public static void sendChangedEvent(Object obj, String propName) {
+      sendEvent(IListener.VALUE_CHANGED, obj, propName, NO_VALUE_EVENT_DETAIL);
+   }
+
+   public static void sendChange(Object obj, String propName, Object val) {
+      sendEvent(IListener.VALUE_CHANGED, obj, propName, val);
+   }
+
+   public static void sendEvent(int event, Object obj, String propName) {
+      sendEvent(event, obj, propName, NO_VALUE_EVENT_DETAIL);
+   }
+
+   private static class ThreadLogState {
+      int indentLevel;
+      Object obj;
+      String prop;
+      IBinding binding;
+      ThreadLogState prev;
+      Object val;
+      boolean noisy;
+   }
+
+   public static class BindFrame {
+      Object obj;
+      Object prop;
+      IListener listener;
+
+      public boolean equals(Object other) {
+         if (other instanceof BindFrame) {
+            BindFrame o = (BindFrame) other;
+            return o.obj == obj && o.prop == prop && o.listener == listener;
+         }
+         return false;
+      }
+
+      public int hashCode() {
+         return obj.hashCode() + (prop == null ? 0 : prop.hashCode()) + listener.hashCode();
+      }
+
+      public String toString() {
+         return DynUtil.getInstanceName(obj) + (prop == null ? "<default event>" : "." + prop) + " listener: " + listener;
+      }
+   }
+
+   // A lighter weight version of the ThreadLogState that we always maintain.  Used to trap recursive bindings and to know when we are in the top-level setX or triggered by a binding
+   private static class ThreadState {
+      int nestedLevel;
+      Object obj;
+      Object prop;
+      ArrayList<BindFrame> recurseFrames;
+   }
+
+   static ThreadLogState logState; 
+
+   public static int getIndentLevel() {
+      if (logState == null) return 0;
+      return logState.indentLevel;
+   }
+
+   public static boolean logBindingMessage(String prefix, IBinding binding, Object obj, Object val, Object src) {
+      // If we are logging we need to get the current value.  Possibly make this optional since debugging code really should
+      // not be calling app code like this.
+      if (val == NO_VALUE_EVENT_DETAIL) {
+         val = null;
+      }
+
+      if (logState == null || !logState.noisy && (logState.obj != obj || logState.binding != binding || !DynUtil.equalObjects(logState.val,val))) {
+         int indentLevel = getIndentLevel();
+         String bstr = binding instanceof DestinationListener ? ((DestinationListener) binding).toString(prefix, false) : binding.toString();
+         if (src != null)
+            bstr = src.toString() + " " + bstr;
+         // When the binding is not valid, it does not print the object's value.  But this is not ideal... we want
+         // to see the value in the debug message either way so do it by hand here in that case.
+         if (val == null)
+            System.out.println(indent(indentLevel) + bstr);
+         else {
+            System.out.println(indent(indentLevel) + bstr + " = " + DynUtil.getInstanceName(val));
+         }
+
+         ThreadLogState prev = logState;
+         logState = new ThreadLogState();
+         logState.obj = obj;
+         logState.binding = binding;
+         logState.prev = prev;
+         logState.val = val;
+         logState.indentLevel = prev == null ? 0 : prev.indentLevel + 1;
+         return true;
+      }
+      else
+         return false;
+   }
+
+   public static void logMessage(String prefix, Object obj, String prop, Object val) {
+      boolean endIndent = false;
+      try {
+         endIndent = logPropMessage(prefix, obj, prop, val);
+      }
+      finally {
+         if (endIndent)
+            endPropMessage();
+      }
+   }
+
+   public static boolean logPropMessage(String prefix, Object obj, String prop, Object val) {
+      // If we are logging we need to get the current value.  Possibly make this optional since debugging code really should
+      // not be calling app code like this.
+      if (val == NO_VALUE_EVENT_DETAIL) {
+         if (prop != null)
+            val = PBindUtil.getPropertyValue(obj, prop);
+         else
+            val = null;
+      }
+
+      if (logState == null || logState.obj != obj || logState.prop != prop || !DynUtil.equalObjects(logState.val,val)) {
+         DestinationListener binding = getBinding(obj, prop);
+         int indentLevel = logState == null ? 0 : logState.indentLevel;
+         String indent = indent(indentLevel);
+         boolean isNoisy = !traceAll && prop != null && noisyProperties.contains(prop);
+         if (!isNoisy) {
+            if (binding != null) {
+               String bstr = binding.toString(prefix, true);
+               // When the binding is not valid, it does not print the object's value.  But this is not ideal... we want
+               // to see the value in the debug message either way so do it by hand here in that case.
+               if (binding.isValid())
+                  System.out.println(indent + bstr);
+               else {
+                  System.out.println(indent + bstr + " = " + getPrintableValue(val, obj, prop));
+               }
+            }
+            else if (prop == null) {
+               if (prefix.equals("Refresh"))
+                  System.out.println(indent + "Refreshing bindings for " + DynUtil.getInstanceName(obj));
+               else
+                  System.out.println(indent + prefix + " " + "default event for: " + DynUtil.getInstanceName(obj));
+            }
+            else
+               System.out.println(indent + prefix + " " + DynUtil.getInstanceName(obj) + "." + prop + " = " + getPrintableValue(val, obj, prop));
+         }
+
+         ThreadLogState prev = logState;
+         logState = new ThreadLogState();
+         logState.obj = obj;
+         logState.prop = prop;
+         logState.prev = prev;
+         logState.noisy = isNoisy;
+         logState.val = val;
+         logState.indentLevel = prev == null ? 0 : prev.indentLevel + 1;
+         return true;
+      }
+      else
+         return false;
+   }
+
+   private static String getPrintableValue(Object val, Object obj, String prop) {
+       return DynUtil.getInstanceName(val == IListener.UNSET_VALUE_SENTINEL ? PBindUtil.getPropertyValue(obj, prop) : val);
+   }
+
+   public static void endPropMessage() {
+      logState = logState.prev;
+   }
+
+   private static TreeSet<String> noisyProperties = new TreeSet<String>();
+   static {
+      noisyProperties.add("mouseMoveEvent");
+   }
+
+   // TODO: it would be nice to validate that "obj" has "prop" but kind of expensive and also ensured at compile
+   // time when the call is injected.  
+   public static void sendEvent(int event, Object obj, String prop, Object eventDetail) {
+      boolean endLogIndent = false;
+      try {
+         if (trace && (traceAll || PBindUtil.getBindingListeners(obj, prop) != null)) {
+            endLogIndent = logPropMessage("Set", obj, prop, eventDetail);
+         }
+         PBindUtil.sendEvent(event, obj, prop, eventDetail);
+      }
+      finally {
+         if (endLogIndent)
+            endPropMessage();
+      }
+      // TODO: add a flag - something like "per operation" or "ordered" which executes the listeners
+      // here - after dependency reordering.
+   }
+
+   /** Used to send change events to all properties on "obj" */
+   public static void sendAllEvents(int event, Object obj) {
+      PBindUtil.sendAllEvents(event, obj);
+   }
+
+   private final static int RecursionDetectionThreadhold = 10000;
+
+   public static int getNestedBindingCount() {
+      ThreadState bindState = (ThreadState) PTypeUtil.getThreadLocal("bindingState");
+      if (bindState == null)
+         return 0;
+      return bindState.nestedLevel;
+   }
+
+   static void dispatchEvent(int event, Object obj, Object prop, IListener listener, Object eventDetail) {
+      // TODO: add the bindingManager hook if we need it.  For now, it's just queuing with the
+      // binding context.
+
+      BindingContext ctx = BindingContext.getBindingContext();
+      if (ctx != null) {
+         ctx.queueEvent(event, obj, prop, listener, eventDetail); 
+         return;
+      }
+      ThreadState bindState = (ThreadState) PTypeUtil.getThreadLocal("bindingState");
+      if (bindState == null) {
+         bindState = new ThreadState();
+         PTypeUtil.setThreadLocal("bindingState", bindState);
+      }
+      bindState.nestedLevel++;
+      bindState.obj = obj;
+      bindState.prop = prop;
+      if (bindState.nestedLevel >= RecursionDetectionThreadhold) {
+         if (bindState.recurseFrames == null)
+            bindState.recurseFrames = new ArrayList<BindFrame>();
+         BindFrame bf = new BindFrame();
+         bf.obj = obj;
+         bf.prop = prop;
+         bf.listener = listener;
+         if (bindState.recurseFrames.contains(bf) || bindState.recurseFrames.size() > 100) {
+            throw new BindingLoopException(bindState.recurseFrames);
+         }
+         bindState.recurseFrames.add(bf);
+      }
+      // TODO: insert check for nestedLevel > some threshold.  Turn on recursion detection.  When that's on, we add: obj, prop, listener, eventDetail? to a list.  Keep recording until we find a matching list already in the list.  Then gather up the list, format it into a nice error message.
+      try {
+         switch (event) {
+            case IListener.VALUE_INVALIDATED:
+               listener.valueInvalidated(obj, prop, eventDetail, true);
+               break;
+            case IListener.ARRAY_ELEMENT_INVALIDATED:
+               listener.arrayElementInvalidated(obj, prop, eventDetail, true);
+               break;
+            case IListener.VALUE_VALIDATED:
+               listener.valueValidated(obj, prop, eventDetail, true);
+               break;
+            case IListener.ARRAY_ELEMENT_VALIDATED:
+               listener.arrayElementValidated(obj, prop, eventDetail, true);
+               break;
+            case IListener.VALUE_CHANGED:
+               listener.valueChanged(obj, prop, eventDetail, true);
+               break;
+            case IListener.ARRAY_ELEMENT_CHANGED:
+               listener.arrayElementChanged(obj, prop, eventDetail, true);
+               break;
+            case IListener.VALUE_REQUESTED:
+               listener.valueRequested(obj, prop);
+               break;
+         }
+      }
+      catch (BindingLoopException exc) {
+         exc.printStackTrace();
+         // Unwind till we have the top event - the one that triggered the whole thing.
+         if (bindState.nestedLevel != 1)
+            throw exc;
+         else {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < exc.recurseFrames.size(); i++) {
+               sb.append("   " + exc.recurseFrames.get(i));
+            }
+            System.err.println("Loop detected in bindings for change: " + DynUtil.getInstanceName(obj) + (prop == null ? " <default event>" : "." + prop) + ": " + getBinding(obj, (String) prop) + ": " + sb);
+         }
+      }
+      finally {
+         bindState.nestedLevel--;
+      }
+   }
+
+/*
+   public static Class getClassForInstance(Object dstObj) {
+      if (dstObj instanceof Class)
+         return (Class) dstObj;
+      else
+         return dstObj.getClass();
+   }
+*/
+
+
+   public static DestinationListener getBinding(Object dstObj, String dstProp) {
+      List<DestinationListener> bindings;
+      DestinationListener toRet = null;
+      bindings = PBindUtil.getBindings(dstObj);
+      if (bindings == null)
+         return null;
+      int sz = bindings.size();
+      int i;
+      for (i = 0; i < sz; i++) {
+         DestinationListener binding = bindings.get(i);
+         if (PBindUtil.equalProps(binding.dstProp, dstProp)) {
+            // If there's a forward binding, there will be only one.  but we can have multiple
+            // reverse only bindings of the form =: a() for the same property.   For logging purposes
+            // though we want to get the real forward binding for the property if there is one.
+            if (binding.direction.doForward())
+               return binding;
+            else
+               toRet = binding;
+         }
+      }
+      return toRet;
+   }
+
+   public static DestinationListener[] getBindings(Object dstObj) {
+      List<DestinationListener> res = PBindUtil.getBindings(dstObj);
+      if (res == null)
+         return null;
+      return res.toArray(new DestinationListener[res.size()]);
+   }
+
+   public static String destinationListenerArrayToString(Object theObj, DestinationListener[] bindingListeners) {
+      StringBuilder sb = new StringBuilder();
+      if (bindingListeners == null || bindingListeners.length == 0)
+         return "";
+      else {
+         for (DestinationListener dl: bindingListeners) {
+            sb.append("   ");
+            sb.append(dl);
+            sb.append("\n");
+         }
+      }
+      return sb.toString();
+   }
+
+/*
+   public static String listenerArrayToString(Object theObj, BindingListener[] bindingListeners) {
+      if (bindingListeners == null)
+         return "";
+
+      boolean isStatic = DynUtil.isType(theObj);
+      Object theClass = isStatic ? theObj : DynUtil.getType(theObj);
+
+      IBeanMapper[] props = isStatic ? DynUtil.getStaticProperties(theClass) : DynUtil.getProperties(theClass);
+      if (props == null)
+          return "<no properties>";
+
+      StringBuilder sb = new StringBuilder();
+      for (int i = 0; i < props.length; i++) {
+         BindingListener l = i < bindingListeners.length ? bindingListeners[i] : null;
+         if (l != null) {
+            IBeanMapper prop = props[i];
+            if (prop == null)
+               sb.append("<valueListener>");
+            else
+               sb.append(prop.getPropertyName());
+            sb.append(":");
+            sb.append("\n");
+            while (l != null) {
+               sb.append("   ");
+               IListener rootListener = getRootListener(l.listener);
+               sb.append(rootListener);
+               sb.append("\n");
+               l = l.next;
+            }
+         }
+      }
+      return sb.toString();
+   }
+*/
+
+
+   public static IListener getRootListener(IListener l) {
+      if (l instanceof DestinationListener) {
+         DestinationListener dl = (DestinationListener) l;
+         if (dl.dstProp == null && dl.dstObj instanceof IListener)
+            return getRootListener((IListener) dl.dstObj);
+      }
+      return l;
+   }
+
+   public static void printBindings(Object obj) {
+      Object cl;
+      cl = DynUtil.getType(obj);
+      if (obj != cl) {
+         String objName = DynUtil.getInstanceName(obj);
+         System.out.println("Bindings for: " + objName);
+         System.out.println("  -- from properties: ");
+         System.out.println(Bind.destinationListenerArrayToString(obj, getBindings(obj)));
+         System.out.println("  -- to properties: ");
+         PBindUtil.printBindingListeners(obj);
+      }
+      String typeName = DynUtil.getTypeName(cl, false);
+      System.out.println("Bindings for type: " + typeName);
+      System.out.println("  -- from this type (static properties):");
+      String staticFromStr = Bind.destinationListenerArrayToString(cl, getBindings(cl));
+      System.out.println(staticFromStr);
+      System.out.println("  -- to this type (static properties):");
+      PBindUtil.printBindingListeners(cl);
+      System.out.println("");
+   }
+
+   public static void printAllBindings() {
+      System.out.println("Printing all system bindings");
+      PBindUtil.printAllBindings();
+   }
+
+   public static String indent(int l) {
+      StringBuilder sb = new StringBuilder();
+      for (int i = 0; i < l; i++)
+         sb.append("   ");
+      return sb.toString();
+   }
+
+   public static String arrayToString(Object[] list) {
+      if (list == null)
+         return "";
+      StringBuilder sb = new StringBuilder();
+      for (int i = 0; i < list.length; i++) {
+         if (i != 0)
+            sb.append(", ");
+         sb.append(list[i]);
+      }
+      return sb.toString();
+   }
+
+   public static void setBindingParent(Object prop, IBinding parent, BindingDirection dir) {
+      if (prop instanceof String)
+          return;
+      if (prop instanceof IBinding)
+         ((IBinding) prop).setBindingParent(parent, dir);
+   }
+
+   public static void activate(Object prop, boolean state, Object bindingParent, boolean chained) {
+      if (prop instanceof IBinding)
+        ((IBinding) prop).activate(state, bindingParent, chained);
+   }
+
+   public static void applyReverseBinding(Object obj, Object prop, Object value, IBinding src) {
+      if (prop instanceof IBinding)
+         ((IBinding) prop).applyReverseBinding(obj, value, src);
+      else if (obj != null)
+         PBindUtil.setPropertyValue(obj, prop, value);
+   }
+
+   public static void applyBinding(Object obj, Object prop, Object value, IBinding src) {
+      if (prop instanceof IBinding)
+         ((IBinding) prop).applyBinding(obj, value, src);
+      else
+         PBindUtil.setPropertyValue(obj, prop, value);
+   }
+   
+   public static void parentBindingChanged(Object prop) {
+      if (prop instanceof IBinding)
+         ((IBinding) prop).parentBindingChanged();
+   }
+}

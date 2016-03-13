@@ -1,0 +1,2 @@
+class InterfaceDeclaration extends TypeDeclaration {
+}
