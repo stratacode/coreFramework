@@ -143,6 +143,27 @@ public class SwingUtil {
       parent.remove((JComponent) child);
    }
 
+   public static Rectangle getBoundingRectangle(Object child) {
+      if (child instanceof JComponent) {
+         return ((JComponent) child).getBounds();
+      }
+      else if (child instanceof IChildContainer) {
+         Rectangle resBounds = new Rectangle(-1, -1, 0, 0);
+         IChildContainer container = (IChildContainer) child;
+         Object[] children = container.getChildren();
+         for (Object innerChild:children) {
+             Rectangle childBounds = getBoundingRectangle(innerChild);
+             resBounds.x = resBounds.x == -1 ? childBounds.x : Math.min(resBounds.x, childBounds.x);
+             resBounds.y = resBounds.y == -1 ? childBounds.y : Math.min(resBounds.y, childBounds.y);
+             resBounds.width = Math.min(resBounds.width, childBounds.width);
+             resBounds.height = Math.min(resBounds.height, childBounds.height);
+         }
+         return resBounds;
+      }
+      else
+         throw new UnsupportedOperationException();
+   }
+
    public static void sendDelayedEvent(final int eventType, final Object obj, final sc.type.IBeanMapper prop) {
       SwingUtilities.invokeLater(new Runnable() {
          public void run() {
