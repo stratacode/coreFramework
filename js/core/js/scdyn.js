@@ -729,6 +729,11 @@ sc_PTypeUtil_c.isArray = function(value) {
    return Array.isArray(value);
 }
 
+
+sc_PTypeUtil_c.clone = function(obj) {
+   return obj.clone();
+}
+
 sc_DynUtil_c.isObject = function(obj) {
    return sc_DynUtil_c.getType(obj).$objectType !== undefined || obj.$objectType !== undefined;
 }

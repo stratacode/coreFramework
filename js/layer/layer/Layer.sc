@@ -5,6 +5,7 @@
 import sc.type.CTypeUtil;
 import sc.obj.Constant;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Collection;
 
 /** The client view of this file (a subset of the original one - yes, should be using layers to keep them in sync but that will require needing to build SC with SC which adds a tooling challenge! */
@@ -113,6 +114,23 @@ public class Layer {
       dependentLayers = layers;
    }
 
+   public List<Layer> getBaseLayers() {
+       if (baseLayerNames == null)
+          return null;
+
+       LayeredSystem sys = LayeredSystem.current;
+       ArrayList<Layer> res = new ArrayList<Layer>();
+       for (String baseLayerName:baseLayerNames) {
+          Layer baseLayer = sys.getLayerByDirName(baseLayerName);
+          if (baseLayer != null)
+             res.add(baseLayer);
+          else
+             System.out.println("*** Unable to find base layer: " + baseLayerName);
+       }
+
+       return res;
+   }
+
    public boolean matchesFilter(Collection<CodeType> codeTypes, Collection<CodeFunction> codeFunctions) {
       return (codeTypes == null || codeTypes.contains(codeType)) && (codeFunctions == null || codeFunctions.contains(codeFunction));
    }
@@ -124,6 +142,40 @@ public class Layer {
    }
    public String getLayerUniqueName() {
       return layerUniqueName;
+   }
+
+   public boolean extendsLayer(Layer other) {
+      List<Layer> baseLayers = getBaseLayers();
+      if (baseLayers == null)
+         return false;
+
+      for (Layer base:baseLayers) {
+         if (base.layerDirName.equals(layerDirName))
+            return true;
+         if (base.extendsLayer(other))
+            return true;
+      }
+      return false;
+   }
+
+   public boolean transparentToLayer(Layer other) {
+      if (other == this)
+         return true;
+
+      if (!transparent)
+         return false;
+
+      List<Layer> baseLayers = getBaseLayers();
+      if (baseLayers == null)
+         return false;
+
+      for (Layer base:baseLayers) {
+         if (base.layerDirName.equals(layerDirName))
+            return true;
+         if (base.transparentToLayer(other))
+            return true;
+      }
+      return false;
    }
 
 }

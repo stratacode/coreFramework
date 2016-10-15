@@ -20,6 +20,15 @@ class BodyTypeDeclaration {
       return fullTypeName;
    }
 
+   private String extendsTypeName;
+   @Constant
+   public void setExtendsTypeName(String ext) {
+      extendsTypeName = ext;
+   }
+   public String getExtendsTypeName() {
+      return extendsTypeName;
+   }
+
    private DeclarationType declarationType;
    @Constant
    public void setDeclarationType(DeclarationType dt) {
