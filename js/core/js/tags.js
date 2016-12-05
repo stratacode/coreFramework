@@ -155,6 +155,12 @@ js_HTMLElement_c.getVisible = function() {
    return this.visible;
 }
 
+js_HTMLElement_c.isVisibleInView = function() {
+   if (this.visible)
+      return true;
+   return this.outer !== undefined && this.outer.isVisibleInView();
+}
+
 js_HTMLElement_c.setHTMLClass = function(cl) {
    if (cl != this.HTMLClass) {
       this.HTMLClass = cl; 
@@ -982,6 +988,9 @@ js_HTMLElement_c.refreshBody = function() {
    var create = false;
    this.updateDOM();
    if (this.element === null) {
+      // We were made invisible or possibly our parent is invisible
+      if (!this.isVisibleInView())
+         return;
       // Go to the top level tag and start the output process up there.  It needs to attach us to the tree
       if (this.outer !== undefined && this.outer.refresh !== null) {
          this.bodyValid = true; // or should we mark this as true when the parent refreshes?
@@ -1181,7 +1190,7 @@ js_HTMLElement_c.schedRefresh = function(tagList, validName) {
    if (this[validName]) {
       if (!js_Element_c.globalRefreshScheduled) {
          this[validName] = false; 
-         if (!js_Element_c.refreshScheduled) {
+         if (!js_Element_c.refreshScheduled && this.isVisibleInView()) {
             js_Element_c.refreshScheduled = true;
             sc_addRunLaterMethod(this, js_Element_c.refreshTags, 5);
          }
