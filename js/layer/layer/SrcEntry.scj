@@ -7,7 +7,7 @@ import sc.util.FileUtil;
  * 
  * NOTE: a direct copy of the version in the layer source code but without the File system dependencies.
  */
-public class SrcEntry {
+public class SrcEntry implements Cloneable {
    public Layer layer;
    public String absFileName;  /* The absolute file name of the src entry */
    public String relFileName;  /* The file name relative to the layer's root directory */
@@ -80,5 +80,13 @@ public class SrcEntry {
 
    public boolean isZip() {
       return false;
+   }
+
+   public SrcEntry clone() {
+      try {
+         return (SrcEntry) super.clone();
+      }
+      catch (CloneNotSupportedException exc) {}
+      return null;
    }
 }

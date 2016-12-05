@@ -1,6 +1,7 @@
 import sc.layer.Layer;
 import sc.lang.sc.PropertyAssignment;
 import sc.dyn.DynUtil;
+import sc.type.CTypeUtil;
 import java.util.ArrayList;
 import sc.layer.LayeredSystem;
 
@@ -27,6 +28,19 @@ public class ModelUtil {
          return ((PropertyAssignment) type).propertyName;
       if (type instanceof BodyTypeDeclaration)  // enum constants
          return ((BodyTypeDeclaration) type).typeName;
+      else
+         throw new UnsupportedOperationException();
+   }
+
+   public static Layer getPropertyLayer(Object prop) {
+      if (prop instanceof String)
+         return null;
+      if (prop instanceof VariableDefinition)
+         return ((VariableDefinition) prop).layer;
+      if (prop instanceof PropertyAssignment)
+         return ((PropertyAssignment) prop).layer;
+      if (prop instanceof BodyTypeDeclaration)  // enum constants
+         return ((BodyTypeDeclaration) prop).layer;
       else
          throw new UnsupportedOperationException();
    }
@@ -65,8 +79,20 @@ public class ModelUtil {
       return type instanceof TypeDeclaration && ((TypeDeclaration) type).getDeclarationType() == DeclarationType.ENUM;
    }
 
+   public static boolean isEnum(Object type) {
+      return type instanceof TypeDeclaration && ((TypeDeclaration) type).getDeclarationType() == DeclarationType.ENUMCONSTANT;
+   }
+
+   public static boolean isInterface(Object type) {
+      return type instanceof InterfaceDeclaration;
+   }
+
    public static boolean isObjectType(Object type) {
       return type instanceof TypeDeclaration && ((TypeDeclaration) type).getDeclarationType() == DeclarationType.OBJECT;
+   }
+
+   public static String getClassName(Object type) {
+      return CTypeUtil.getClassName(getTypeName(type));
    }
 
    public static String getTypeName(Object type) {
@@ -88,6 +114,18 @@ public class ModelUtil {
    public static ClientTypeDeclaration getClientTypeDeclaration(Object type) {
       if (type instanceof ClientTypeDeclaration)
          return (ClientTypeDeclaration) type;
+      return null;
+   }
+
+   public boolean filteredProperty(Object type, Object p, boolean perLayer) {
+      // TODO: can implement special rules here, like on the server but for the most part our properties should already reflect
+      // the ones we want to display on the client
+      return false;
+   }
+
+
+   public static Object getPreviousDefinition(Object def) {
+       // TODO: should get enclosing type of the definition and find the same type, member, etc. in the layer before this one
       return null;
    }
 
