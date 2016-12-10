@@ -1026,13 +1026,17 @@ js_HTMLElement_c.refreshBody = function() {
                document.appendChild(tmp.childNodes[0]);
             }
             catch (e) {
-               console.error("Error appending child for refreshBody of element: " + this.id);
+               console.error("Error appending child for refreshBody of element: " + this.id + + " tag: " + this.tagName + " error: " + e + " for content: " + outRes);
             }
          }
          else {
             document.write(outRes);
          }
          this.updateDOM();
+      }
+      else {
+         // TODO: are there any cases where this is not the right thing?  Like blanking out some content we need to blank out?
+         console.log("Ignoring empty body on create");
       }
       if (this.tagName != null && this.element === null)
          console.log("unable to find top-level element after refresh");

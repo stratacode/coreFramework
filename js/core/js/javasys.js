@@ -356,6 +356,15 @@ jv_Character_c.isUpperCase = function(c) {
    return c.isUpperCase();
 }
 
+// TODO: these should handle unicode characters
+jv_Character_c.isJavaIdentifierStart = function(c) {
+   return (c >= 'A' && c <= 'z') || c == '_';
+}
+
+jv_Character_c.isJavaIdentifierPart = function(c) {
+   return (c >= 'A' && c <= 'z') || (c >= '0' && c <= '9') || c == '_';
+}
+
 function jv_Math() {
 }
 
