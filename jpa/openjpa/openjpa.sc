@@ -1,4 +1,6 @@
 
+// Deprecated - openjpa is no longer supported by anyone.  Using datanucleus
+// now by default.
 jpa.openjpa extends basejpa {
    codeType = sc.layer.CodeType.Framework;
    codeFunction = sc.layer.CodeFunction.Program;
@@ -8,10 +10,12 @@ jpa.openjpa extends basejpa {
    // Directory holding this file has a symbolic link to the android/platforms/android-xxx directory which contains android.jar
    public void start() {
       sc.layer.LayeredSystem system = getLayeredSystem();
+      /* This package is no longer available...
       sc.repos.RepositoryPackage pkg = addRepositoryPackage("openjpaLibs", "scp", "vsgit@stratacode.com:/home/vsgit/openjpaLibs", false);
       if (pkg.installedRoot != null && !disabled) {
          classPath=sc.util.FileUtil.listFiles(sc.util.FileUtil.concat(pkg.installedRoot, "lib"),".*\\.jar");
       }
+      */
 
       // Turns on class load time enhancement via command line.  We use the postBuildCommand enhancer now instead.
       //String jpaFile = getRelativeFile("./lib/openjpa.jar");
