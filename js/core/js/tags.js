@@ -670,6 +670,9 @@ js_HTMLElement_c.syncRepeatTags = function(updateDOM) {
       var sz = repeat === null ? 0 : sc_DynUtil_c.getArrayLength(repeat);
       if (repeat !== null) {
          this.repeatTagsValid = true;
+         // Delay the creation until we are visible - TODO: do we need this check?  
+         if (!this.isVisibleInView())
+            return;
          var repeatTags = this.repeatTags;
          if (repeatTags === null) {
             this.repeatTags = repeatTags = [];

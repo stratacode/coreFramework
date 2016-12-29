@@ -1,6 +1,6 @@
 // Not modifying core's Color - instead had to copy it.  We interpret "super" in this
 // case as the modified type and so have no way to insert the actual super() call for the
-// Color constructor.  This is the first case which begs for a modified() keyword which works 
+// Color constructor.  This is a case which begs for a modified() keyword which works
 // differently than super().   Or maybe for constructors we just use this() to also search the modified
 // type - i.e. like how we treat super today?
 @sc.obj.Sync(onDemand=true)

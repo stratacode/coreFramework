@@ -54,10 +54,8 @@ public servlet.core extends webApp, meta, html.core {
       registerScopeProcessor("window", windowScope);
 
       // Causes PageDispatcher.sc to be regenerated whenever the members of either type group are modified
-      if (activated) {
-         layeredSystem.addTypeGroupDependency("PageInit.sc", "sc.servlet.PageInit", "_init");
-         layeredSystem.addTypeGroupDependency("PageInit.sc", "sc.servlet.PageInit", "_startup");
-      }
+      addTypeGroupDependency("PageInit.sc", "sc.servlet.PageInit", "_init");
+      addTypeGroupDependency("PageInit.sc", "sc.servlet.PageInit", "_startup");
 
       sc.lang.DefaultAnnotationProcessor urlProc = new sc.lang.DefaultAnnotationProcessor();
       // Need to add a static code snippet to register the page.  If we happen to register an inner class the addPage still goes on the parent type

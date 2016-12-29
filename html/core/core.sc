@@ -24,10 +24,10 @@ html.core extends sys.std {  // Extending sys.std because we override the standa
       extensions = {"scxml"};
       // We will process or generate this file at build time - i.e. for static files or those used in the build.
       processTemplate = true;
-      // For gwt, xml files are used by the compiler itself so they need to be done
-      // before the process phase in prepare.  May need to register a separate xml pattern for the specific build files
-      // if we need to scxml elsewhere with different rules (i.e. that go into the web root)
-      buildPhase = BuildPhase.Prepare;
+      // For GWT, we used to do this in the 'prepare' phase because it's xml files need to be processed before you can 
+      // compile.  But sys.std adds an scxml process in the process phase so the processors would both run so for now just
+      // using process in the generic html.core layer.
+      buildPhase = BuildPhase.Process;
       resultSuffix = "xml";
       useSrcDir = false;
       srcPathTypes = {null, "web"};
@@ -172,11 +172,9 @@ html.core extends sys.std {  // Extending sys.std because we override the standa
       mainInitProc.subTypesOnly = true; // Don't include the Html and Page types which set the annotation
       registerAnnotationProcessor("sc.html.MainInit", mainInitProc);
 
-      if (activated) {
-         // When either of these type groups change, we need to regenerate the runTest script
-         system.addTypeGroupDependency("runTest.scsh", "runTest", "mainInit");
-         system.addTypeGroupDependency("runTest.scsh", "runTest", "urlTypes");
-      }
+      // When either of these type groups change, we need to regenerate the runTest script
+      addTypeGroupDependency("runTest.scsh", "runTest", "mainInit");
+      addTypeGroupDependency("runTest.scsh", "runTest", "urlTypes");
    }
 
 }

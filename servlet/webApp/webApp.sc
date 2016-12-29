@@ -34,12 +34,9 @@ servlet.webApp extends util, html.schtml {
       servletFiltersProc.requiredType = "javax.servlet.Filter";
       registerAnnotationProcessor("sc.servlet.PathServletFilter", servletFiltersProc);
 
-      if (activated) {
-         // When either the list of servlets or servlet filters changes, we need to regenerate
-         // web.xml
-         system.addTypeGroupDependency("web/WEB-INF/web.scxml", "web.WEB-INF.web", "servlets");
-         system.addTypeGroupDependency("web/WEB-INF/web.scxml", "web.WEB-INF.web", "servletFilters");
-      }
+      // When either the list of servlets or servlet filters changes, we need to regenerate web.xml
+      addTypeGroupDependency("web/WEB-INF/web.scxml", "web.WEB-INF.web", "servlets");
+      addTypeGroupDependency("web/WEB-INF/web.scxml", "web.WEB-INF.web", "servletFilters");
 
       addSrcPath("web", "web", "web");
    }
