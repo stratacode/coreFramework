@@ -739,7 +739,7 @@ sc_DynUtil_c.isObject = function(obj) {
 }
 
 sc_DynUtil_c.isObjectType = function(type) {
-   return type.$objectType !== undefined || sc_DynUtil_c.getAnnotationValue(type, "sc.obj.TypeSettings", "objectType");;
+   return type.$objectType !== undefined || sc_DynUtil_c.getAnnotationValue(type, "sc.obj.TypeSettings", "objectType");
 }
 
 sc_DynUtil_c.isRootedObject = function(obj) {

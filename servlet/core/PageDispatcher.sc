@@ -36,12 +36,26 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 
 /** 
-  * The PageDispatcher manages a registry of URL patterns which are matched against incoming request URIs
-  * and then farmed to the appropriate object to handle the request.
+  * The PageDispatcher manages a registry of URL patterns to request handling objects.  For each incoming URL, the
+  * set of matching objects generates the content for the response.
   * <p>
-  * The PageDispatcher can be configured as either a Servlet or a ServletFilter.  When it is a servlet
-  * it must handle the request and when it is a filter, it handles the request when it receives a matching URL
+  * This servlet uses the sync framework to support flexible scoping and state management.  Page objects can be global, session, request or window scoped, or user 
+  * defined scopes support the ability to change the lifecycle.  
+  * <p>
+  * For the sync framework, the resulting HTML includes the server version of the response page, and following that any 'initial sync state' from synchronized objects
+  * referenced on the page.
+  * <p>
+  * The PageDispatcher runs as either a Servlet or a ServletFilter.  When it is a servlet,
+  * it must handle the requests it's given or it's an error.  When it is a filter, it handles the request when it receives a matching URL
   * and forwards it otherwise.  
+  * <p>
+  * For synchronization, all page objects required for a URL are locked before the page request starts.  
+  * TODO: we should have a way to support read-only locks for page objects shared between users that are only used in a read-only way
+  * <p>
+  * For debugging, use the -vh (for a summary) or -vha (for all) HTML traffic.  Use -vs or -vsa for monitoring the sync code.
+  * <p>
+  * TODO: when more than one HTML page object is found, we have some experiemental code in there to merge the head and body sections
+  * individually.  The goal here is for adding say a tracker link to the head section by chaining in a page object.
   */
 @sc.servlet.PathServletFilter(path="/*")
 class PageDispatcher extends InitServlet implements Filter {
@@ -352,6 +366,7 @@ class PageDispatcher extends InitServlet implements Filter {
                   language.parseIntoInstance(uri, pageEnt.patternParselet, inst);
             }
 
+            // This runs any code triggered by 'do later' jobs during the page-init phase.  It makes sure the page content is in sync before we start rendering.
             ctx.execLaterJobs();
          }
 
@@ -524,6 +539,7 @@ class PageDispatcher extends InitServlet implements Filter {
          CharSequence initSync = SyncManager.getInitialSync("jsHttp", WindowScopeDefinition.scopeId, resetSync);
          sb.append("\n\n<!-- Init SC JS -->\n");
          sb.append("<script type='text/javascript'>\n");
+         // Here are in injecting code into the generated script for debugging - if you enable logging on the server, it's on in the client automatically
          if (SyncManager.trace) {
             sb.append("sc_SyncManager_c.trace = true;\n");
          }
