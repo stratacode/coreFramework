@@ -162,6 +162,10 @@ function sc_arrayInstanceOf(srcObj, dstClass, ndim) {
   return srcObj._class != null && srcObj._ndim == ndim && sc_isAssignableFrom(srcObj._class, dstClass);
 }
 
+function sc_instanceOfClass(obj, dstClass) {
+  return obj.hasOwnProperty("$protoName") || obj.hasOwnProperty("$typeName");
+}
+
 function sc_clInit(c) {
    if (c._clInit != null)
       c._clInit();

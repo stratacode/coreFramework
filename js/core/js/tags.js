@@ -23,11 +23,14 @@ function js_HTMLElement() {
 }
 
 
-js_Element_c = js_HTMLElement_c = sc_newClass("js_HTMLElement", js_HTMLElement, null, [sc_ISyncInit]);
+js_Element_c = js_HTMLElement_c = sc_newClass("js_HTMLElement", js_HTMLElement, null, [sc_ISyncInit, sc_IStoppable]);
 
 // This is part of the SemanticNode class on the server and so the component code gen uses it even for client code
 // involving component types which extend Element.  Just noop it here.
-js_Element_c.init = js_Element_c.start = js_Element_c.stop = function() {};
+js_Element_c.init = js_Element_c.start = function() {};
+js_Element_c.stop = function() {
+    this.visible = false;
+}
 js_Element_c.refreshStartTags = [];
 js_Element_c.refreshBodyTags = [];
 js_Element_c.refreshRepeatTags = [];
@@ -151,14 +154,17 @@ js_HTMLElement_c.setVisible = function(vis) {
    }
 }
 
-js_HTMLElement_c.getVisible = function() {
+js_HTMLElement_c.isVisible = function() {
    return this.visible;
 }
 
 js_HTMLElement_c.isVisibleInView = function() {
-   if (this.visible)
-      return true;
-   return this.outer !== undefined && this.outer.isVisibleInView();
+   if (!this.visible)
+      return false;
+   if (this.outer !== undefined && !this.outer.isVisibleInView())
+      return false;
+   // TODO: is this a top-level node?  If not, maybe it should return false here since we have to be attached to something
+   return true;
 }
 
 js_HTMLElement_c.setHTMLClass = function(cl) {
@@ -264,6 +270,7 @@ js_HTMLElement_c.destroy = function() {
    this.element = null;
    this.domChanged(origElem, null);
    this.removeAttributeListener();
+   this.visible = false; // Mark invisible without sending event just to cancel any pending refreshes
    if (this.repeat != null) {
       this.destroyRepeatTags();
    }
@@ -649,7 +656,7 @@ js_HTMLElement_c.repeatNeedsSync = function() {
 }
 
 js_HTMLElement_c.refreshRepeat = function() {
-   if (this.syncRepeatTags(true)) {
+   if (this.repeat && this.syncRepeatTags(true)) {
       this.refreshBody();
    }
 }
@@ -818,8 +825,13 @@ js_HTMLElement_c.appendElement = function(tag, updateDOM) {
 js_HTMLElement_c.insertElement = function(tag, ix, updateDOM) {
    if (updateDOM) {
        // Can't do an incremental refresh when there is no current element... to do this incrementally maybe we insert a dummy tag when we remove the last one?
-       if (ix >= this.repeatTags.length)
+       if (ix >= this.repeatTags.length) {
+          if (ix == this.repeatTags.length)
+             this.repeatTags.push(tag);
+          else
+             console.log("Warning - not adding element onto repeatTags");
           return true;
+       }
        var tmp = document.createElement('div');
        tmp.innerHTML = tag.output().toString();
        var repeatTag = this.repeatTags[ix];
@@ -998,8 +1010,8 @@ js_HTMLElement_c.refreshBody = function() {
       if (this.outer !== undefined && this.outer.refresh !== null) {
          this.bodyValid = true; // or should we mark this as true when the parent refreshes?
          if (js_Element_c.trace)
-            console.log("refreshBody of: " + this.id + " refreshing parent: " + this.outer.id);
-         this.outer.refresh();
+            console.log("refreshBody of: " + this.id + " refreshing parent body: " + this.outer.id);
+         this.outer.refreshBody();
          return;
       }
       else {
@@ -1008,7 +1020,7 @@ js_HTMLElement_c.refreshBody = function() {
    }
    this.bodyValid = true;
 
-   if (this.outer === undefined) {
+   if (this.outer === undefined && this.element == null) {
       this.makeRoot();
    }
 
@@ -1614,7 +1626,7 @@ js_Select_c.outputSelectBody = function(sb) {
          if (selected)
             sb.append(" selected");
          sb.append(">");
-         sb.append(dv);
+         sb.append(this.escBody(dv));
          sb.append("</option>");
       }
       else {
@@ -1624,6 +1636,7 @@ js_Select_c.outputSelectBody = function(sb) {
          subOption.startValid = false;
          subOption.setSelected(selected);
          subOption.setOptionData(dv);
+         // TODO: right now the tag itself must render 'selected' but should we have a way to inject that attribute if it's not already specified?
          subOption.outputTag(sb);
          subOption.bodyValid = true;
          subOption.startValid = true;

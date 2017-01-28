@@ -138,6 +138,17 @@ class SyncServlet extends HttpServlet {
          if (SyncManager.trace || PageDispatcher.trace)
             System.out.println("Sync complete: session: " + DynUtil.getTraceObjId(session.getId()) + " thread: " + PageDispatcher.getCurrentThreadString() + ": " + traceBuffer + ": " + PageDispatcher.getRuntimeString(startTime));
       }
+      catch (RuntimeException exc) {
+         if (sys == null) {
+            System.err.println("Sync request error: " + exc);
+            exc.printStackTrace();
+         }
+         else {
+            sys.error("Sync request error: " + exc.toString());
+            if (sys.options.verbose)
+               exc.printStackTrace();
+         }
+      }
       finally {
          if (ctx != null) {
             ctx.execLaterJobs();

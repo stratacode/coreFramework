@@ -404,6 +404,13 @@ sc_DynUtil_c.getStaticProperty = function(type, propName) {
    return null;
 }
 
+// Like getPropertyValue but works for static properties (where obj is the type, not the instance)
+sc_DynUtil_c.getProperty = function(obj, prop) {
+   if (sc_DynUtil_c.isType(obj))
+      return sc_DynUtil_c.getStaticProperty(obj, prop);
+   return sc_DynUtil_c.getPropertyValue(obj, prop);
+}
+
 sc_DynUtil_c.getPropertyValue = function(obj, prop) {
    var capPropName = sc_capitalizeProperty(prop);
    // TODO: perf - we should cache this info in the obj's type to avoid doing multiple lookups and string building each time.
@@ -621,7 +628,7 @@ sc_DynUtil_c.dispose = function(obj, disposeChildren) {
    sc_SyncManager_c.removeSyncInst(obj);
    sc_Bind_c.removeBindings(obj, false);
 
-   if (sc_instanceOf(obj, sc_IComponent)) {
+   if (sc_instanceOf(obj, sc_IStoppable)) {
        obj.stop();
    }
 
@@ -645,9 +652,12 @@ function sc_IObjChildren() {}
 
 sc_IObjChildren_c = sc_newClass("sc_IObjChildren", sc_IObjChildren, null, null);
 
+function sc_IStoppable() {}
+sc_IStoppable_c = sc_newClass("sc_IStoppable", sc_IStoppable, null, null);
+
 function sc_IComponent() {}
 
-sc_IComponent_c = sc_newClass("sc_IComponent", sc_IComponent, null, null);
+sc_IComponent_c = sc_newClass("sc_IComponent", sc_IComponent, sc_IStoppable, null);
 
 function sc_PTypeUtil() {}
 

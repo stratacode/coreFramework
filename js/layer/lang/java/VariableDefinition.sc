@@ -1,16 +1,17 @@
 import sc.layer.Layer;
+import sc.obj.GetSet;
 
 class VariableDefinition implements IVariableInitializer {
-   @sc.obj.GetSet
+   @GetSet
    String variableName;
    @Bindable
    String initializerExprStr;
    @Bindable
    String operatorStr;
-   @sc.obj.GetSet
+   @GetSet
    Layer layer;
-   @sc.obj.GetSet
+   @GetSet
    String comment;
-   @sc.obj.GetSet
+   @GetSet
    String variableTypeName;
 }

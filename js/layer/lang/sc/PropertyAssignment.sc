@@ -2,6 +2,7 @@ import sc.layer.Layer;
 import sc.lang.java.Statement;
 import sc.lang.java.IVariableInitializer;
 import sc.dyn.DynUtil;
+import sc.obj.GetSet;
 
 @sc.js.JSSettings(prefixAlias="sc_",jsModuleFile="js/sclayer.js")
 class PropertyAssignment extends Statement implements IVariableInitializer, sc.obj.IObjectId {
@@ -10,16 +11,16 @@ class PropertyAssignment extends Statement implements IVariableInitializer, sc.o
    String operatorStr;
    @Bindable
    String initializerExprStr;
-   @sc.obj.GetSet
+   @GetSet
    String variableTypeName;
-   @sc.obj.GetSet
+   @GetSet
    Layer layer;
 
    String getVariableName() {
       return propertyName;
    }
 
-   @sc.obj.GetSet
+   @GetSet
    String comment;
    //String modifiers;
 

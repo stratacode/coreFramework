@@ -329,10 +329,18 @@ function jv_Exception() {
    this.stack = new Error().stack;
 }
 
-jv_Exception_c = sc_newClass("jv_Exception", jv_Exception);
+jv_Exception_c = sc_newClass("jv_Exception", jv_Exception, jv_Object, null);
 
 jv_Exception_c.printStackTrace = function() {
    console.log(this.stack);
+}
+
+jv_Exception_c.toString = function() {
+   if (this.message) {
+      return this.message;
+   }
+   else
+      return this.getClass().getName();
 }
 
 var jv_enableAsserts = true;
