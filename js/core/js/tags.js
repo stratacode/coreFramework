@@ -1004,8 +1004,10 @@ js_HTMLElement_c.refreshBody = function() {
    this.updateDOM();
    if (this.element === null) {
       // We were made invisible or possibly our parent is invisible
-      if (!this.isVisibleInView())
+      if (!this.isVisibleInView()) {
+         this.bodyValid = true;
          return;
+      }
       // Go to the top level tag and start the output process up there.  It needs to attach us to the tree
       if (this.outer !== undefined && this.outer.refresh !== null) {
          this.bodyValid = true; // or should we mark this as true when the parent refreshes?
@@ -1209,7 +1211,8 @@ js_HTMLElement_c.schedRefresh = function(tagList, validName) {
    if (this[validName]) {
       if (!js_Element_c.globalRefreshScheduled) {
          this[validName] = false; 
-         if (!js_Element_c.refreshScheduled && this.isVisibleInView()) {
+         // Need to refresh the element even if it's not visible at least to set the valid flag back to true so we refresh it again to make it visible
+         if (!js_Element_c.refreshScheduled) {
             js_Element_c.refreshScheduled = true;
             sc_addRunLaterMethod(this, js_Element_c.refreshTags, 5);
          }

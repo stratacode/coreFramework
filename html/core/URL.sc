@@ -20,11 +20,13 @@ import java.lang.annotation.Target;
 // Keep these at runtime so we can do the getURLPaths lookup at runtime using the compiled class, without having to retrieve the source.
 @Retention(RetentionPolicy.RUNTIME)
 public @interface URL {
-   /** Either a simple string like "/index.html" that defines the URL, or it can be a pattern string to match URLs with data in them.
-       The pattern string lets you match any pattern defined in the SC language, using the name of the parselet behind that language element.
-       For example the pattern:   @URL(pattern="/bookTitle/{integerLiteral}") would match: /bookTitle/12345.   You can also set properties in your object by specifying
-       variable names like: @URL(pattern="/bookTitle/{bookId=integerLiteral}")   When your page is called, it's bookId property will always be set to a valid integer.
-       */
+   /**
+    * Either a simple string like "/index.html" that defines the URL, or it can be a pattern string to match URLs with data in them.
+    * The pattern string is defined using the sc.lang.PatternLanguage (as used from the sc.lang.pattern.Pattern class). This lets you produce a string
+    * with embedded values parsed from other languages.  In this case, PageDispatcher lets you use any public parselet in the SCLanguage as variable types.
+    * For example the pattern:   @URL(pattern="/bookTitle/{integerLiteral}") would match: /bookTitle/12345.   You can also set properties in your object by specifying
+    * variable names like: @URL(pattern="/bookTitle/{bookId=integerLiteral}")   When your page is called, it's bookId property will always be set to a valid integer.
+    */
    String pattern() default "";
    /** When page is true, the URL matches a top-level page object which handle the request.  When it is false, the first component */
    boolean page() default true;

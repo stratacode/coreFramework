@@ -5,6 +5,8 @@ import java.util.LinkedHashSet;
 import java.util.HashMap;
 import java.util.Date;
 import java.util.Calendar;
+import java.util.Map;
+import java.util.Iterator;
 
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.Lock;
@@ -14,6 +16,7 @@ import sc.util.StringUtil;
 import sc.util.TextUtil;
 import sc.util.PerfMon;
 import sc.dyn.DynUtil;
+import sc.dyn.ITypeChangeListener;
 
 import sc.lang.SCLanguage;
 import sc.lang.js.JSRuntimeProcessor;
@@ -36,29 +39,33 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 
 /** 
-  * The PageDispatcher manages a registry of URL patterns to request handling objects.  For each incoming URL, the
-  * set of matching objects generates the content for the response.
-  * <p>
-  * This servlet uses the sync framework to support flexible scoping and state management.  Page objects can be global, session, request or window scoped, or user 
-  * defined scopes support the ability to change the lifecycle.  
-  * <p>
-  * For the sync framework, the resulting HTML includes the server version of the response page, and following that any 'initial sync state' from synchronized objects
-  * referenced on the page.
-  * <p>
-  * The PageDispatcher runs as either a Servlet or a ServletFilter.  When it is a servlet,
-  * it must handle the requests it's given or it's an error.  When it is a filter, it handles the request when it receives a matching URL
-  * and forwards it otherwise.  
-  * <p>
-  * For synchronization, all page objects required for a URL are locked before the page request starts.  
-  * TODO: we should have a way to support read-only locks for page objects shared between users that are only used in a read-only way
-  * <p>
-  * For debugging, use the -vh (for a summary) or -vha (for all) HTML traffic.  Use -vs or -vsa for monitoring the sync code.
-  * <p>
-  * TODO: when more than one HTML page object is found, we have some experiemental code in there to merge the head and body sections
-  * individually.  The goal here is for adding say a tracker link to the head section by chaining in a page object.
-  */
+ * The PageDispatcher manages a registry of URL patterns to request handling objects.  For each incoming URL, the
+ * set of matching objects generates the content for the response.
+ * <p>
+ * This servlet uses the sync framework to support flexible scoping and state management.  Page objects can be global, session, request or window scoped, or user 
+ * defined scopes support the ability to change the lifecycle.  
+ * <p>
+ * For the sync framework, the resulting HTML includes the server version of the response page, and following that any 'initial sync state' from synchronized objects
+ * referenced on the page.
+ * <p>
+ * The PageDispatcher runs as either a Servlet or a ServletFilter.  When it is a servlet,
+ * it must handle the requests it's given or it's an error.  When it is a filter, it handles the request when it receives a matching URL
+ * and forwards it otherwise.  
+ * <p>
+ * For synchronization, all page objects required for a URL are locked before the page request starts, so pages are run one at a time, only one
+ * page per session if there are session-scoped page objects, etc.
+ * <p>
+ * For debugging, use the -vh (for a summary) or -vha (for all) HTML traffic.  Use -vs or -vsa for tracing synchronization.
+ * <p>
+ * TODO: we should have a way to support read-only locks for page objects shared between users that are only used in a read-only way.  A use case for this is a header template
+ * with shared content that's changed infrequently that's used by lots of pages that are used concurrently.
+ * <p>
+ * TODO: when more than one HTML page object is found for a given request, the PageDispatcher will first call getHead().outputStart()/outputBody() on each
+ * page object and concatenate the contents in the order in which the page objects are registered.  It will then do the same for the body.  So at runtime it
+ * attempts to merge the page objects.  Ideally we'd recursively merge all matching tags with ids but I haven't found a use case for that yet.
+ */
 @sc.servlet.PathServletFilter(path="/*")
-class PageDispatcher extends InitServlet implements Filter {
+class PageDispatcher extends InitServlet implements Filter, ITypeChangeListener {
    static LinkedHashMap<String,PageEntry> pages = new LinkedHashMap<String,PageEntry>();
 
    static Language language = SCLanguage.getSCLanguage();
@@ -73,7 +80,7 @@ class PageDispatcher extends InitServlet implements Filter {
       String pattern;
       Parselet patternParselet;
       Object pageType;
-      boolean urlOnly;
+      boolean page;
       int priority;
       String lockScope; // The scope name to use for locking.  if null, use the type's scope as the scope for the lock.
       String mimeType;
@@ -93,7 +100,7 @@ class PageDispatcher extends InitServlet implements Filter {
     * We are not guaranteed these get called in any order so need to use the priority to decide who gets to listen on that
     * pattern.
     */
-   public static void addPage(String keyName, String pattern, Object pageType, boolean urlOnly, int priority, String lockScope) {
+   public static void addPage(String keyName, String pattern, Object pageType, boolean page, int priority, String lockScope) {
       PageEntry ent = new PageEntry();
       ent.pattern = pattern;
       Object patternRes = Pattern.initPattern(language, pageType, pattern);
@@ -102,13 +109,13 @@ class PageDispatcher extends InitServlet implements Filter {
       ent.patternParselet = (Parselet) patternRes;
       ent.pageType = pageType;
       ent.priority = priority;
-      ent.urlOnly = urlOnly;
+      ent.page = page;
       if (pattern.endsWith(".css")) {
          ent.doSync = false;
          ent.mimeType = "text/css";
       }
       else
-         ent.doSync = !urlOnly;
+         ent.doSync = page;
       // Used to use the keyName here as the key but really can only have one per pattern anyway and need a precednce so sc.foo.index can override sc.bar.index.
       // TODO: now that we have multiple PageEntry's supporting each URL, should we have an option to support multiple handlers for the same pattern?  patternFilter=true?
       PageEntry oldEnt = pages.get(pattern);
@@ -121,7 +128,7 @@ class PageDispatcher extends InitServlet implements Filter {
       if (pattern.equals(indexPattern)) {
          if (trace)
             System.out.println("PageDispatcher: adding index page");
-         addPage("_index_", "/", pageType, urlOnly, priority, lockScope);
+         addPage("_index_", "/", pageType, page, priority, lockScope);
       }
    }
 
@@ -183,7 +190,7 @@ class PageDispatcher extends InitServlet implements Filter {
       // first we'll loop through all page objects and figure out which scopes and locks are needed for this request
       // that way we can acquire locks "all or none" to avoid deadlocks.
       for (PageEntry pageEnt:pageEnts) {
-         if (!pageEnt.urlOnly) {
+         if (pageEnt.page) {
             Object pageType = pageEnt.pageType;
             boolean isObject = ModelUtil.isObjectType(pageType);
 
@@ -288,7 +295,7 @@ class PageDispatcher extends InitServlet implements Filter {
 
       int i = 0;
       for (PageEntry pageEnt:pageEnts) {
-         if (!pageEnt.urlOnly) {
+         if (pageEnt.page) {
             scopeName = scopeNames.get(i);
             scopeId = scopeIds.get(i);
             scopeCtx = scopeCtxs.get(i);
@@ -455,7 +462,7 @@ class PageDispatcher extends InitServlet implements Filter {
       //LinkedHashSet<String> jsFiles = new LinkedHashSet<String>();
       for (PageEntry pageEnt:pageEnts) {
          Object inst = insts.get(i);
-         if (inst instanceof Element && !pageEnt.urlOnly) {
+         if (inst instanceof Element && pageEnt.page) {
             needsDyn = true;
 
             if (pageEnt.doSync)
@@ -576,7 +583,7 @@ class PageDispatcher extends InitServlet implements Filter {
                            throws IOException, ServletException {
       Context ctx = null;  
       try {
-         boolean urlOnly = true;
+         boolean isPage = false;
          String uri = request.getRequestURI();
 
          List<PageEntry> pageEnts = getPageEntries(uri);;
@@ -588,9 +595,9 @@ class PageDispatcher extends InitServlet implements Filter {
             if (trace)
                System.out.println("Page init: " + uri + " matched: " + pageEnts + " thread: " + getCurrentThreadString());
 
-            urlOnly = pageEnts.get(0).urlOnly && urlOnly;
+            isPage = pageEnts.get(0).page || isPage;
 
-            if (!urlOnly && ctx == null)
+            if (isPage && ctx == null)
                ctx = Context.initContext(request, response);
 
             LayeredSystem sys = LayeredSystem.getCurrent();
@@ -642,7 +649,7 @@ class PageDispatcher extends InitServlet implements Filter {
                releaseLocks(locks, session);
             }
          }
-         return pageEnts != null && pageEnts.size() > 0 && !urlOnly;
+         return pageEnts != null && pageEnts.size() > 0 && isPage;
       }
       finally {
          if (ctx != null) {
@@ -755,6 +762,9 @@ class PageDispatcher extends InitServlet implements Filter {
 
          if (Element.trace)
             trace = true;
+
+         // This enables us to keep track of changes to types that might be registered with this servlet
+         sys.registerTypeChangeListener(this);
       }
 
       this.filterConfig = filterConfig;
@@ -806,6 +816,38 @@ class PageDispatcher extends InitServlet implements Filter {
          SyncManager.setInitialSync("jsHttp", url, WindowScopeDefinition.scopeId, false);
       }
       return pageOutput;
+   }
+
+   public void updateType(Object oldType, Object newType) {
+      typeRemoved(oldType);
+      typeCreated(newType);
+   }
+
+   public void typeCreated(Object newType) {
+      Object urlAnnot = DynUtil.getAnnotation(newType, "sc.html.URL");
+      if (urlAnnot != null) {
+          String newTypeName = DynUtil.getTypeName(newType, false);
+          Boolean isPageObj = (Boolean) DynUtil.getAnnotationValue(newType, "sc.html.URL", "page");
+          boolean isPage = isPageObj == null || isPageObj;
+          String pattern = (String) DynUtil.getAnnotationValue(newType, "sc.html.URL", "pattern");
+          String lockScope = (String) DynUtil.getAnnotationValue(newType, "sc.html.URL", "lockScope");
+          String resultSuffix = (String) DynUtil.getInheritedAnnotationValue(newType, "sc.obj.ResultSuffix", "value");
+          if (pattern == null) {
+             pattern = "/" + sc.type.CTypeUtil.getClassName(newTypeName) + (resultSuffix == null ? "" : "." + resultSuffix);
+          }
+          System.out.println("*** Adding page type: " + newType);
+          addPage(newTypeName, pattern, newType, isPage, DynUtil.getLayerPosition(newType), lockScope);
+      }
+   }
+
+   public void typeRemoved(Object oldType) {
+      for (Iterator<Map.Entry<String,PageEntry>> it = pages.entrySet().iterator(); it.hasNext(); ) {
+         Map.Entry<String,PageEntry> ent = it.next();
+         if (ent.getValue().pageType == oldType) {
+            System.out.println("*** Removing page type: " + oldType);
+            it.remove();
+         }
+      }
    }
 
 }
