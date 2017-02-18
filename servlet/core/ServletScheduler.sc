@@ -11,8 +11,10 @@ class ServletScheduler implements sc.dyn.IScheduler {
       sj.toInvoke = runnable;
       sj.priority = priority;
       Context ctx = Context.getCurrentContext();
-      if (ctx == null)
-         throw new IllegalArgumentException("Unable to invoke later unless in context of a request");
+      if (ctx == null) {
+         System.out.println("ServletScheduler - skipping job sent when not in context of a request");
+         return;
+      }
 
       if (ctx.toInvokeLater == null)
          ctx.toInvokeLater = new ArrayList<ScheduledJob>();
