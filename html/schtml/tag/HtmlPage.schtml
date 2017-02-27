@@ -1,7 +1,7 @@
 <%@ 
 // Exposes these components as a top-level page via the default URL, e.g. TypeName.html   Override the URL pattern, apply URL properties via the URL setting
 @URL(page=true, subTypesOnly=true) 
-@sc.obj.Scope(name="session")
+@sc.obj.Scope(name="appSession")
 @MainInit(subTypesOnly=true)
 @sc.js.JSSettings(jsModulePattern="js/<%= typeName %>.js", dependentJSFiles="js/tags.js") %>
 <!DOCTYPE html>

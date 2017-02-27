@@ -59,5 +59,23 @@ sys.std {
       scshLang.needsJavascript = false;
 
       registerLanguage(scshLang, "scsh");
+
+      // Registers a standard scope which is "per-application", where the application is defined by the ScopeEnvironment's appId value.
+      // For a web application, the appId defaults to the base part of the URL.  For a desktop application 'null' is the default app which
+      // will work just like global but it's a hook to allow multiple independent resident apps to use independent instances of the same
+      // components or maybe support a multi-tenant application.
+      sc.lang.sc.BasicScopeProcessor appGlobalScope = new sc.lang.sc.BasicScopeProcessor("appGlobal");
+      appGlobalScope.validOnClass = true;
+      appGlobalScope.validOnField = false;
+      appGlobalScope.validOnObject = true;
+      appGlobalScope.includeScopeAnnotation = true;
+      appGlobalScope.needsField = false;
+      appGlobalScope.customResolver = 
+          "      sc.obj.ScopeContext _ctx = sc.obj.AppGlobalScopeDefinition.getAppGlobalScope()\n" +
+          "      if (_ctx == null) return null;\n" +
+          "      <%= variableTypeName %> _<%= lowerClassName %> = (<%= variableTypeName %>) _ctx.getValue(\"<%= typeClassName %>\");\n";
+      appGlobalScope.customSetter = 
+          "      _ctx.setValue(\"<%= typeClassName %>\", _<%= lowerClassName %>);\n";
+      registerScopeProcessor("appGlobal", appGlobalScope);
    }
 }

@@ -2,6 +2,7 @@ import java.io.PrintWriter;
 import sc.sync.SyncManager;
 
 import sc.dyn.DynUtil;
+import sc.dyn.ScheduledJob;
 import sc.obj.ScopeDefinition;
 import sc.obj.ScopeContext;
 
@@ -19,7 +20,7 @@ class Context {
    boolean requestComplete;
    boolean windowRequest = true; // When processing a session invalidate event, we are not from a window
 
-   ArrayList<ServletScheduler.ScheduledJob> toInvokeLater = null;
+   ArrayList<ScheduledJob> toInvokeLater = null;
 
    Context(HttpServletRequest req, HttpServletResponse res) {
       request = req;
@@ -69,7 +70,7 @@ class Context {
             }
          }
       }
-      windowCtx = getWindowScopeContext();
+      windowCtx = getWindowScopeContext(true);
       windowCtx.windowId = windowId;
       updateWindowContext(windowCtx);
       return windowCtx;
@@ -105,7 +106,7 @@ class Context {
          }
       }
       else {
-         ctx.updateWindowContext(ctx.getWindowScopeContext());
+         ctx.updateWindowContext(ctx.getWindowScopeContext(true));
       }
       // TODO: populate this with data from the request/response - url and compute a size from the device meta-data
       // You might want to render different content based on the device size for example so that would be nice to have here.
@@ -126,8 +127,8 @@ class Context {
             // While running any callbacks, we are in the recording state, even if invoking these as part of the
             // initialization phase.  This is really like Initializing but where there's a nested binding count.
             SyncManager.setSyncState(SyncManager.SyncState.RecordingChanges);
-            ArrayList<ServletScheduler.ScheduledJob> toRun = (ArrayList<ServletScheduler.ScheduledJob>)toInvokeLater.clone();
-            for (ServletScheduler.ScheduledJob sj:toRun) {
+            ArrayList<ScheduledJob> toRun = (ArrayList<ScheduledJob>)toInvokeLater.clone();
+            for (ScheduledJob sj:toRun) {
                sj.toInvoke.run();
             }
          }
@@ -145,18 +146,18 @@ class Context {
    }
 
    public int getWindowId() {
-      return getWindowScopeContext().windowId;
+      return getWindowScopeContext(true).windowId;
    }
 
    public static boolean getHasWindowScope() {
-      return getWindowScope() != null;
+      return getWindowScope(false) != null;
    }
 
-   public static WindowScopeContext getWindowScope() {
+   public static WindowScopeContext getWindowScope(boolean create) {
       Context current = getCurrentContext();
       if (current == null)
          return null;
-      return current.getWindowScopeContext();
+      return current.getWindowScopeContext(create);
    }
 
    public void destroyWindowScopes() {
@@ -203,7 +204,7 @@ class Context {
       }
    }
 
-   public WindowScopeContext getWindowScopeContext() {
+   public WindowScopeContext getWindowScopeContext(boolean create) {
       if (windowCtx == null && windowRequest) {
          HttpSession session = getSession();
          if (session == null)
@@ -211,6 +212,8 @@ class Context {
          ArrayList<WindowScopeContext> ctxList = (ArrayList<WindowScopeContext>) session.getAttribute("_windowContexts");
          int windowId;
          if (ctxList == null) {
+            if (!create)
+               return null;
             // TODO: is it safe to sync on the session?  This may conflict with locks in the servlet implementation itself
             synchronized (session) {
                ctxList = (ArrayList<WindowScopeContext>) session.getAttribute("_windowContexts");
@@ -244,5 +247,11 @@ class Context {
       catch (IOException exc) {
          throw new IllegalArgumentException("failed to write to client: " + exc.toString());
       }
+   }
+
+   void invokeLater(ScheduledJob sj) {
+      if (toInvokeLater == null)
+         toInvokeLater = new ArrayList<ScheduledJob>();
+      ScheduledJob.addToJobList(toInvokeLater, sj);
    }
 }

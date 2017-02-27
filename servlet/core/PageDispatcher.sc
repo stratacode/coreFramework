@@ -28,6 +28,7 @@ import sc.layer.LayeredSystem;
 
 import sc.obj.ScopeContext;
 import sc.obj.ScopeDefinition;
+import sc.obj.ScopeEnvironment;
 
 import sc.sync.SyncManager;
 
@@ -65,7 +66,7 @@ import javax.servlet.ServletResponse;
  * attempts to merge the page objects.  Ideally we'd recursively merge all matching tags with ids but I haven't found a use case for that yet.
  */
 @sc.servlet.PathServletFilter(path="/*")
-class PageDispatcher extends InitServlet implements Filter, ITypeChangeListener {
+class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener {
    static LinkedHashMap<String,PageEntry> pages = new LinkedHashMap<String,PageEntry>();
 
    static Language language = SCLanguage.getSCLanguage();
@@ -187,6 +188,8 @@ class PageDispatcher extends InitServlet implements Filter, ITypeChangeListener 
       int scopeId = -1;
       ScopeContext scopeCtx = null;
 
+      ScopeEnvironment.setAppId(uri);
+
       // first we'll loop through all page objects and figure out which scopes and locks are needed for this request
       // that way we can acquire locks "all or none" to avoid deadlocks.
       for (PageEntry pageEnt:pageEnts) {
@@ -194,42 +197,16 @@ class PageDispatcher extends InitServlet implements Filter, ITypeChangeListener 
             Object pageType = pageEnt.pageType;
             boolean isObject = ModelUtil.isObjectType(pageType);
 
-            scopeName = null;
-            scopeCtx = null;
-
-            // If this is a class we handle the scopes here.  Otherwise, it is handled in the dyn child manager or generated
-            // getX method for the class.
-            if (!isObject) {
-               if (isSessionScopeType(pageType)) {
-                  scopeName = "session";
-                  scopeId = SessionScopeDefinition.scopeId;
-               }
-               else if (isWindowScopeType(pageType)) {
-                  scopeName = "window";
-                  scopeId = WindowScopeDefinition.scopeId;
-                  scopeCtx = ctx.getWindowScopeContext();
-               }
-            }
-            if (scopeName == null) {
-               scopeName = ModelUtil.getInheritedScopeName(null, pageType);
-               if (scopeName != null && scopeName.length() > 0) {
-                  ScopeDefinition scopeDef = ScopeDefinition.getScopeByName(scopeName);
-                  if (scopeDef == null) {
-                     System.err.println("*** Missing ScopeDefinition for scope: " + scopeName);
-                  }
-                  else {
-                     scopeId = scopeDef.scopeId;
-                     scopeCtx = scopeDef.getScopeContext();
-                  }
-               }
-            }
-            if (scopeCtx == null) {
+            scopeName = ModelUtil.getInheritedScopeName(null, pageType);
+            if (scopeName != null && scopeName.length() > 0) {
                ScopeDefinition scopeDef = ScopeDefinition.getScopeByName(scopeName);
                if (scopeDef == null) {
                   System.err.println("*** Missing ScopeDefinition for scope: " + scopeName);
                }
-               else
-                  scopeCtx = scopeDef.getScopeContext();
+               else {
+                  scopeId = scopeDef.scopeId;
+                  scopeCtx = scopeDef.getScopeContext(true);
+               }
             }
 
             if (locks != null && !scopeNames.contains(scopeName)) {
@@ -254,7 +231,7 @@ class PageDispatcher extends InitServlet implements Filter, ITypeChangeListener 
                // Skip locking only if explicitly specified - otherwise we lock based on
                if (!lockScope.equals("none")) {
                   ScopeDefinition lockScopeDef = ScopeDefinition.getScopeByName(lockScope);
-                  ScopeContext lockScopeCtx = lockScopeDef.getScopeContext();
+                  ScopeContext lockScopeCtx = lockScopeDef.getScopeContext(true);
 
                   ReentrantReadWriteLock rwLock = (ReentrantReadWriteLock) lockScopeCtx.getValue("_lock");
                   if (rwLock == null) {
@@ -308,7 +285,8 @@ class PageDispatcher extends InitServlet implements Filter, ITypeChangeListener 
                SyncManager.setInitialSync("jsHttp", uri, WindowScopeDefinition.scopeId, true);
             }
             else {
-               SyncManager.setSyncAppId(uri);
+               //ScopeEnvironment.setAppId(uri);
+
                // When we get the page for a sync reset operation, we do not record the changes and it's not the "initial sync" layer
                if (resetSync)
                   SyncManager.setSyncState(SyncManager.SyncState.ApplyingChanges);
@@ -550,6 +528,9 @@ class PageDispatcher extends InitServlet implements Filter, ITypeChangeListener 
          if (SyncManager.trace) {
             sb.append("sc_SyncManager_c.trace = true;\n");
          }
+         if (SyncManager.verbose) {
+            sb.append("sc_SyncManager_c.verbose = true;\n");
+         }
          if (SyncManager.traceAll) {
             sb.append("sc_SyncManager_c.traceAll = true;\n");
          }
@@ -566,13 +547,15 @@ class PageDispatcher extends InitServlet implements Filter, ITypeChangeListener 
       }
       String pageOutput = sb.toString();
 
-      if (SyncManager.traceAll) {
-         traceBuffer.append(" url=" + uri + " size: " + pageOutput.length() + " -----:\n");
-         traceBuffer.append(SyncManager.verbose ? pageOutput : StringUtil.ellipsis(pageOutput, SyncManager.logSize, false));
-         traceBuffer.append("----- \n");
-      }
-      else if (trace) {
-         traceBuffer.append(" url=" + uri + " pageSize: " + pageBodySize + " initSyncSize: " + initSyncSize);
+      if (traceBuffer != null) {
+         if (SyncManager.traceAll) {
+            traceBuffer.append(" url=" + uri + " size: " + pageOutput.length() + " -----:\n");
+            traceBuffer.append(SyncManager.verbose ? pageOutput : StringUtil.ellipsis(pageOutput, SyncManager.logSize, false));
+            traceBuffer.append("----- \n");
+         }
+         else if (trace) {
+            traceBuffer.append(" url=" + uri + " pageSize: " + pageBodySize + " initSyncSize: " + initSyncSize);
+         }
       }
 
       return sb;
@@ -596,6 +579,10 @@ class PageDispatcher extends InitServlet implements Filter, ITypeChangeListener 
                System.out.println("Page init: " + uri + " matched: " + pageEnts + " thread: " + getCurrentThreadString());
 
             isPage = pageEnts.get(0).page || isPage;
+
+            // Run any jobs that came in not in a request (e.g. through the command line or scheduled jobs)
+            // Do this before we set up the session and the context
+            ServletScheduler.execBeforeRequestJobs();
 
             if (isPage && ctx == null)
                ctx = Context.initContext(request, response);
@@ -657,28 +644,6 @@ class PageDispatcher extends InitServlet implements Filter, ITypeChangeListener 
             Context.clearContext();
          }
       }
-   }
-
-   public boolean isWindowScopeType(Object typeObj) {
-      String scopeName = ModelUtil.getInheritedScopeName(null, typeObj);
-      if (scopeName != null && scopeName.equals("window"))
-         return true;
-
-      if (ModelUtil.getInheritedAnnotation(null, typeObj, "sc.servlet.WindowScope") != null)
-         return true;
-
-      return false;
-   }
-
-   public boolean isSessionScopeType(Object typeObj) {
-      String scopeName = ModelUtil.getInheritedScopeName(null, typeObj);
-      if (scopeName != null && scopeName.equals("session"))
-         return true;
-
-      if (ModelUtil.getInheritedAnnotation(null, typeObj, "sc.servlet.SessionScope") != null)
-         return true;
-
-      return false;
    }
 
    public void doFilter (ServletRequest request, ServletResponse response, FilterChain chain) 
@@ -746,11 +711,9 @@ class PageDispatcher extends InitServlet implements Filter, ITypeChangeListener 
    public void init(FilterConfig filterConfig) {
       // Registers a scheduler to handle the invokeLater
       ServletScheduler.init();
-      // Create the global scope first, before the session scope and other application defined scopes are defined.
+      // Create the global scopes first, before the session scope and other application defined scopes are defined.
       sc.obj.GlobalScopeDefinition.getGlobalScopeDefinition();
-
-      // This method gets generated via the InitTypesMixin template.  It will init all initOnStartup and createAtStartup objects for the servlet layer.
-      initTypes();
+      sc.obj.AppGlobalScopeDefinition.getAppGlobalScopeDefinition();
 
       // If any clients want to synchronize the layered system, this needs to be initialized first.  This has to be run after we've initialized the
       // destinations, hence after initTypes.

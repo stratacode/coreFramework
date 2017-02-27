@@ -15,6 +15,8 @@ class SessionScopeContext extends ScopeContext implements HttpSessionBindingList
    }
 
    public void setValue(String key, Object value) {
+      if (ScopeDefinition.trace)
+         System.out.println("sessionSession - set " + key + " = " + value + " for: " + toString());
       session.setAttribute(key, value);
    }
 
@@ -36,5 +38,9 @@ class SessionScopeContext extends ScopeContext implements HttpSessionBindingList
 
    public boolean isCurrent() {
       return Context.getCurrentSession() == session;
+   }
+
+   public String toString() {
+      return "session scope: " + getId();
    }
 }

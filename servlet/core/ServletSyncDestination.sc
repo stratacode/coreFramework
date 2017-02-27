@@ -86,16 +86,15 @@ object ServletSyncDestination extends SyncDestination {
          return "";
       else {
          boolean trace = SyncManager.trace;
-         boolean verbose = SyncManager.verbose;
 
-         long startTime = trace || verbose ? System.currentTimeMillis() : 0;
+         long startTime = trace ? System.currentTimeMillis() : 0;
 
          CharSequence seq = stream.convertToJS(name, "window");
 
-         if (trace || verbose)
+         if (trace)
             System.out.println("Sync reply: size: " + layerDef.length() + " js size: " + seq.length() + " translated in: " + StringUtil.formatFloat((System.currentTimeMillis() - startTime)/1000.0) + " secs\n" +
                               (SyncManager.traceAll ? layerDef : StringUtil.ellipsis(layerDef, SyncManager.logSize, false)));
-         if (verbose)
+         if (SyncManager.traceAll)
             System.out.print("\n\n  --- translated to:\n" + seq.toString() + "\n\n");
 
 

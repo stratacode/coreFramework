@@ -412,3 +412,14 @@ jv_Class_c.getName = function() {
 jv_Class_c.toString = function() {
    return this.$protoName;
 }
+
+jv_Collections_c = {};
+
+jv_Collections_c.sort = function(list) {
+   var arr = list.toArray();
+   arr.sort(function(a,b) { return a.compareTo(b); } );
+   var sz = arr.length;
+   for (var i = 0; i < sz; i++) {
+      list.set(i, arr[i]);
+   }
+}

@@ -1,34 +1,25 @@
 import sc.dyn.DynUtil;
+import sc.dyn.ScheduledJob;
 
 class ServletScheduler implements sc.dyn.IScheduler {
-   static class ScheduledJob {
-      Runnable toInvoke;
-      int priority;
-   }
+   static Object invokeNextRequestLock = new Object();
+   static ArrayList<ScheduledJob> toInvokeNextRequest = new ArrayList<ScheduledJob>();
 
    public void invokeLater(Runnable runnable, int priority) {
       ScheduledJob sj = new ScheduledJob();
       sj.toInvoke = runnable;
       sj.priority = priority;
       Context ctx = Context.getCurrentContext();
+
+      // No current request - schedule this job to run before the next one
       if (ctx == null) {
-         System.out.println("ServletScheduler - skipping job sent when not in context of a request");
+         synchronized(invokeNextRequestLock) {
+            toInvokeNextRequest.add(sj);
+         }
          return;
       }
 
-      if (ctx.toInvokeLater == null)
-         ctx.toInvokeLater = new ArrayList<ScheduledJob>();
-      int i;
-      int len = ctx.toInvokeLater.size();
-      for (i = 0; i < len; i++) {
-         ScheduledJob oldSJ = ctx.toInvokeLater.get(i);
-         if (oldSJ.priority < priority)
-            break;
-      }
-      if (i == len)
-         ctx.toInvokeLater.add(sj);
-      else
-         ctx.toInvokeLater.add(i, sj);
+      ctx.invokeLater(sj);
    }
 
    void execLaterJobs() {
@@ -39,5 +30,26 @@ class ServletScheduler implements sc.dyn.IScheduler {
    static void init() {
       if (DynUtil.frameworkScheduler == null)
          DynUtil.frameworkScheduler = new ServletScheduler();
+   }
+
+   static void execBeforeRequestJobs() {
+      Context ctx = Context.getCurrentContext();
+      if (ctx != null) {
+         ArrayList<ScheduledJob> toExecList = null;
+         synchronized(invokeNextRequestLock) {
+            if (toInvokeNextRequest.size() > 0)
+               toExecList = (ArrayList<ScheduledJob>) toInvokeNextRequest.clone();
+            toInvokeNextRequest.clear();
+         }
+         if (toExecList != null) {
+            // Adds all pending jobs to the invoke later list
+            for (ScheduledJob sj:toExecList) {
+               ctx.invokeLater(sj);
+            }
+
+            // Runs the entries in the list
+            ctx.execLaterJobs();
+         }
+      }
    }
 }

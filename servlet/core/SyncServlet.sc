@@ -22,6 +22,7 @@ import javax.servlet.FilterChain;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 
+import sc.obj.ScopeEnvironment;
 import sc.sync.SyncManager;
 
 /** 
@@ -86,8 +87,9 @@ class SyncServlet extends HttpServlet {
 
       Context ctx = null;
       try {
-         if (url != null)
-            SyncManager.setSyncAppId(url);
+         if (url != null) {
+            ScopeEnvironment.setAppId(url);
+         }
 
          ctx = Context.initContext(request, response);
 
@@ -104,7 +106,8 @@ class SyncServlet extends HttpServlet {
          if (url != null) {
 
             // Setting initial = isReset here and resetSync = false. - when we are resetting it's the initial sync though we toss this page output.  It just sets up the page to be like the client's state when it's first page was shipped out.
-            pageOutput = pageDispatcher.getPageOutput(ctx, url, isReset, false, locks, sys, traceBuffer);
+            // TODO: setting traceBuffer = null here since we never see this output but are there any cases where it might help to debug things?
+            pageOutput = pageDispatcher.getPageOutput(ctx, url, isReset, false, locks, sys, null);
             if (pageOutput == null)
                return true;
          }
@@ -153,7 +156,7 @@ class SyncServlet extends HttpServlet {
          if (ctx != null) {
             ctx.execLaterJobs();
             Context.clearContext();
-            SyncManager.setSyncAppId(null);
+            ScopeEnvironment.setAppId(null);
          }
          PageDispatcher.releaseLocks(locks, session);
       }
@@ -178,7 +181,7 @@ class SyncServlet extends HttpServlet {
 
       if (SyncManager.trace || PageDispatcher.trace) {
          // TODO: add session id, timestamp.
-         System.out.println("Client: " + (isReset ? "reset" : "sync") + " session:" + DynUtil.getTraceObjId(session.getId()) + " thread: " + PageDispatcher.getCurrentThreadString() + ":\n" + bufStr + "");
+         System.out.println("Received sync from client: " + (isReset ? "reset" : "sync") + " session:" + DynUtil.getTraceObjId(session.getId()) + " thread: " + PageDispatcher.getCurrentThreadString() + ":\n" + bufStr + "");
       }
 
        // Apply changes from the client.

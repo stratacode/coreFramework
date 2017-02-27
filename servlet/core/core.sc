@@ -48,10 +48,26 @@ public servlet.core extends webApp, meta, html.core {
       windowScope.includeScopeAnnotation = true;
       windowScope.needsField = false;
       windowScope.customResolver = 
-          "      <%= variableTypeName %> _<%= lowerClassName %> = (<%= variableTypeName %>) sc.servlet.Context.getWindowScope().getValue(\"<%= typeClassName %>\");\n";
+          "      <%= variableTypeName %> _<%= lowerClassName %> = (<%= variableTypeName %>) sc.servlet.Context.getWindowScope(true).getValue(\"<%= typeClassName %>\");\n";
       windowScope.customSetter = 
-          "      sc.servlet.Context.getWindowScope().setValue(\"<%= typeClassName %>\", _<%= lowerClassName %>);\n";
+          "      sc.servlet.Context.getWindowScope(true).setValue(\"<%= typeClassName %>\", _<%= lowerClassName %>);\n";
       registerScopeProcessor("window", windowScope);
+
+      // Like session but stores objects per-url, per-session
+      sc.lang.sc.BasicScopeProcessor appSessionScope = new sc.lang.sc.BasicScopeProcessor("appSession");
+      appSessionScope.validOnClass = true;
+      appSessionScope.validOnField = false;
+      appSessionScope.validOnObject = true;
+      appSessionScope.includeScopeAnnotation = true;
+      appSessionScope.needsField = false;
+      appSessionScope.customResolver = 
+          "      sc.obj.ScopeContext _ctx = sc.servlet.AppSessionScopeDefinition.getAppSessionScope();\n" +
+          "      if (_ctx == null) return null;\n" +
+          "      <%= variableTypeName %> _<%= lowerClassName %> = (<%= variableTypeName %>) _ctx.getValue(\"<%= typeClassName %>\");\n";
+      appSessionScope.customSetter = 
+          "      _ctx.setValue(\"<%= typeClassName %>\", _<%= lowerClassName %>);\n";
+      registerScopeProcessor("appSession", appSessionScope);
+
 
       // Causes PageDispatcher.sc to be regenerated whenever the members of either type group are modified
       addTypeGroupDependency("PageInit.sc", "sc.servlet.PageInit", "_init");
