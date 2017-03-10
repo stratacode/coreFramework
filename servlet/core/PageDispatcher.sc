@@ -29,6 +29,7 @@ import sc.layer.LayeredSystem;
 import sc.obj.ScopeContext;
 import sc.obj.ScopeDefinition;
 import sc.obj.ScopeEnvironment;
+import sc.obj.RequestScopeDefinition;
 
 import sc.sync.SyncManager;
 
@@ -231,26 +232,29 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                // Skip locking only if explicitly specified - otherwise we lock based on
                if (!lockScope.equals("none")) {
                   ScopeDefinition lockScopeDef = ScopeDefinition.getScopeByName(lockScope);
-                  ScopeContext lockScopeCtx = lockScopeDef.getScopeContext(true);
+                  // Temporary scopes - like request don't have to be locked because they are only used by one thread at a time.
+                  if (!lockScopeDef.isTemporary()) {
+                     ScopeContext lockScopeCtx = lockScopeDef.getScopeContext(true);
 
-                  ReentrantReadWriteLock rwLock = (ReentrantReadWriteLock) lockScopeCtx.getValue("_lock");
-                  if (rwLock == null) {
-                     synchronized (lockScopeCtx) {
-                        rwLock = (ReentrantReadWriteLock) lockScopeCtx.getValue("_lock");
-                        if (rwLock == null) {
-                           rwLock = new ReentrantReadWriteLock();
-                           if (traceLocks)
-                              System.out.println("Page: new lock created for scope: " + lockScope + " " + rwLock + " session: " + DynUtil.getTraceObjId(session.getId()) + " thread: " + getCurrentThreadString());
-                           lockScopeCtx.setValue("_lock", rwLock);
+                     ReentrantReadWriteLock rwLock = (ReentrantReadWriteLock) lockScopeCtx.getValue("_lock");
+                     if (rwLock == null) {
+                        synchronized (lockScopeCtx) {
+                           rwLock = (ReentrantReadWriteLock) lockScopeCtx.getValue("_lock");
+                           if (rwLock == null) {
+                              rwLock = new ReentrantReadWriteLock();
+                              if (traceLocks)
+                                 System.out.println("Page: new lock created for scope: " + lockScope + " " + rwLock + " session: " + DynUtil.getTraceObjId(session.getId()) + " thread: " + getCurrentThreadString());
+                              lockScopeCtx.setValue("_lock", rwLock);
+                           }
                         }
                      }
+
+                     // TODO: provide some way to specify this request is a read-only request so we only acquire a read lock
+                     Lock lock = rwLock.writeLock();
+
+                     locks.add(lock);
+                     lockScopeNames.add(lockScope);
                   }
-
-                  // TODO: provide some way to specify this request is a read-only request so we only acquire a read lock
-                  Lock lock = rwLock.writeLock();
-
-                  locks.add(lock);
-                  lockScopeNames.add(lockScope);
                }
             }
 
@@ -282,7 +286,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
             if (initial) {
                // Mark this as the initial sync mode
-               SyncManager.setInitialSync("jsHttp", uri, WindowScopeDefinition.scopeId, true);
+               SyncManager.setInitialSync("jsHttp", uri, RequestScopeDefinition.getRequestScopeDefinition().scopeId, true);
             }
             else {
                //ScopeEnvironment.setAppId(uri);

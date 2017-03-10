@@ -6,9 +6,13 @@ import sc.obj.ScopeEnvironment;
 import javax.servlet.http.HttpSessionBindingListener;
 import javax.servlet.http.HttpSessionBindingEvent;
 
+import java.util.Map;
+import java.util.LinkedHashMap;
+
 class AppSessionScopeContext extends ScopeContext implements HttpSessionBindingListener {
    HttpSession session;
    String appId;
+   LinkedHashMap<String,Object> valuesMap;
 
    AppSessionScopeContext(HttpSession session, String appId) {
       this.session = session;
@@ -26,7 +30,16 @@ class AppSessionScopeContext extends ScopeContext implements HttpSessionBindingL
    public void setValue(String key, Object value) {
       if (ScopeDefinition.trace)
          System.out.println("appSession - set " + key + " = " + value + " for: " + toString());
+      // Stored in the session so we can use session persistence
       session.setAttribute(appId + "__" + key, value);
+      if (valuesMap == null) {
+         valuesMap = new LinkedHashMap<String,Object>();
+      }
+      valuesMap.put(key, value);
+   }
+
+   public Map<String,Object> getValues() {
+      return valuesMap;
    }
 
    public ScopeDefinition getScopeDefinition() {

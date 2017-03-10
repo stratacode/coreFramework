@@ -25,7 +25,7 @@ public servlet.core extends webApp, meta, html.core {
    }
 
    public void start() {
-      // Defines a new object lifecycle where instances are stored in the browser's session
+      // Like request but where instances are stored in the browser's session
       sc.lang.sc.BasicScopeProcessor sessionScope = new sc.lang.sc.BasicScopeProcessor("session");
       sessionScope.validOnClass = true;
       sessionScope.validOnField = false;
@@ -68,13 +68,12 @@ public servlet.core extends webApp, meta, html.core {
           "      _ctx.setValue(\"<%= typeClassName %>\", _<%= lowerClassName %>);\n";
       registerScopeProcessor("appSession", appSessionScope);
 
-
-      // Causes PageDispatcher.sc to be regenerated whenever the members of either type group are modified
+      // Causes PageInit.sc to be regenerated whenever the members of either type group are modified
       addTypeGroupDependency("PageInit.sc", "sc.servlet.PageInit", "_init");
       addTypeGroupDependency("PageInit.sc", "sc.servlet.PageInit", "_startup");
 
       sc.lang.DefaultAnnotationProcessor urlProc = new sc.lang.DefaultAnnotationProcessor();
-      // Need to add a static code snippet to register the page.  If we happen to register an inner class the addPage still goes on the parent type
+      // Adds a static code snippet to register the page when you annotate a class with @URL.  If we happen to register an inner class the addPage still goes on the parent type
       urlProc.staticMixinTemplate = "sc.servlet.URLMixinTemplate";
       urlProc.validOnField = false;
       urlProc.validOnClass = true;

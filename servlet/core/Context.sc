@@ -5,6 +5,7 @@ import sc.dyn.DynUtil;
 import sc.dyn.ScheduledJob;
 import sc.obj.ScopeDefinition;
 import sc.obj.ScopeContext;
+import sc.obj.RequestScopeDefinition;
 
 import sc.type.PTypeUtil;
 import sc.lang.html.Window;
@@ -22,6 +23,8 @@ class Context {
 
    ArrayList<ScheduledJob> toInvokeLater = null;
 
+   WindowScopeContext windowCtx = null;
+
    Context(HttpServletRequest req, HttpServletResponse res) {
       request = req;
       response = res;
@@ -31,7 +34,6 @@ class Context {
    Context(HttpSession session) {
       this.session = session;
    }
-
 
    HttpSession getSession() {
       if (request == null)
@@ -117,6 +119,11 @@ class Context {
 
    static void clearContext() {
       currentContextStore.set(null);
+      ScopeContext requestCtx = RequestScopeDefinition.getRequestScopeDefinition().getScopeContext(false);
+      if (requestCtx != null) {
+         requestCtx.scopeDestroyed();
+         requestCtx = null;
+      }
    }
 
    void execLaterJobs() {
@@ -138,8 +145,6 @@ class Context {
          }
       }
    }
-
-   WindowScopeContext windowCtx = null;
 
    public void setWindowId(int windowId) {
       windowCtx.windowId = windowId;

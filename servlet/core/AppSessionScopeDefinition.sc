@@ -4,13 +4,17 @@ import sc.obj.ScopeEnvironment;
 import sc.obj.GlobalScopeDefinition;
 import sc.obj.AppGlobalScopeDefinition;
 
-// Using startPriority here to assign the scopeIds in scope precedance order (e.g. global, appGlobal, session, appSession, window)
+// Using startPriority here to assign the scopeIds in scope precedance order (e.g. global, appGlobal, session, appSession, window, request)
 @CompilerSettings(createOnStartup=true, startPriority=105)
 object AppSessionScopeDefinition extends ScopeDefinition {
    name = "appSession";
    {
       addParentScope(AppGlobalScopeDefinition);
       addParentScope(SessionScopeDefinition);
+   }
+
+   private AppSessionScopeDefinition() {
+      super(3);
    }
 
    public static ScopeContext getAppSessionScope() {

@@ -10,6 +10,10 @@ object WindowScopeDefinition extends ScopeDefinition {
       addParentScope(AppSessionScopeDefinition);
    }
 
+   private WindowScopeDefinition() {
+      super(4);
+   }
+
    public ScopeContext getScopeContext(boolean create) {
       return Context.getCurrentContext().getWindowScopeContext(create);
    }
