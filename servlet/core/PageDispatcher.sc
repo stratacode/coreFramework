@@ -233,28 +233,26 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                if (!lockScope.equals("none")) {
                   ScopeDefinition lockScopeDef = ScopeDefinition.getScopeByName(lockScope);
                   // Temporary scopes - like request don't have to be locked because they are only used by one thread at a time.
-                  if (!lockScopeDef.isTemporary()) {
-                     ScopeContext lockScopeCtx = lockScopeDef.getScopeContext(true);
+                  ScopeContext lockScopeCtx = lockScopeDef.getScopeContext(true);
 
-                     ReentrantReadWriteLock rwLock = (ReentrantReadWriteLock) lockScopeCtx.getValue("_lock");
-                     if (rwLock == null) {
-                        synchronized (lockScopeCtx) {
-                           rwLock = (ReentrantReadWriteLock) lockScopeCtx.getValue("_lock");
-                           if (rwLock == null) {
-                              rwLock = new ReentrantReadWriteLock();
-                              if (traceLocks)
-                                 System.out.println("Page: new lock created for scope: " + lockScope + " " + rwLock + " session: " + DynUtil.getTraceObjId(session.getId()) + " thread: " + getCurrentThreadString());
-                              lockScopeCtx.setValue("_lock", rwLock);
-                           }
+                  ReentrantReadWriteLock rwLock = (ReentrantReadWriteLock) lockScopeCtx.getValue("_lock");
+                  if (rwLock == null) {
+                     synchronized (lockScopeCtx) {
+                        rwLock = (ReentrantReadWriteLock) lockScopeCtx.getValue("_lock");
+                        if (rwLock == null) {
+                           rwLock = new ReentrantReadWriteLock();
+                           if (traceLocks)
+                              System.out.println("Page: new lock created for scope: " + lockScope + " " + rwLock + " session: " + DynUtil.getTraceObjId(session.getId()) + " thread: " + getCurrentThreadString());
+                           lockScopeCtx.setValue("_lock", rwLock);
                         }
                      }
-
-                     // TODO: provide some way to specify this request is a read-only request so we only acquire a read lock
-                     Lock lock = rwLock.writeLock();
-
-                     locks.add(lock);
-                     lockScopeNames.add(lockScope);
                   }
+
+                  // TODO: provide some way to specify this request is a read-only request so we only acquire a read lock
+                  Lock lock = rwLock.writeLock();
+
+                  locks.add(lock);
+                  lockScopeNames.add(lockScope);
                }
             }
 
@@ -415,6 +413,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       if (traceLocks)
          System.out.println("Page - releasing " + locks.size() + " locks: " + locks + " session: " + (session == null ? "<none>" : DynUtil.getTraceObjId(session.getId())) + " thread: " + getCurrentThreadString());
       releaseLocks(locks, 0, locks.size());
+      if (traceLocks)
+         System.out.println("Page - released locks.");
    }
 
    static void releaseLocks(List<Lock> locks, int from, int to) {
@@ -569,12 +569,12 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                                 javax.servlet.http.HttpServletResponse response) 
                            throws IOException, ServletException {
       Context ctx = null;  
+      String uri = request.getRequestURI();
+      ArrayList<Lock> locks = new ArrayList<Lock>();
+      HttpSession session = null;
       try {
          boolean isPage = false;
-         String uri = request.getRequestURI();
-
          List<PageEntry> pageEnts = getPageEntries(uri);;
-         ArrayList<Lock> locks = new ArrayList<Lock>();
 
          if (pageEnts != null && pageEnts.size() > 0) {
             List<Object> insts = null;
@@ -600,7 +600,6 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             if (trace)
                startTime = System.currentTimeMillis();
 
-            HttpSession session = null;
             try {
                // TODO: check if we need a session for this request before creating it
                session = request.getSession(true);
@@ -634,18 +633,31 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                   System.out.println("Page complete: session: " + DynUtil.getTraceObjId(session.getId()) + " thread: " + getCurrentThreadString() + traceBuffer + ": " + getRuntimeString(startTime));
             }
             finally {
-               // This clears the initial sync flag in case we called setInitialSync(..., true) in initPageObjects.  It also clears the SyncState for the other initPageObjects cases.
-               SyncManager.setInitialSync("jsHttp", uri, WindowScopeDefinition.scopeId, false);
-
-               releaseLocks(locks, session);
+               try {
+                  // This clears the initial sync flag in case we called setInitialSync(..., true) in initPageObjects.  It also clears the SyncState for the other initPageObjects cases.
+                  SyncManager.setInitialSync("jsHttp", uri, WindowScopeDefinition.scopeId, false);
+               }
+               catch (RuntimeException exc) {
+                  System.err.println("*** Application error processing initial sync for request: " + uri + ": " + exc);
+                  exc.printStackTrace();
+               }
             }
          }
          return pageEnts != null && pageEnts.size() > 0 && isPage;
       }
       finally {
-         if (ctx != null) {
-            ctx.execLaterJobs();
-            Context.clearContext();
+         try {
+            if (ctx != null) {
+               ctx.execLaterJobs();
+               Context.clearContext();
+            }
+         }
+         catch (RuntimeException exc) {
+            System.err.println("*** Application error clearing context request: " + uri + ": " + exc);
+            exc.printStackTrace();
+         }
+         finally {
+            releaseLocks(locks, session);
          }
       }
    }

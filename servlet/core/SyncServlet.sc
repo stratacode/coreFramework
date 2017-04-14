@@ -153,12 +153,20 @@ class SyncServlet extends HttpServlet {
          }
       }
       finally {
-         if (ctx != null) {
-            ctx.execLaterJobs();
-            Context.clearContext();
-            ScopeEnvironment.setAppId(null);
+         try {
+            if (ctx != null) {
+               ctx.execLaterJobs();
+               Context.clearContext();
+               ScopeEnvironment.setAppId(null);
+            }
          }
-         PageDispatcher.releaseLocks(locks, session);
+         catch (RuntimeException exc) {
+            System.err.println("*** Error cleaning up servlet context: " + exc);
+            exc.printStackTrace();
+         }
+         finally {
+            PageDispatcher.releaseLocks(locks, session);
+         }
       }
       return true;
    }

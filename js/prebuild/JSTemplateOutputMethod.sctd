@@ -1,0 +1,4 @@
+public sc.util.LineCountStringBuilder output() {
+  sc.util.LineCountStringBuilder out = createOutput();
+  return out;
+}

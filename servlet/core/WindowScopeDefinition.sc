@@ -16,9 +16,7 @@ object WindowScopeDefinition extends ScopeDefinition {
 
    public ScopeContext getScopeContext(boolean create) {
       Context ctx = Context.getCurrentContext();
-      if (ctx == null)
-         return null;
-      return ctx.getWindowScopeContext(create);
+      return ctx == null ? null : ctx.getWindowScopeContext(create);
    }
 
    public ScopeDefinition getScopeDefinition() {
