@@ -74,11 +74,11 @@ if (needsConstructor) {
 } %>
 
 <% if (needsClassDef) { 
-%>var _c, <%= typeName %>_c = _c = <%= newClassMethodName %>("<%= javaTypeName %>", <%= typeName %>,<%= outerClassArg %> <%= extendsClass %>, <%= implementsClasses %>);
+%>var <%= useShortTypeNames ? "_c , " : "" %><%= JSTypeName %> = <%= useShortTypeNames ? "_c = " :"" %><%= newClassMethodName %>("<%= javaTypeName %>", <%= typeName %>,<%= outerClassArg %> <%= extendsClass %>, <%= implementsClasses %>);
 <% } else if (hasTypeChanges) { 
-%>var _c = <%= typeName %>_c;
+%>var <%= useShortTypeNames ? "_c = " : "" %><%= JSTypeName %>;
 <% } %>
-<%= annotations %><% for (JSMethod meth:methods) { %>_c.<%= meth.name%> = function (<%= meth.argNames %>) <%= meth.needsDispatch ? '/' + "* overloaded *" + '/' : "" %> {<%
+<%= annotations %><%= propertyMetadata %><%= typeAliases %><% for (JSMethod meth:methods) { %><%= shortJSTypeName%>.<%= meth.name%> = function (<%= meth.argNames %>) <%= meth.needsDispatch ? '/' + "* overloaded *" + '/' : "" %> {<%
       if (meth.getWithArgs) { %>
    if (arguments.length == 0) return;<% } %><%= meth.methodClassInit %><%
       if (!meth.needsDispatch) {
@@ -144,18 +144,18 @@ if (needsConstructor) {
      }
    %>};
 <% } %><% if (needsInstInit) { %>
-_c._<%= typeName%>Init = function() {
+<%=shortJSTypeName%>._<%= typeName%>Init = function() {
 <%
    for (JSStatement initStatement:initStatements) {
       %><%= replaceIndent(1, initStatement.toString()) %><%
    } %>};<% } %><% if (needsClassInit) { %>
-_c._clInit = function() {
-   if (<%= typeName %>_c.hasOwnProperty("_clInited")) return;
-   <%= typeName %>_c._clInited = true;
+<%=shortJSTypeName%>._clInit = function() {
+   if (<%= JSTypeName %>.hasOwnProperty("_clInited")) return;
+   <%= JSTypeName %>._clInited = true;
    <% for (JSMethod meth:methods) {
    MethodBindSettings mbs = meth.getBindSettings();
    if (mbs != null) { %>
-   <%= typeName %>_c._<%= meth.name %>MethBindSettings = new sc_MethodBindSettings(<%= typeName %>_c.<%= mbs.reverseMethodName %>, <%= mbs.reverseSlot %>, <%= mbs.forwardSlot %>, <%= mbs.modifyParam %>, <%= mbs.oneParamReverse %>, <%= mbs.reverseMethodStatic %>);
+   <%= JSTypeName %>._<%= meth.name %>MethBindSettings = new sc_MethodBindSettings(<%= JSTypeName %>.<%= mbs.reverseMethodName %>, <%= mbs.reverseSlot %>, <%= mbs.forwardSlot %>, <%= mbs.modifyParam %>, <%= mbs.oneParamReverse %>, <%= mbs.reverseMethodStatic %>);
 <% } } %>
 <% for (JSStatement initStatement:staticInitStatements) {
      %>   <%= initStatement %><%

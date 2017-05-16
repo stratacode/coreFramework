@@ -18,6 +18,7 @@ import sc.util.StringUtil;
 @CompilerSettings(createOnStartup=true,startPriority=100)
 object ServletSyncDestination extends SyncDestination {
    name = "jsHttp"; // The name of the destination in the remote runtime
+   defaultScope = "window";
 
    ServletSyncDestination() {
       super();
@@ -27,49 +28,18 @@ object ServletSyncDestination extends SyncDestination {
       SyncManager.addSyncDestination(this);
    }
 
-   static ModelStream convertToModelStream(String layerDef) {
-      SCLanguage lang = SCLanguage.getSCLanguage();
-      boolean trace = SyncManager.trace;
-      long startTime = trace ? System.currentTimeMillis() : 0;
-      Object streamRes = lang.parseString(layerDef, lang.modelStream);
-      if (streamRes instanceof ParseError) {
-         ParseError perror = (ParseError) streamRes;
-         System.err.println("*** Failed to parse sync layer def: " + perror.errorStringWithLineNumbers(layerDef));
-         return null;
-      }
-      else {
-         ModelStream stream = (ModelStream) ParseUtil.nodeToSemanticValue(streamRes);
-         stream.setLayeredSystem(LayeredSystem.getCurrent());
-
-         if (trace && layerDef.length() > 2048)
-            System.out.println("Parsed sync layer in: " + StringUtil.formatFloat((System.currentTimeMillis() - startTime)/1000.0) + " secs");
-         return stream;
-      }
-   }
-
-   /** Applies the layer definition received from the remote definition.  For Java we'll parse the layer definition and apply it as a set of changes to the instances.  */
-   public void applySyncLayer(String layerDef, boolean resetSync) {
-      if (layerDef == null || layerDef.length() == 0)
-         return;
-
-      ModelStream stream = convertToModelStream(layerDef);
-
-      if (stream != null) {
-         boolean trace = SyncManager.trace;
-         long startTime = trace ? System.currentTimeMillis() : 0;
-         stream.updateRuntime(name, "window", resetSync);
-         if (SyncManager.trace)
-            System.out.println("Applied sync layer to system in: " + StringUtil.formatFloat((System.currentTimeMillis() - startTime)/1000.0) + " secs");
-      }
-   }
-
    public void writeToDestination(String syncRequestStr, String syncGroup, IResponseListener listener, String paramStr) {
       boolean error = true;
       try {
          Context ctx = Context.getCurrentContext();
          if (paramStr != null) // TODO: use response headers to send and receive these parameters via the XMLHttp call.  I don't think we can send parameters with the initial page sync easily
              System.out.println("*** Warning: ignoring destination params: " + paramStr);
-         ctx.write(syncRequestStr);
+         if (syncRequestStr.length() > 0) {
+            ctx.write(SYNC_LAYER_START);
+            ctx.write(outputLanguage);
+            ctx.write(":");
+            ctx.write(syncRequestStr);
+         }
          error = false;
       }
       finally {
@@ -79,23 +49,26 @@ object ServletSyncDestination extends SyncDestination {
       }
    }
 
-   public CharSequence translateSyncLayer(String layerDef) {
-      ModelStream stream = convertToModelStream(layerDef);
+   public StringBuilder translateSyncLayer(String layerDef) {
+      ModelStream stream = ModelStream.convertToModelStream(layerDef);
 
       if (stream == null)
-         return "";
+         return new StringBuilder();
       else {
          boolean trace = SyncManager.trace;
 
          long startTime = trace ? System.currentTimeMillis() : 0;
 
-         CharSequence seq = stream.convertToJS(name, "window");
+         StringBuilder seq = stream.convertToJS(name, "window");
 
-         if (trace)
+/*
+     logged in in SyncDestination.sendSync
+         if (trace || SyncManager.verbose)
             System.out.println("Sync reply: size: " + layerDef.length() + " js size: " + seq.length() + " translated in: " + StringUtil.formatFloat((System.currentTimeMillis() - startTime)/1000.0) + " secs\n" +
-                              (SyncManager.traceAll ? layerDef : StringUtil.ellipsis(layerDef, SyncManager.logSize, false)));
+                              (trace ? layerDef : StringUtil.ellipsis(layerDef, SyncManager.logSize, false)));
          if (SyncManager.traceAll)
             System.out.print("\n\n  --- translated to:\n" + seq.toString() + "\n\n");
+*/
 
 
          return seq;

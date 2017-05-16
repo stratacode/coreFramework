@@ -1,0 +1,71 @@
+<%@
+   import sc.obj.ScopeDefinition;
+   import sc.obj.ScopeContext;
+   import sc.sync.SyncManager;
+   import sc.sync.SyncManager.SyncContext;
+   import sc.sync.SyncManager.InstInfo;
+   import sc.util.StringUtil;
+   import java.util.Map;
+   import java.util.Map.Entry;
+   import java.util.Arrays;
+%>
+<html scope="request">
+
+<body>
+<h2>StrataCode Server State Viewer</h2>
+<%
+   for (ScopeDefinition currentScope:ScopeDefinition.scopes) {
+      if (currentScope != null) {
+         %>
+            <h3>Scope: <%= currentScope.externalName %></h3>
+            <p>
+               <%
+                  ScopeContext ctx = currentScope.getScopeContext(false);
+                  if (ctx == null)
+                     out.append("not created");
+                  else {
+                     Map<String,Object> values = ctx.getValues();
+                     if (values == null) {
+                        out.append("no values");
+                     }
+                     else {
+                        SyncContext syncCtx = null;
+                        // First dump out the normal scope values
+                        for (Map.Entry<String,Object> ent:values.entrySet()) {
+                           if (ent.key.equals(SyncManager.SC_SYNC_CONTEXT_SCOPE_KEY)) {
+                              syncCtx = (SyncContext) ent.value;
+                              continue;
+                           }
+                           %>
+                              <div>
+                                 <span class="key"><%= ent.key %></span>
+                                 <span class="value"> <%= ent.value %></span>
+                              </div>
+                           <%
+                        }
+
+                        // Now dump out the contents of the sync context if we found one
+                        if (syncCtx != null && syncCtx.objectIndex.size() > 0) {
+                           %><h3>Synchronized objects</h3>
+                           <%
+                           for (Map.Entry<String,Object> ent:syncCtx.objectIndex.entrySet()) {
+                              InstInfo instInfo = syncCtx.getInstInfo(ent.value);
+                              if (instInfo != null) {
+                                 %>
+                                    <h4><%= instInfo.name %></h4>(<%= sc.util.ArrayUtil.argsToString(instInfo.args) %>)  Registered: <%= instInfo.registered %>
+                                        onDemand: <%= instInfo.onDemand %>Initialized: <%= instInfo.initialized %> Value: <%= ent.value %>
+                                 <%
+                              }
+                           }
+                        }
+                     }
+                  }
+               %>
+            </p>
+         <%
+      }
+   }
+%>
+</body>
+
+</html>

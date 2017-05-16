@@ -52,6 +52,9 @@ class SyncServlet extends HttpServlet {
       String reset = request.getParameter("reset");
       HttpSession session = request.getSession(false);
       String url = request.getParameter("url");
+      String receiveLanguage = request.getParameter("lang");
+      if (receiveLanguage == null)
+         receiveLanguage = SyncManager.defaultLanguage;
       /** Refresh of true says to do a code-refresh before the sync.  This defaults based on the server default but you can override whether you want to check for code changes on each sync or not. */
       String refresh = request.getParameter("refresh");
 
@@ -97,7 +100,7 @@ class SyncServlet extends HttpServlet {
          if (reset == null) {
             // Reads the POST data as a layer, applies that layer to the current context, and execs any jobs spawned
             // by the layer.
-            applySyncLayer(ctx, request, session, url, syncGroup, false);
+            applySyncLayer(ctx, request, receiveLanguage, session, url, syncGroup, false);
          }
 
          PageDispatcher pageDispatcher = PageDispatcher.getPageDispatcher();
@@ -115,7 +118,7 @@ class SyncServlet extends HttpServlet {
          // For the reset=true case, we need to first render the pages from the default initial state, then apply
          // the reset sync from the client.
          if (reset != null) {
-            applySyncLayer(ctx, request, session, url, syncGroup, true);
+            applySyncLayer(ctx, request, receiveLanguage, session, url, syncGroup, true);
 
             // Also render the page after we do the reset so that we lazily init any objects that need synchronizing in this output
             // This time we render with initial = false and resetSync = true - so we do not record any changed made during this page rendering.  We're just resyncing the state of the application to be where the client is already.
@@ -124,16 +127,28 @@ class SyncServlet extends HttpServlet {
                return true;
          }
 
-         // For chrome - so you can set breakpoints in debugged eval scripts.
-         ctx.write("\n\n//@ sourceURL=scSync.js\n");
+         SyncManager mgr = SyncManager.getSyncManager("jsHttp");
+         if (mgr.syncDestination.outputLanguage.equals("js")) {
+            // For chrome - so you can set breakpoints in debugged eval scripts.
+            ctx.write("\n\n//@ sourceURL=scSync.js\n");
+         }
 
-         // Now collect up all changes and write them as the response layer.
-         SyncManager.sendSync("jsHttp", syncGroup, false);
+         // Now collect up all changes and write them as the response layer.  TODO: is default scope right here?
+         mgr.sendSync(syncGroup, SyncManager.getDefaultScope().scopeId, false);
 
+         // TODO: add "code update" as a feature of the sync manager using the 'js' language - move this code into ServletSyncDestination.
          if (syncSession.lastSyncTime != -1 && sys != null && (refresh != null || sys.options.autoRefresh)) {
             CharSequence out = sys.refreshJS(syncSession.lastSyncTime);
-            if (out != null)
-               ctx.write(out.toString());
+            if (mgr.syncDestination.outputLanguage.equals("js")) {
+               if (out != null)
+                  ctx.write(out.toString());
+            }
+            else {
+               if (out != null && out.length() > 0) {
+                  System.err.println("*** Not updating client code through JSON: " + out);
+                  // TODO: for JSON - create a JSON serializer here, serialize this as an 'eval' node and append it somehow
+               }
+            }
          }
 
          syncSession.lastSyncTime = System.currentTimeMillis();
@@ -171,7 +186,7 @@ class SyncServlet extends HttpServlet {
       return true;
    }
 
-   private void applySyncLayer(Context ctx, HttpServletRequest request, HttpSession session, String url, String syncGroup, boolean isReset) throws IOException {
+   private void applySyncLayer(Context ctx, HttpServletRequest request, String receiveLanguage, HttpSession session, String url, String syncGroup, boolean isReset) throws IOException {
 
       int len = request.getContentLength();
       boolean noLength = false;
@@ -193,7 +208,7 @@ class SyncServlet extends HttpServlet {
       }
 
        // Apply changes from the client.
-      ServletSyncDestination.applySyncLayer(bufStr, isReset);
+      ServletSyncDestination.applySyncLayer(bufStr, receiveLanguage, isReset);
 
       ctx.execLaterJobs();
 

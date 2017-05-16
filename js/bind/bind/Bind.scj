@@ -729,9 +729,10 @@ public class Bind {
       PBindUtil.printAllBindings();
    }
 
-   public static String indent(int l) {
+   public static String indent(int n) {
+      if (n == 0) return "";
       StringBuilder sb = new StringBuilder();
-      for (int i = 0; i < l; i++)
+      for (int i = 0; i < n; i++)
          sb.append("   ");
       return sb.toString();
    }

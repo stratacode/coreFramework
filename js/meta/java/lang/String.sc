@@ -11,4 +11,9 @@ String {
    override @JSMethodSettings(replaceWith="_valueOf")  valueOf(char data[]);
    override @JSMethodSettings(replaceWith="_valueOf")  valueOf(boolean b);
    override @JSMethodSettings(replaceWith="_valueOf")  valueOf(char c);
+   override @JSMethodSettings(replaceWith="substring") subSequence(int start, int end);
+
+   // The normal char to int conversion done in the JS needs to be suppressed here because in JS, the 'ch' parameters are really strings
+   override @JSMethodSettings(parameterTypes="char") indexOf(int ch);
+   override @JSMethodSettings(parameterTypes="char,int") indexOf(int ch, int start);
 }

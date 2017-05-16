@@ -126,7 +126,7 @@ function sc_isAssignableFrom(srcClass, dstClass) {
    if (srcClass === dstClass)
       return true;
    do {
-      if (srcClass.prototype === dstClass.prototype) {
+      if (srcClass.$typeName == dstClass.$typeName) {
          return true;
       }
       if (srcClass.$implements) {
@@ -301,3 +301,9 @@ function sc_charToInt(cs) {
    return cs.charCodeAt(0);
 }
 
+// Registers alias for type names replaced on the server with 'replaceType'
+function sc_addTypeAliases(type, list) {
+   var thisConstr = sc$classTable[type.$protoName];
+   for (var i = 0; i < list.length; i++)
+      sc$classTable[list[i]] = thisConstr;
+}

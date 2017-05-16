@@ -13,6 +13,9 @@ Number.prototype.intValue = function() {
 }
 
 Number_c.parseInt = parseInt;
+Number_c.parseLong = parseInt;
+Number_c.parseDouble = parseFloat;
+Number_c.parseFloat = parseFloat;
 
 Number_c.valueOf = function(v) {
    // build in js method for comparison against a boolean or something
@@ -141,6 +144,10 @@ String.prototype.compareTo = function(other) {
    return len1 - len2;
 }
 
+String.prototype.toCharArray = function() {
+   return this.split('');
+}
+
 function jv_Object() {
 }
 
@@ -252,7 +259,7 @@ function jv_Enum(name, ord) {
 
 jv_Enum_c = sc_newClass("jv_Enum", jv_Enum);
 
-jv_Enum_c.toString = function() {
+jv_Enum_c.toString = jv_Enum_c.name = function() {
    return this._name;
 }
 
@@ -292,6 +299,10 @@ jv_StringBuilder_c._length = function() {
 
 jv_StringBuilder_c.toString = function() {
    return this.value.join("");
+}
+
+jv_StringBuilder_c.substring = jv_StringBuilder_c.subSequence = function(start, end) {
+   return this.toString().substring(start, end); // TODO: this could be more efficient
 }
 
 Array.prototype.clone = function() {
@@ -357,11 +368,23 @@ function jv_Character() {
 jv_Character_c = sc_newClass("jv_Character", jv_Character);
 
 jv_Character_c.isLowerCase = function(c) {
-   return c.isLowerCase();
+   return /[a-z]/.test(c);
 }
 
 jv_Character_c.isUpperCase = function(c) {
-   return c.isUpperCase();
+   return /[A-Z]/.test(c);
+}
+
+jv_Character_c.toLowerCase = function(c) {
+   return c.toLowerCase();
+}
+
+jv_Character_c.toUpperCase = function(c) {
+   return c.toUpperCase();
+}
+
+jv_Character_c.isWhitespace = function(c) {
+   return ' \n\t\r\f\v'.indexOf(c) != -1; 
 }
 
 // TODO: these should handle unicode characters

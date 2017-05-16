@@ -348,13 +348,16 @@ sc_DynUtil_c.getArrayName = function(arr) {
    return res;
 }
 
-sc_DynUtil_c.createInnerInstance = function(newClass, paramSig, outer, paramValues) {
+sc_DynUtil_c.createInnerInstance = function(newClass, outer, paramSig, paramValues) {
+   paramValues = sc_vararg(arguments, 3);
    var DynInst = function(){}; // temporary constructor
    var inst, ret; 
 
-   // True if we are called with the _c value
+   // True if we are called with the _c value versus the actual constructor function
    var isPrototype = newClass.hasOwnProperty("$protoName");
 
+   // TODO: the name of the constructor we see in the debugger is 'DynInst' 
+   // Can we somehow use newClass's constructor here?
    // Give the DynInst constructor the Constructor's prototype
    if (isPrototype)
       DynInst.prototype = newClass.constructor.prototype;
@@ -364,11 +367,14 @@ sc_DynUtil_c.createInnerInstance = function(newClass, paramSig, outer, paramValu
    // Create a new instance
    inst = new DynInst;
 
-   if (outer !== null) {
+   // For static types, outer is a type here and not a constructor param
+   if (outer !== null && !sc_DynUtil_c.isType(outer)) {
       if (paramValues == null)
          paramValues = [outer];
-      else
-         paramValues = paramValues.splice(0, 0, outer);
+      else {
+         paramValues = paramValues.slice();
+         paramValues.splice(0, 0, outer);
+      }
    }
 
    // Call the original Constructor with the temp
@@ -385,8 +391,37 @@ sc_DynUtil_c.createInnerInstance = function(newClass, paramSig, outer, paramValu
    return Object(ret) === ret ? ret : inst;
 }
 
+sc_DynUtil_c.newInnerInstance = function(type, outer, constrSig, params) {
+   params = sc_vararg(arguments, 3);
+   if (!sc_DynUtil_c.isComponentType(type)) {
+      return sc_DynUtil_c.createInnerInstance(type, outer, constrSig, params);
+   }
+   var t = outer == null ? type : outer;
+   var typeName = sc_DynUtil_c.getTypeName(type);
+   var name = sc_capitalizeProperty(sc_CTypeUtil_c.getClassName(typeName));
+   var newMeth = t['new' + name];
+   if (!newMeth)
+      throw new jv_IllegalArgumentException("No method: " + typeName + ':' + name);
+   return newMeth.apply(outer, params);
+}
+
+
 sc_DynUtil_c.createInstance = function(newClass, paramSig, paramValues) {
-   return sc_DynUtil_c.createInnerInstance(newClass, paramSig, null, paramValues);
+   return sc_DynUtil_c.createInnerInstance(newClass, null, paramSig, sc_vararg(arguments, 2));
+}
+
+// Must be called with the _c object which has the metadata.  We only know
+// the property metadata for specific types used in synchronization for which
+// we need to create a compatible type on the client using metadata of the type
+// on the server (e.g. a collection which supports data binding)
+sc_DynUtil_c.getPropertyType = function(type, propName) {
+   if (type._PROPS) {
+      return sc_DynUtil_c.findType(type._PROPS[propName]);
+   }
+   var ext = sc_DynUtil_c.getExtendsType(type);
+   if (ext)
+      return sc_DynUtil_c.getPropertyType(ext, propName);
+   return null;
 }
 
 sc_DynUtil_c.getStaticProperty = function(type, propName) {
@@ -648,6 +683,10 @@ sc_DynUtil_c.dispose = function(obj, disposeChildren) {
    }
 }
 
+sc_DynUtil_c.isComponentType = function(type) {
+   return type._A_Component !== undefined;
+}
+
 function sc_IObjChildren() {}
 
 sc_IObjChildren_c = sc_newClass("sc_IObjChildren", sc_IObjChildren, null, null);
@@ -898,4 +937,15 @@ sc_DynUtil_c.updateInstances = function(typeName) {
          }
       }
    }
+}
+
+sc_DynUtil_c.applySyncLayer = function(lang, dest, scope, layerDef, isReset, allowCodeEval) {
+   if (lang.equals("js") && allowCodeEval)
+      sc_DynUtil_c.evalScript(layerDef);
+   else
+      throw new IllegalArgumentException("Error - unable to apply sync layer for lang: " + lang);
+}
+
+sc_DynUtil_c.isAssignableFrom = function(s, d) {
+   return sc_isAssignableFrom(s.constructor, d.constructor);
 }

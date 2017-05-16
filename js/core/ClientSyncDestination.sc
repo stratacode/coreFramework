@@ -15,12 +15,17 @@ import sc.dyn.DynUtil;
 import sc.lang.html.Window;
 
 import sc.obj.GlobalScopeDefinition;
+import sc.obj.ScopeDefinition;
 
 @Component
 @MainInit
 @JSSettings(jsModuleFile="js/sync.js", prefixAlias="sc_", requiredModule=true)
 object ClientSyncDestination extends SyncDestination {
    name = "servletToJS";
+   defaultScope = "global";
+
+   allowCodeEval = true; // Allows the browser to evaluate code that's sent from the server
+   clientDestination = true; // Objects received by this destination are registered as 'fixed' - i.e. we don't post them back on a reset
 
    public void writeToDestination(String layerDef, String syncGroup, IResponseListener listener, String paramStr) {
       String useParams = paramStr;
@@ -45,21 +50,26 @@ object ClientSyncDestination extends SyncDestination {
             useParams += "&";
          useParams += "windowId=" + winId;
       }
+      if (useParams == null)
+         useParams = "?";
+      else
+         useParams += "&";
+      useParams += "lang=" + sendLanguage;
       PTypeUtil.postHttpRequest("/sync" + useParams, layerDef, "text/plain", listener);
    }
 
    void init() {
+      ScopeDefinition.initScopes();
       // On the client global and session are the same thing - i.e. one instance per user's session
-      GlobalScopeDefinition.getGlobalScopeDefinition().aliases = Arrays.asList(new String[]{"session","window"});
+      GlobalScopeDefinition.getGlobalScopeDefinition().aliases.addAll(Arrays.asList(new String[]{"session","window"}));
       SyncManager.addSyncDestination(this);
    }
 
    // The server returns a javascript encoded result to the layer sync operation.  Just apply these changes by evaluating them in the JS runtime.
-   public void applySyncLayer(String toApply, boolean isReset) {
-      BindingContext ctx = new BindingContext();
-      BindingContext oldBindCtx = BindingContext.getBindingContext();
-      BindingContext.setBindingContext(ctx);
-      try {
+   public void applySyncLayer(String toApply, String receiveLanguage, boolean isReset) {
+      if (receiveLanguage == null && toApply != null && !toApply.startsWith("sync:"))
+         receiveLanguage = "js";
+      if (receiveLanguage != null && receiveLanguage.equals("js")) {
          if (SyncManager.trace) {
             if (toApply == null || toApply.length() == 0)
                System.out.println("Server returned no changes");
@@ -71,11 +81,8 @@ object ClientSyncDestination extends SyncDestination {
             System.out.println("Eval complete");
          }
       }
-      finally {
-         BindingContext.setBindingContext(oldBindCtx);
-         // By batching the events we are giving the code a simpler model to deal with in the event callbacks - i.e. objects are fully populated when property changes are fired.
-         ctx.dispatchEvents(null);
-      }
+      else
+         super.applySyncLayer(toApply, receiveLanguage, isReset);
    }
 
    public void initSyncManager() {
@@ -83,8 +90,10 @@ object ClientSyncDestination extends SyncDestination {
    }
 
    /** Sending the raw layer definition to the server as it can parse it easily there. */
-   public CharSequence translateSyncLayer(String layerDef) {
-      return layerDef;
+   public StringBuilder translateSyncLayer(String layerDef) {
+      StringBuilder sb = new StringBuilder();
+      sb.append(layerDef);
+      return sb;
    }
 
    public int getDefaultSyncPropOptions() {

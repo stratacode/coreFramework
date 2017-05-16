@@ -74,7 +74,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
    static public String indexPattern = "/index.html";
 
-   static public boolean trace = false, traceLocks = false;
+   static public boolean verbose = false, trace = false, traceLocks = false;
 
    private FilterConfig filterConfig;
 
@@ -124,11 +124,11 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       if (oldEnt == null || oldEnt.priority < priority)
          pages.put(pattern, ent);
 
-      if (trace)
+      if (verbose)
          System.out.println("PageDispatcher: new page id: " + keyName + " url:" + pattern + " type: " + ModelUtil.getTypeName(pageType) + ")");
 
       if (pattern.equals(indexPattern)) {
-         if (trace)
+         if (verbose)
             System.out.println("PageDispatcher: adding index page");
          addPage("_index_", "/", pageType, page, priority, lockScope);
       }
@@ -336,7 +336,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             }
             insts.add(inst);
 
-            if (trace) {
+            if (verbose) {
                String pageTypeStr = (initial ? "Page" : (reset ? "Sync: reset session" : "Sync"));
                System.out.println(pageTypeStr + " start: " + uri + " type:" + typeName + " uri:" + uri + " scope: " + scopeName + " session: " + DynUtil.getTraceObjId(session.getId()) + " thread: " + getCurrentThreadString() + " " + getTimeString() + " locks: " + lockScopeNames);
             }
@@ -378,7 +378,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             // If we can't immediately get the next lock
             if (!lock.tryLock()) {
                releaseLocks(locks, 0, i);
-               if (trace || traceLocks)
+               if (verbose || trace || traceLocks)
                   System.out.println("Waiting for locks held: " + uri + " thread: " + getCurrentThreadString() + ": " + getTimeString());
                // Wait now to get the contended lock to avoid a busy loop but we'll just immediately release it just to make the code simpler
                lock.lock();
@@ -525,9 +525,14 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             }
          }
          */
-         CharSequence initSync = SyncManager.getInitialSync("jsHttp", WindowScopeDefinition.scopeId, resetSync);
+         // Gets the contents of the 'initial sync layer' - i.e. the data to populate the current state for this page.
+         // Using the jsHttp destination but force the output to javascript
+         CharSequence initSync = SyncManager.getInitialSync("jsHttp", WindowScopeDefinition.scopeId, resetSync, "js");
          sb.append("\n\n<!-- Init SC JS -->\n");
          sb.append("<script type='text/javascript'>\n");
+         if (sc.bind.Bind.trace) {
+            sb.append("sc_Bind_c.trace = true;\n");
+         }
          // Here are in injecting code into the generated script for debugging - if you enable logging on the server, it's on in the client automatically
          if (SyncManager.trace) {
             sb.append("sc_SyncManager_c.trace = true;\n");
@@ -538,6 +543,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
          if (SyncManager.traceAll) {
             sb.append("sc_SyncManager_c.traceAll = true;\n");
          }
+         // Propagate this option when we load up the page so the client has the same defaultLanguage that we do (if it's not the default)
+         if (!SyncManager.defaultLanguage.equals("json"))
+            sb.append("sc_SyncManager_c.defaultLanguage = \"" + SyncManager.defaultLanguage + "\";\n");
          if (trace || Element.trace) {
             sb.append("js_Element_c.trace = true;\n");
          }
@@ -554,10 +562,10 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       if (traceBuffer != null) {
          if (SyncManager.traceAll) {
             traceBuffer.append(" url=" + uri + " size: " + pageOutput.length() + " -----:\n");
-            traceBuffer.append(SyncManager.verbose ? pageOutput : StringUtil.ellipsis(pageOutput, SyncManager.logSize, false));
+            traceBuffer.append(trace ? pageOutput : StringUtil.ellipsis(pageOutput, SyncManager.logSize, false));
             traceBuffer.append("----- \n");
          }
-         else if (trace) {
+         else if (verbose) {
             traceBuffer.append(" url=" + uri + " pageSize: " + pageBodySize + " initSyncSize: " + initSyncSize);
          }
       }
@@ -579,7 +587,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
          if (pageEnts != null && pageEnts.size() > 0) {
             List<Object> insts = null;
 
-            if (trace)
+            if (verbose)
                System.out.println("Page init: " + uri + " matched: " + pageEnts + " thread: " + getCurrentThreadString());
 
             isPage = pageEnts.get(0).page || isPage;
@@ -597,7 +605,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             }
 
             long startTime = 0;
-            if (trace)
+            if (verbose)
                startTime = System.currentTimeMillis();
 
             try {
@@ -619,7 +627,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                StringBuilder pageOutput = getInitialSync(insts, ctx, uri, pageEnts, traceBuffer);
 
                if (ctx.requestComplete) {
-                  if (trace) {
+                  if (verbose) {
                      System.out.println("PageDispatcher request handled after page init - aborting processing: " + traceBuffer);
                   }
                   return true;
@@ -629,7 +637,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                   ctx.write(pageOutput.toString());
                }
 
-               if (trace)
+               if (verbose)
                   System.out.println("Page complete: session: " + DynUtil.getTraceObjId(session.getId()) + " thread: " + getCurrentThreadString() + traceBuffer + ": " + getRuntimeString(startTime));
             }
             finally {
@@ -741,6 +749,12 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
          if (Element.trace)
             trace = true;
+
+         if (Element.verbose)
+            verbose = true;
+
+         if (trace || SyncManager.trace)
+            verbose = true;
 
          // This enables us to keep track of changes to types that might be registered with this servlet
          sys.registerTypeChangeListener(this);
