@@ -24,7 +24,7 @@ object AppSessionScopeDefinition extends ScopeDefinition {
    public ScopeContext getScopeContext(boolean create) {
       HttpSession session = Context.getCurrentSession();
       if (session == null)
-         return null;
+         return super.getScopeContext(create);
       AppSessionScopeContext ctx;
       String appId = ScopeEnvironment.getAppId();
       String key = "_sessionApp_" + appId;

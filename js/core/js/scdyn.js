@@ -772,12 +772,19 @@ sc_PTypeUtil_c.setThreadLocal = function(key, value) {
    return orig;
 }
 
-sc_PTypeUtil_c.isArray = function(value) {
+sc_DynUtil_c.isArray = sc_PTypeUtil_c.isArray = function(value) {
    if (value === null)
       return false;
    return Array.isArray(value);
 }
 
+sc_DynUtil_c.getComponentType = sc_PTypeUtil_c.getComponentType = function(value) {
+   return jv_Object_c;
+}
+
+sc_PTypeUtil_c.newArray = function(type, size) {
+   return new Array(size); // unlike java we don't care about component type 
+}
 
 sc_PTypeUtil_c.clone = function(obj) {
    return obj.clone();

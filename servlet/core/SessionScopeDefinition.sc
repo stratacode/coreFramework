@@ -18,7 +18,7 @@ object SessionScopeDefinition extends ScopeDefinition {
    public ScopeContext getScopeContext(boolean create) {
       HttpSession session = Context.getCurrentSession();
       if (session == null)
-         return null;
+         return super.getScopeContext(create);
       SessionScopeContext ctx;
       ctx = (SessionScopeContext) session.getAttribute("_sessionScopeContext");
       if (ctx == null && create) {
