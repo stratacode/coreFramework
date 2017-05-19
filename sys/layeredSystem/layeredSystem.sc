@@ -17,5 +17,8 @@ sys.layeredSystem {
 
       // The LayeredSystem is only available in the default Java runtime.
       addRuntime(null);
+
+      // Can't run programs that extend this layer without the LayeredSystem
+      getLayeredSystem().needsDynamicRuntime = true;
    }
 }

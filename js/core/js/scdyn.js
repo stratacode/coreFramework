@@ -424,6 +424,10 @@ sc_DynUtil_c.getPropertyType = function(type, propName) {
    return null;
 }
 
+sc_DynUtil_c.hasProperty = function(obj, propName) {
+   return obj[propName] !== undefined;
+}
+
 sc_DynUtil_c.getStaticProperty = function(type, propName) {
    var getName = "get" + sc_capitalizeProperty(propName);
    var getMethod = type[getName];
