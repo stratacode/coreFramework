@@ -28,17 +28,35 @@ object ServletSyncDestination extends SyncDestination {
       SyncManager.addSyncDestination(this);
    }
 
-   public void writeToDestination(String syncRequestStr, String syncGroup, IResponseListener listener, String paramStr) {
+   public void writeToDestination(String syncRequestStr, String syncGroup, IResponseListener listener, String paramStr, CharSequence codeUpdates) {
       boolean error = true;
       try {
          Context ctx = Context.getCurrentContext();
          if (paramStr != null) // TODO: use response headers to send and receive these parameters via the XMLHttp call.  I don't think we can send parameters with the initial page sync easily
              System.out.println("*** Warning: ignoring destination params: " + paramStr);
-         if (syncRequestStr.length() > 0) {
+         int syncReqLen = syncRequestStr.length();
+         if (syncReqLen > 0) {
             ctx.write(SYNC_LAYER_START);
             ctx.write(outputLanguage);
             ctx.write(":");
+            String header = null;
+            if (outputLanguage.equals("js")) {
+               header = "\n\n//@ sourceURL=scSync.js\n";
+               syncReqLen = header.length() + syncReqLen;
+            }
+            ctx.write(String.valueOf(syncReqLen));
+            ctx.write(":");
+            if (header != null)
+               ctx.write(header);
             ctx.write(syncRequestStr);
+         }
+         if (codeUpdates != null && codeUpdates.length() > 0) {
+            ctx.write(":");
+            ctx.write(SYNC_LAYER_START);
+            ctx.write("js:"); // TODO: make this configurable?
+            ctx.write(String.valueOf(codeUpdates.length()));
+            ctx.write(":");
+            ctx.write(codeUpdates.toString());
          }
          error = false;
       }

@@ -57,7 +57,17 @@ class BodyTypeDeclaration {
    public String getPackageName() {
       return packageName;
    }
- 
+
+   private String scopeName;
+   @Constant
+   public void setScopeName(String sn) {
+      scopeName = sn;
+   }
+
+   public String getScopeName() {
+      return scopeName;
+   }
+
    private boolean dynamicType;
    @Constant
    public void setDynamicType(boolean dt) {

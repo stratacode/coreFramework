@@ -27,7 +27,7 @@ object ClientSyncDestination extends SyncDestination {
    allowCodeEval = true; // Allows the browser to evaluate code that's sent from the server
    clientDestination = true; // Objects received by this destination are registered as 'fixed' - i.e. we don't post them back on a reset
 
-   public void writeToDestination(String layerDef, String syncGroup, IResponseListener listener, String paramStr) {
+   public void writeToDestination(String layerDef, String syncGroup, IResponseListener listener, String paramStr, CharSequence codeUpdates) {
       String useParams = paramStr;
       if (syncGroup != null) {
          String syncParam = "syncGroup=" + syncGroup;

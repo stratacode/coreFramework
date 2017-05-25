@@ -7,6 +7,7 @@ import sc.type.IBeanMapper;
 import sc.dyn.DynUtil;
 import sc.dyn.IDynObject;
 
+/** Manages a list of child widgets */
 @Component
 @CompilerSettings(mixinTemplate="sc.gui.grid.ListViewMixinTemplate", childTypeParameter="T",
             //objectTemplate="sc.swing.ChildContainerInit",

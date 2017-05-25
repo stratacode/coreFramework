@@ -128,28 +128,14 @@ class SyncServlet extends HttpServlet {
          }
 
          SyncManager mgr = SyncManager.getSyncManager("jsHttp");
-         if (mgr.syncDestination.outputLanguage.equals("js")) {
-            // For chrome - so you can set breakpoints in debugged eval scripts.
-            ctx.write("\n\n//@ sourceURL=scSync.js\n");
+         CharSequence codeUpdates = null;
+         // TODO: add "code update" as a feature of the sync manager using the 'js' language - move this code into ServletSyncDestination.
+         if (syncSession.lastSyncTime != -1 && sys != null && (refresh != null || sys.options.autoRefresh)) {
+            codeUpdates = sys.refreshJS(syncSession.lastSyncTime);
          }
 
          // Now collect up all changes and write them as the response layer.  TODO: is default scope right here?
-         mgr.sendSync(syncGroup, SyncManager.getDefaultScope().scopeId, false);
-
-         // TODO: add "code update" as a feature of the sync manager using the 'js' language - move this code into ServletSyncDestination.
-         if (syncSession.lastSyncTime != -1 && sys != null && (refresh != null || sys.options.autoRefresh)) {
-            CharSequence out = sys.refreshJS(syncSession.lastSyncTime);
-            if (mgr.syncDestination.outputLanguage.equals("js")) {
-               if (out != null)
-                  ctx.write(out.toString());
-            }
-            else {
-               if (out != null && out.length() > 0) {
-                  System.err.println("*** Not updating client code through JSON: " + out);
-                  // TODO: for JSON - create a JSON serializer here, serialize this as an 'eval' node and append it somehow
-               }
-            }
-         }
+         mgr.sendSync(syncGroup, SyncManager.getDefaultScope().scopeId, false, codeUpdates);
 
          syncSession.lastSyncTime = System.currentTimeMillis();
 

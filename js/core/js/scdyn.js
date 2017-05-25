@@ -205,7 +205,7 @@ sc_DynUtil_c.getInstanceId = function(obj) {
 
    var type = sc_DynUtil_c.getType(obj);
 
-   if (sc_instanceOf(obj, jv_Enum))
+   if (sc_instanceOf(obj, jv_Enum) || obj == type)
       return sc_DynUtil_c.getTypeName(type, false) + "." + sc_DynUtil_c.getEnumName(obj);
 
    return sc_DynUtil_c.getObjectId(obj, type, null);
@@ -425,7 +425,7 @@ sc_DynUtil_c.getPropertyType = function(type, propName) {
 }
 
 sc_DynUtil_c.hasProperty = function(obj, propName) {
-   return obj[propName] !== undefined;
+   return obj[propName] !== undefined || obj["get" + sc_capitalizeProperty(propName)] !== undefined;
 }
 
 sc_DynUtil_c.getStaticProperty = function(type, propName) {
@@ -534,7 +534,8 @@ sc_DynUtil_c.getPackageName = function(type) {
    return sc_CTypeUtil_c.getPackageName(sc_DynUtil_c.getRootTypeName(sc_DynUtil_c.getTypeName(type, false), false));
 }
 
-sc_DynUtil_c.getScopeName = function(obj) {
+// TODO: use the annotations so we can return a custom scope for editing purposes on the client
+sc_DynUtil_c.getScopeName = sc_DynUtil_c.getScopeNameForType = function(obj) {
    return null;
 }
 
