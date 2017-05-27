@@ -73,7 +73,7 @@ object ClientSyncDestination extends SyncDestination {
          if (toApply == null || toApply.length() == 0)
             System.out.println("Server returned no changes");
          else
-            System.out.println("Applying " + receiveLanguage + " returned from server: '" + toApply + "'" + (isReset ? "reset" : "") +"\n");
+            System.out.println("Applying changes" + (receiveLanguage == null ? "" : " in " + receiveLanguage) + " from server: '" + toApply + "'" + (isReset ? "reset" : "") +"\n");
       }
       if (receiveLanguage != null && receiveLanguage.equals("js")) {
          DynUtil.evalScript(toApply);
