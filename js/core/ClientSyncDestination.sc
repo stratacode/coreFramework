@@ -69,20 +69,21 @@ object ClientSyncDestination extends SyncDestination {
    public void applySyncLayer(String toApply, String receiveLanguage, boolean isReset) {
       if (receiveLanguage == null && toApply != null && !toApply.startsWith("sync:"))
          receiveLanguage = "js";
+      if (SyncManager.trace) {
+         if (toApply == null || toApply.length() == 0)
+            System.out.println("Server returned no changes");
+         else
+            System.out.println("Applying " + receiveLanguage + " returned from server: '" + toApply + "'" + (isReset ? "reset" : "") +"\n");
+      }
       if (receiveLanguage != null && receiveLanguage.equals("js")) {
-         if (SyncManager.trace) {
-            if (toApply == null || toApply.length() == 0)
-               System.out.println("Server returned no changes");
-            else
-               System.out.println("Evaluating JS script returned from server: '" + toApply + "'\n");
-         }
          DynUtil.evalScript(toApply);
          if (SyncManager.trace) {
             System.out.println("Eval complete");
          }
       }
-      else
+      else {
          super.applySyncLayer(toApply, receiveLanguage, isReset);
+      }
    }
 
    public void initSyncManager() {
