@@ -72,12 +72,12 @@ sc_DynUtil_c.getType = sc_DynUtil_c.getSType = function(o) {
    return o.constructor.prototype;
 }
 
-sc_DynUtil_c.resolveMethod = function(vartype, methName) {
-   return {type:sc_clInit(vartype), name:methName};
+sc_DynUtil_c.resolveMethod = function(vartype, methName, sig) {
+   return {type:sc_clInit(vartype), name:methName, paramSig:sig};
 }
 
-sc_DynUtil_c.resolveRemoteMethod = function(vartype, methName) {
-   var res = sc_DynUtil_c.resolveMethod(vartype, methName);
+sc_DynUtil_c.resolveRemoteMethod = function(vartype, methName, sig) {
+   var res = sc_DynUtil_c.resolveMethod(vartype, methName, sig);
    res.remote = true;
    return res;
 }
@@ -120,7 +120,7 @@ sc_DynUtil_c.invokeMethod = function(obj, method, paramValues) {
 
 // TODO: make this a pluggable hook so we can do remote methods with data binding using other RPC, not just the sync system
 sc_DynUtil_c.invokeRemote = function(obj, method, paramValues) {
-   return sc_SyncManager_c.invokeRemote(obj, method.name, paramValues);
+   return sc_SyncManager_c.invokeRemote(obj, method.name, method.paramSig, paramValues);
 }
 
 sc_DynUtil_c.evalArithmeticExpression = function(operator, expectedType, lhsVal, rhsVal) {
