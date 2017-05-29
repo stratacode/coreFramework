@@ -12,6 +12,14 @@ import sc.lang.html.Window;
 
 import java.util.Enumeration;
 
+/** 
+  * An abstraction around the servlet request and response, stored in thread-local so any code running
+  * in the context of the request can get access to per-request, per-session and per-window data, run
+  * 'do later' jobs, set the output type and write to the response.
+  *
+  * TODO: we could break this down into a platform independent part and provide a seamless way for servlet
+  * apps to move to other runtime environments that follow the request/response model.
+  */
 class Context {
    HttpServletRequest request;
    HttpServletResponse response;

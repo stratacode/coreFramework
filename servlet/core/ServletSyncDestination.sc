@@ -19,6 +19,7 @@ import sc.util.StringUtil;
 object ServletSyncDestination extends SyncDestination {
    name = "jsHttp"; // The name of the destination in the remote runtime
    defaultScope = "window";
+   remoteRuntimeName = "js"; // For now, we're only talking to the JS runtime.  
 
    ServletSyncDestination() {
       super();
