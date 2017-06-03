@@ -67,9 +67,11 @@ public class AssertionError extends Error {
      * @param detailMessage
      *            the value to be converted into the message.
      */
+/* don't need this in JS land and it can cause an infinite loop if you use it since char = String[1] = JS.
     public AssertionError(char detailMessage) {
         this(String.valueOf(detailMessage));
     }
+*/
 
     /**
      * Constructs a new {@code AssertionError} with a message based on calling

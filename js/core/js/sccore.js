@@ -159,11 +159,11 @@ function sc_instanceOf(srcObj, dstClass) {
 }
 
 function sc_arrayInstanceOf(srcObj, dstClass, ndim) {
-   return srcObj != null && srcObj._class != null && srcObj._ndim == ndim && sc_isAssignableFrom(srcObj._class, dstClass);
+   return srcObj != null && srcObj._class != null && srcObj._ndim == ndim && sc_isAssignableFrom(srcObj._class.constructor, dstClass);
 }
 
 function sc_instanceOfChar(srcObj, type) {
-   return srcObj != null && srcObj.constructor == String && strObj.length == 1;
+   return srcObj != null && srcObj.constructor == String && srcObj.length == 1;
 }
 
 function sc_instanceOfClass(obj, dstClass) {
