@@ -5,4 +5,7 @@ package org.eclipse.jetty;
 // change it.
 jetty.v8compat extends lib {
    compiledOnly = true;
+
+   codeType = sc.layer.CodeType.Framework;
+   codeFunction = sc.layer.CodeFunction.Program;
 }

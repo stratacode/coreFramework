@@ -450,7 +450,7 @@ sc_DynUtil_c.getProperty = function(obj, prop) {
    return sc_DynUtil_c.getPropertyValue(obj, prop);
 }
 
-sc_DynUtil_c.getPropertyValue = function(obj, prop) {
+sc_DynUtil_c.getPropertyValue = function(obj, prop, ignoreError) {
    var capPropName = sc_capitalizeProperty(prop);
    // TODO: perf - we should cache this info in the obj's type to avoid doing multiple lookups and string building each time.
    var getName = "get" + capPropName;
@@ -468,8 +468,12 @@ sc_DynUtil_c.getPropertyValue = function(obj, prop) {
          return res;
    }
    var res = obj[prop];
-   if (res === undefined && arguments.length == 2) // A third arg here means to just return undefined
-      throw new jv_IllegalArgumentException("Object: " + sc_DynUtil_c.getInstanceId(obj) + " missing property: " + prop);
+   if (res === undefined) {
+      if (arguments.length == 2 || !ignoreError) 
+         throw new jv_IllegalArgumentException("Object: " + sc_DynUtil_c.getInstanceId(obj) + " missing property: " + prop);
+      else 
+         res = null;
+   }
    return res;
 }
 
@@ -570,7 +574,7 @@ sc_DynUtil_c.resolveName = function(name, create) {
             tailName = null;
          }
          sc_clInit(cur);
-         var next = sc_DynUtil_c.getPropertyValue(cur, propName, true); // Returns undefined if not there with this third arg - does not throw
+         var next = sc_DynUtil_c.getPropertyValue(cur, propName, true); // Returns null if not there with this third arg - does not throw
          if (next == null) {
             cur = null;
             break; // Still need to see if this is perhaps a class name.

@@ -340,6 +340,14 @@ public class Bind {
       sendEvent(IListener.VALUE_CHANGED, obj, propName, val);
    }
 
+   public static void sendInvalidate(Object obj, String propName, Object val) {
+      sendEvent(IListener.VALUE_INVALIDATED, obj, propName, val);
+   }
+
+   public static void sendValidate(Object obj, String propName, Object val) {
+      sendEvent(IListener.VALUE_VALIDATED, obj, propName, val);
+   }
+
    public static void sendEvent(int event, Object obj, String propName) {
       sendEvent(event, obj, propName, NO_VALUE_EVENT_DETAIL);
    }

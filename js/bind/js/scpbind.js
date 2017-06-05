@@ -139,7 +139,7 @@ sc_PBindUtil_c.sendEvent = function(event, obj, prop, detail) {
    if (listeners != null) {
       // When the event is a value changed event, we want to first run the invalidated listeners, then the validated listeners for
       // optimal efficient and preservation of the order of operations.
-      if ((event & sc_IListener_c.VALUE_CHANGED) != 0) {
+      if ((event & sc_IListener_c.VALUE_CHANGED) == sc_IListener_c.VALUE_CHANGED) {
          sc_PBindUtil_c.dispatchListeners(listeners, sc_IListener_c.VALUE_INVALIDATED, obj, prop, detail);
          sc_PBindUtil_c.dispatchListeners(listeners, sc_IListener_c.VALUE_VALIDATED, obj, prop, detail);
          event = event & ~(sc_IListener_c.VALUE_CHANGED);

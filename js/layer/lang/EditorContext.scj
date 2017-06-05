@@ -23,23 +23,20 @@ public class EditorContext extends ClientEditorContext {
       int i = 0;
       // Add a null entry at the front to represent the <type> selection
       if (addNull)
-         ret.add(new InstanceWrapper(this, null));
+         ret.add(new InstanceWrapper(this, null, typeName));
 
       // TODO: need a way to test for jv_Enum and then get the instance
       //if (ModelUtil.isEnum(type)) {
-      //   ret.add(new InstanceWrapper(this, ModelUtil.getRuntimeEnum(type)));
+      //   ret.add(new InstanceWrapper(this, ModelUtil.getRuntimeEnum(type), typeName));
       //}
 
       if (insts == null)
          return ret;
 
       int sz = insts.length;
-      for (i = 0; i < max && i < sz; i++) {
-         ret.add(new InstanceWrapper(this, insts[i]));
-      }
-
-      if (sz == 1 && DynUtil.getEnclosingType(type, true) == null && DynUtil.isObjectType(type)) {
-         ret.add(new InstanceWrapper(this, type != null, typeName)); // A dummy wrapper which creates the instance when it is selected
+      for (i = 0; i < max && i < sz; i++) { 
+         Object inst = insts[i];
+         ret.add(new InstanceWrapper(this, inst, DynUtil.getTypeName(DynUtil.getType(inst), false)));
       }
 
       return ret;

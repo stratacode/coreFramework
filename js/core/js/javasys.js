@@ -270,7 +270,7 @@ jv_Enum_c.values = jv_Enum_c.getEnumConstants = function() {
    return this._values;
 }
 
-jv_Enum_c.valueOf = function(name) {
+jv_Enum_c._valueOf = function(name) {
    sc_clInit(this);
    for (var i = 0; i < this._values.length; i++) 
       if (this._values[i]._name == name)

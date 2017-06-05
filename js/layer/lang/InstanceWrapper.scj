@@ -1,22 +1,26 @@
 package sc.lang;
 
 import sc.dyn.DynUtil;
+import sc.type.CTypeUtil;
 
 @sc.obj.Sync(onDemand=true)
-public class InstanceWrapper {
+public class InstanceWrapper implements sc.obj.IObjectId {
    EditorContext ctx;
    Object theInstance;
    boolean canCreate = false;
    String typeName;
+/*
    public InstanceWrapper(EditorContext ctx, boolean canCreate, String typeName) {
       this.typeName = typeName;
       this.canCreate = canCreate;
       this.ctx = ctx;
    }
+*/
 
-   public InstanceWrapper(EditorContext ctx, Object inst) {
+   public InstanceWrapper(EditorContext ctx, Object inst, String typeName) {
       this.theInstance = inst;
       this.ctx = ctx;
+      this.typeName = typeName;
    }
 
    public Object getInstance() {
@@ -31,7 +35,7 @@ public class InstanceWrapper {
 
    public String toString() {
       if (theInstance == null)
-         return typeName != null ? (canCreate ? "<select to create>" : "<restart to create>") : "<type>";
+         return typeName != null ? (canCreate ? "<select to create>" : "<type>") : "<type>";
       return DynUtil.getInstanceName(theInstance);
    }
 
@@ -48,5 +52,18 @@ public class InstanceWrapper {
    public int hashCode() {
       if (theInstance == null) return 0;
       return theInstance.hashCode();
+   }
+
+   public String getObjectId() {
+      StringBuilder sb = new StringBuilder();
+      sb.append("IW__");
+      if (theInstance == null && typeName != null) {
+         sb.append(typeName);
+         sb.append("__");
+      }
+      if (theInstance != null) {
+         sb.append(CTypeUtil.escapeIdentifierString(DynUtil.getInstanceId(theInstance)));
+      }
+      return sb.toString();
    }
 }

@@ -38,6 +38,7 @@ js_Element_c.refreshScheduled = false;
 js_Element_c.globalRefreshScheduled = false;
 js_Element_c.trace = false;
 js_Element_c.verbose = false;
+js_Element_c.verboseRepeat = false;
 js_Element_c.needsRefresh = false;
 js_Element_c.getURLPaths = function() {
    return [];
@@ -677,9 +678,15 @@ js_HTMLElement_c.syncRepeatTags = function(updateDOM) {
       var sz = repeat === null ? 0 : sc_DynUtil_c.getArrayLength(repeat);
       if (repeat !== null) {
          this.repeatTagsValid = true;
-         // Delay the creation until we are visible - TODO: do we need this check?  
-         if (!this.isVisibleInView())
+         // Delay the creation until we are visible unless we've already sync'd the repeat property against the repeat tags.
+         if (!this.isVisibleInView()) {
+            if (js_Element_c.verboseRepeat) {
+               console.log("syncRepeatTags - invisible tag: repeatTags for: " + this.id);
+               this.dumpRepeatTags();
+            }
+            this.destroyRepeatTags();
             return;
+         }
          var repeatTags = this.repeatTags;
          if (repeatTags === null) {
             this.repeatTags = repeatTags = [];
@@ -692,9 +699,18 @@ js_HTMLElement_c.syncRepeatTags = function(updateDOM) {
                var newElem = this.createRepeatElement(toAddArrayVal, i, null);
                repeatTags.push(newElem);
             }
+            if (js_Element_c.verboseRepeat) {
+               console.log("syncRepeatTags - new repeat repeatTags for: " + this.id);
+               this.dumpRepeatTags();
+            }
          }
          // Incrementally update the tags while keeping the DOM synchronized with the object tree
          else {
+            
+            if (js_Element_c.verboseRepeat) {
+               console.log("syncRepeatTags - update new size: " + sz + " old size: " + repeatTags.length + " for: " + this.id);
+               this.dumpRepeatTags();
+            }
             // Walking through the current value of the repeat list
             for (var i = 0; i < sz; i++) {
                var arrayVal = sc_DynUtil_c.getArrayElement(repeat, i); // the value at spot i now
@@ -766,6 +782,11 @@ js_HTMLElement_c.syncRepeatTags = function(updateDOM) {
             }
 
             while (repeatTags.length > sz) {
+               
+               if (js_Element_c.verboseRepeat) {
+                  console.log("syncRepeatTags - removing end nodes - new size: " + sz + " old size: " + repeatTags.length + " for: " + this.id);
+                  this.dumpRepeatTags();
+               }
                var ix = repeatTags.length - 1;
                var toRem = repeatTags[ix];
                needsRefresh = this.removeElement(toRem, ix, updateDOM) || needsRefresh;
@@ -773,16 +794,45 @@ js_HTMLElement_c.syncRepeatTags = function(updateDOM) {
                   break;
             }
          }
+
+         if (js_Element_c.verboseRepeat) {
+            console.log("Finished sync repeat: ");
+            this.dumpRepeatTags();
+         }
       }
-      else { // TODO: dispose of old tags?
+      else {
+         if (js_Element_c.verboseRepeat && this.repeatTags != null) {
+            console.log("syncRepeatTags - no array value - destroying repeat tags: ");
+            this.dumpRepeatTags();
+         }
          this.destroyRepeatTags();
-         repeatTags = [];
       }
    }
    finally {
       //sc_SyncManager_c.setSyncState(oldSyncState);
    }
    return needsRefresh;
+}
+
+js_HTMLElement_c.dumpRepeatTag = function(tag) {
+    if (tag.formEditor != null)
+        console.log("  " + tag.id + " scId: " + sc_id(tag) + " form editor: " + tag.formEditor.id);
+    else if (tag.parentEditor != null)
+        console.log("  " + tag.id + " scId: " + sc_id(tag) + " parent editor: " + tag.parentEditor.id);
+    else
+        console.log("  " + tag.id + " scId: " + sc_id(tag));
+}
+
+js_HTMLElement_c.dumpRepeatTags = function() {
+   if (this.repeatTags != null) {
+      console.log("element: " + this.id + " has: " + this.repeatTags.length + " repeatTags");
+      for (var i = 0; i < this.repeatTags.length; i++) { 
+          var tag = this.repeatTags[i];
+          this.dumpRepeatTag(tag);
+      }
+   }
+   else
+      console.log("element: " + this.id + " has null repeatTags");
 }
 
 js_HTMLElement_c.appendElement = function(tag, updateDOM) {
@@ -823,13 +873,18 @@ js_HTMLElement_c.appendElement = function(tag, updateDOM) {
 }
 
 js_HTMLElement_c.insertElement = function(tag, ix, updateDOM) {
+   if (js_Element_c.verboseRepeat) {
+      console.log("insertElement:" + ix);
+      this.dumpRepeatTag(tag);
+   }
+   var needsRefresh = false;
    if (updateDOM) {
        // Can't do an incremental refresh when there is no current element... to do this incrementally maybe we insert a dummy tag when we remove the last one?
        if (ix >= this.repeatTags.length) {
           if (ix == this.repeatTags.length)
              this.repeatTags.push(tag);
           else
-             console.log("Warning - not adding element onto repeatTags");
+             console.error("Warning - not adding element onto repeatTags");
           return true;
        }
        var tmp = document.createElement('div');
@@ -840,64 +895,75 @@ js_HTMLElement_c.insertElement = function(tag, ix, updateDOM) {
           repeatTag.updateDOM();
           curElem = repeatTag.element;
           if (curElem == null) {
-             if (js_Element_c.verbose)
-                console.log("Unable to insert element to repeat - no element in sibling repeat tag at spot: " + ix);
-             return true;
+             needsRefresh = true;
           }
        }
-       curElem.parentNode.insertBefore(tmp.childNodes[0], curElem);
+       if (!needsRefresh)
+          curElem.parentNode.insertBefore(tmp.childNodes[0], curElem);
        //document.removeChild(tmp); ?? does this need to be removed - it throws an exception?
    }
    this.repeatTags.splice(ix, 0, tag);
    tag.updateDOM();
-   return false;
+   return needsRefresh;
 }
 
 js_HTMLElement_c.removeElement = function(tag, ix, updateDOM) {
+   var needsRefresh = false;
+   if (js_Element_c.verboseRepeat) {
+      console.log("removeElement:" + ix);
+      this.dumpRepeatTag(tag);
+   }
    if (updateDOM) {
       var repeatTag = this.repeatTags[ix];
       var curElem = repeatTag.element;
       if (curElem == null) {
          repeatTag.updateDOM();
          curElem = repeatTag.element;
-         if (curElem == null) {
-            console.log("Unable to remove element to repeat - no element for repeat tag at spot: " + ix);
-            return true;
+         if (curElem == null) { // maybe we were invisible for the last change of the list?
+            needsRefresh = true;
          }
       }
-      curElem.parentNode.removeChild(curElem);
+      if (!needsRefresh)
+         curElem.parentNode.removeChild(curElem);
    }
    this.repeatTags.splice(ix,1);
-   // Needs to be done after updateDOM as it setss element = null.
+   // Needs to be done after updateDOM as it sets the element = null.
    tag.destroy();
-   return false;
+   return needsRefresh;
 }
 
 js_HTMLElement_c.moveElement = function(tag, oldIx, newIx, updateDOM) {
+   if (js_Element_c.verboseRepeat) {
+      console.log("moveElement - " + oldIx + " -> " + newIx);
+      this.dumpRepeatTag(tag);
+   }
+   var needsRefresh = false;
    if (updateDOM) {
       var elemToMove = tag.element;
       if (elemToMove == null) {
          tag.updateDOM();
          elemToMove = tag.element;
-         if (curElem == null) {
-            console.log("Unable to remove element to repeat - no element for repeat tag ");
-            return true;
+         if (elemToMove == null) {
+            needsRefresh = true;
          }
       }
       // The new spot is at the end of the list
-      if (newIx >= this.repeatTags.length) {
-         elemToMove.parentNode.appendChild(elemToMove);
-      }
-      else {
-         var newSpot = this.repeatTags[newIx];
-         if (newSpot == null)
-            console.error("No repeat tag at index: " + newIx + " for mov element");
-         else
-            elemToMove.parentNode.insertBefore(elemToMove, newSpot.element);
+      if (!needsRefresh) {
+         if (newIx >= this.repeatTags.length) {
+            elemToMove.parentNode.appendChild(elemToMove);
+         }
+         else {
+            var newSpot = this.repeatTags[newIx];
+            if (newSpot == null)
+               console.error("No repeat tag at index: " + newIx + " for mov element");
+            else
+               elemToMove.parentNode.insertBefore(elemToMove, newSpot.element);
+         }
       }
    }
    this.repeatTags.splice(newIx, 0, elemToMove);
-   return false;
+
+   return needsRefresh;
 }
 
 js_HTMLElement_c.getId = function() {
@@ -1123,6 +1189,14 @@ js_HTMLElement_c.createRepeatElement = function(rv, ix, oldTag) {
       js_HTMLElement_c.registerSyncInstAndChildren(elem);
    if (flush)
        sc_SyncManager_c.flushSyncQueue();
+
+   if (js_Element_c.verboseRepeat) {
+      if (rv == elem)
+         console.log("Reusing original repeat element: ");
+      else
+         console.log("Created repeat element: ");
+      this.dumpRepeatTag(elem);
+   }
    return elem;
 }
 
