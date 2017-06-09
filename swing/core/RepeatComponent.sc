@@ -16,6 +16,7 @@ public abstract class RepeatComponent<T> implements IChildContainer {
    public boolean disableRefresh = false;
    public boolean valid = true; // start out true so the first invalidate triggers the refresh
 
+   disableRefresh =: invalidate();
    repeat =: invalidate();
 
    // TODO: by default we could define a separate class from the children of this component using an IChildContainer

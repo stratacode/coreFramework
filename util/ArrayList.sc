@@ -81,7 +81,7 @@ public class ArrayList<E> extends java.util.ArrayList<E> implements sc.bind.ICha
 
   /** Just like get but returns null if the element is out of range */
   @sc.bind.BindSettings(reverseMethod="set", reverseSlot=1)
-  public E getNoError(int index) {
+  public E ret(int index) {
      if (index >= size() || index < 0)
         return null;
      return super.get(index);

@@ -415,8 +415,11 @@ sc_DynUtil_c.createInstance = function(newClass, paramSig, paramValues) {
 // we need to create a compatible type on the client using metadata of the type
 // on the server (e.g. a collection which supports data binding)
 sc_DynUtil_c.getPropertyType = function(type, propName) {
+   var res = null;
    if (type._PROPS) {
-      return sc_DynUtil_c.findType(type._PROPS[propName]);
+      res = sc_DynUtil_c.findType(type._PROPS[propName]);
+      if (res != null)
+         return res;
    }
    var ext = sc_DynUtil_c.getExtendsType(type);
    if (ext)
@@ -544,6 +547,8 @@ sc_DynUtil_c.getScopeName = sc_DynUtil_c.getScopeNameForType = function(obj) {
 }
 
 sc_DynUtil_c.findType = function(name) {
+   if (name.indexOf('[') != -1) // TODO: Do we need to create a new type for each element type?
+      return jv_Array_c;
    var res = sc$classTable[name];
    if (res != null) {
       sc_clInit(res);
@@ -781,10 +786,14 @@ sc_PTypeUtil_c.setThreadLocal = function(key, value) {
    return orig;
 }
 
-sc_DynUtil_c.isArray = sc_PTypeUtil_c.isArray = function(value) {
-   if (value === null)
+sc_DynUtil_c.isArray = sc_PTypeUtil_c.isArray = function(type) {
+   if (type === null)
       return false;
-   return Array.isArray(value);
+   if (type == jv_Array_c || type == Array || type == Array_c)
+      return true;
+   if (Array.isArray(type))
+      console.error("old isArray usage!");
+   return false;
 }
 
 sc_DynUtil_c.getComponentType = sc_PTypeUtil_c.getComponentType = function(value) {
@@ -834,6 +843,19 @@ sc_DynUtil_c.getAnnotationValue = function(typeObj, annotName, valName) {
    if (val == null)
       return null;
    return val[valName];
+}
+
+sc_DynUtil_c.getPropertyAnnotationValue = function(typeObj, propName, annotName, valName) {
+   var keyName = "_PT_";
+   var annots = typeObj[keyName];
+   if (annots == null)
+      return null;
+
+   var annotName = sc_CTypeUtil_c.getClassName(annotName);
+   var annotVal = annots[annotName];
+   if (annotVal == null)
+       return null;
+   return annotVal[valName];
 }
 
 function sc_IDynChildManager() {

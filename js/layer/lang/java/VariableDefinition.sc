@@ -14,4 +14,6 @@ class VariableDefinition implements IVariableInitializer {
    String comment;
    @GetSet
    String variableTypeName;
+   @GetSet
+   boolean indexedProperty;
 }

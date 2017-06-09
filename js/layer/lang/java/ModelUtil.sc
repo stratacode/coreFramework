@@ -3,6 +3,7 @@ import sc.lang.sc.PropertyAssignment;
 import sc.dyn.DynUtil;
 import sc.type.CTypeUtil;
 import java.util.ArrayList;
+import java.util.List;
 import sc.layer.LayeredSystem;
 
 public class ModelUtil {
@@ -129,4 +130,65 @@ public class ModelUtil {
       return null;
    }
 
+   // TODO: slightly modified version from ModelUtil.java
+   public static List mergeProperties(List modProps, List declProps, boolean replace, boolean includeAssigns) {
+      if (modProps == null)
+         return declProps;
+      if (declProps == null)
+         return modProps;
+      if (!(modProps instanceof ArrayList) && declProps.size() > 0)
+         modProps = new ArrayList(modProps);
+      for (int i = 0; i < declProps.size(); i++) {
+         Object prop = declProps.get(i);
+         if (prop == null)
+            continue;
+         if (includeAssigns && isReverseBinding(prop))
+            modProps.add(prop);
+         else {
+            int ix = propertyIndexOf(modProps, prop, true);
+            if (ix == -1)
+               modProps.add(prop);
+            else if (replace)
+               modProps.set(ix, prop);
+            /*  In LayerSyncHandler, MethodDefinitions are turned into VariableDefinitions for serialization to the client - if this distinction
+                is important on the client, we could mark the VariableDefinitions or create a new class for get/set methods on the client
+            else {
+               Object modProp = modProps.get(ix);
+               if (ModelUtil.isGetMethod(prop) && ModelUtil.isField(modProp))
+                  modProps.set(ix, prop);
+            }
+            */
+         }
+      }
+      return modProps;
+   }
+
+   // TODO: a direct copy from ModelUtil.java
+   public static int propertyIndexOf(List props, Object prop, boolean byName) {
+      if (props == null || prop == null)
+         return -1;
+      for (int i = 0; i < props.size(); i++) {
+         Object cprop = props.get(i);
+         if (cprop == null)
+            continue;
+         if (byName) {
+            String name = ModelUtil.getPropertyName(cprop);
+            if (name.equals(ModelUtil.getPropertyName(prop)))
+               return i;
+         }
+         else {
+            if (prop == cprop)
+               return i;
+         }
+      }
+      return -1;
+   }
+
+   public static boolean isReverseBinding(Object def) {
+      if (!(def instanceof PropertyAssignment))
+         return false;
+
+      PropertyAssignment pa = (PropertyAssignment) def;
+      return pa.operatorStr != null && pa.operatorStr.equals("=:");
+   }
 }

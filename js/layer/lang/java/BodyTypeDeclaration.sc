@@ -3,6 +3,10 @@ import java.util.ArrayList;
 import sc.layer.Layer;
 import sc.obj.Constant;
 
+// A version of the BodyTypeDeclaration for clients that cannot run the full dynamic runtime.
+// Essentially all of the TypeDeclaration classes store their info in this one value object so 
+// we can do basic operations on the metadata of the code, without exposing source code and
+// the complete model of the code.
 class BodyTypeDeclaration {
    String typeName;
    boolean isLayerType;
