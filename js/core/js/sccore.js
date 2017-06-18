@@ -311,3 +311,7 @@ function sc_addTypeAliases(type, list) {
    for (var i = 0; i < list.length; i++)
       sc$classTable[list[i]] = thisConstr;
 }
+
+function sc_addTypeAlias(fromName, toName) {
+   sc$classTable[toName] = sc$classTable[fromName];
+}

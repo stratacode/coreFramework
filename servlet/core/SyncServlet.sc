@@ -149,8 +149,7 @@ class SyncServlet extends HttpServlet {
          }
          else {
             sys.error("Sync request error: " + exc.toString());
-            if (sys.options.verbose)
-               exc.printStackTrace();
+            exc.printStackTrace();
          }
       }
       finally {

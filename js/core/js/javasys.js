@@ -148,6 +148,10 @@ String.prototype.toCharArray = function() {
    return this.split('');
 }
 
+String.prototype.equalsIgnoreCase = function(o) {
+   return this.toUpperCase() === o.toUpperCase();
+}
+
 function jv_Object() {
 }
 
@@ -169,6 +173,7 @@ jv_Object_c.getName = function() {
 }
 
 var Boolean_c = sc_newClass("Boolean", Boolean, null, null);
+sc_addTypeAlias("Boolean", "boolean");
 
 Boolean_c.FALSE = false;
 Boolean_c.TRUE = true;

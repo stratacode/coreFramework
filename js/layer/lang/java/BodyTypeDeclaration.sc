@@ -7,7 +7,7 @@ import sc.obj.Constant;
 // Essentially all of the TypeDeclaration classes store their info in this one value object so 
 // we can do basic operations on the metadata of the code, without exposing source code and
 // the complete model of the code.
-class BodyTypeDeclaration {
+class BodyTypeDeclaration extends Definition {
    String typeName;
    boolean isLayerType;
 

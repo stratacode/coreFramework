@@ -19,7 +19,9 @@ sys.sccore {
       String rtSrcDir = system.getStrataCodeRuntimePath(true, true);
       preCompiledSrcPath = rtSrcDir;
 
-      if (system.options.verbose)
+      if (rtSrcDir == null)
+         system.error("No stratacode source for layer: " + this + " runtime: " + system.getProcessIdent());
+      else if (system.options.verbose)
          system.verbose("Core runtime src: " + rtSrcDir + " from layer: " + this + " runtime: " + system.getProcessIdent());
 
       excludeRuntime("java");

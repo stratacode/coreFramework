@@ -46,6 +46,14 @@ public class ModelUtil {
          throw new UnsupportedOperationException();
    }
 
+   public static Object getAnnotationValue(Object def, String annotName, String valName) {
+       if (def instanceof Definition) {
+          return ((Definition) def).getAnnotationValue(annotName, valName);
+       }
+       else
+         throw new UnsupportedOperationException();
+   }
+
    public static String getInnerTypeName(Object type) {
       if (type instanceof TypeDeclaration)
          return ((TypeDeclaration)type).typeName; // TODO: should be the full inner type name

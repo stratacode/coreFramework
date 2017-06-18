@@ -117,6 +117,9 @@ js_Element_c.escBody = function(input) {
          .replace(/'/g, "&#039;");
 }
 
+// Hide this node in the editor - paralles the same annotation on Element in Java
+js_Element_c._PT = {parentNode:{EditorSettings:{visible:false}}};
+
 js_HTMLElement_c.toString = function() {
    var id = this.getId();
    var tn = this.tagName;
@@ -662,12 +665,14 @@ js_HTMLElement_c.refreshRepeat = function() {
    }
 }
 
+js_HTMLElement_c.repeatTagsChanged = function() {}
 
 // This method gets called when the repeat property has changed.  For each value in the repeat array we create a tag object and corresponding DOM element in repeatTags.
 // process incrementally updates one from the other, trying to move and preserve the existing tags when possible because that will lead to incremental UI refreshes.
 js_HTMLElement_c.syncRepeatTags = function(updateDOM) {
    var needsRefresh = false;
    var repeat = this.repeat;
+   var anyChanges = false;
    //var oldSyncState = sc_SyncManager_c.getSyncState();
    try {
       //sc_SyncManager_c.setSyncState(sc_SyncManager_SyncState_c.Disabled);
@@ -685,6 +690,7 @@ js_HTMLElement_c.syncRepeatTags = function(updateDOM) {
                this.dumpRepeatTags();
             }
             this.destroyRepeatTags();
+            anyChanges = true;
             return;
          }
          var repeatTags = this.repeatTags;
@@ -698,6 +704,7 @@ js_HTMLElement_c.syncRepeatTags = function(updateDOM) {
                }
                var newElem = this.createRepeatElement(toAddArrayVal, i, null);
                repeatTags.push(newElem);
+               anyChanges = true;
             }
             if (js_Element_c.verboseRepeat) {
                console.log("syncRepeatTags - new repeat repeatTags for: " + this.id);
@@ -706,7 +713,6 @@ js_HTMLElement_c.syncRepeatTags = function(updateDOM) {
          }
          // Incrementally update the tags while keeping the DOM synchronized with the object tree
          else {
-            
             if (js_Element_c.verboseRepeat) {
                console.log("syncRepeatTags - update new size: " + sz + " old size: " + repeatTags.length + " for: " + this.id);
                this.dumpRepeatTags();
@@ -721,6 +727,7 @@ js_HTMLElement_c.syncRepeatTags = function(updateDOM) {
                   var oldArrayVal = oldElem.getRepeatVar();
                   // The guy in this spot is not our guy.
                   if (oldArrayVal !== arrayVal && (oldArrayVal == null || !oldArrayVal.equals(arrayVal))) {
+                     anyChanges = true;
                      // The current guy is new to the list
                      if (curIx == -1) {
                         // Either replace or insert a row
@@ -767,6 +774,7 @@ js_HTMLElement_c.syncRepeatTags = function(updateDOM) {
                   }
                }
                else {
+                  anyChanges = true;
                   // If the current array val is not in the current list then append it
                   if (curIx == -1) {
                      var arrayElem = this.createRepeatElement(arrayVal, i, null);
@@ -782,6 +790,7 @@ js_HTMLElement_c.syncRepeatTags = function(updateDOM) {
             }
 
             while (repeatTags.length > sz) {
+               anyChanges = true;
                
                if (js_Element_c.verboseRepeat) {
                   console.log("syncRepeatTags - removing end nodes - new size: " + sz + " old size: " + repeatTags.length + " for: " + this.id);
@@ -790,8 +799,6 @@ js_HTMLElement_c.syncRepeatTags = function(updateDOM) {
                var ix = repeatTags.length - 1;
                var toRem = repeatTags[ix];
                needsRefresh = this.removeElement(toRem, ix, updateDOM) || needsRefresh;
-               if (needsRefresh) // Unable to remove - need to get out.
-                  break;
             }
          }
 
@@ -809,6 +816,8 @@ js_HTMLElement_c.syncRepeatTags = function(updateDOM) {
       }
    }
    finally {
+      if (anyChanges)
+         this.repeatTagsChanged();
       //sc_SyncManager_c.setSyncState(oldSyncState);
    }
    return needsRefresh;
@@ -1527,9 +1536,11 @@ js_Input_c.getClickCount = function() {
    return this.clickCount; 
 }
 
-js_Input_c.setChecked = function(ct) {
-   if (ct != this.checked) {
-      this.checked = ct; 
+js_Input_c.setChecked = function(ch) {
+   if (ch != this.checked) {
+      this.checked = ch; 
+      if (this.element !== null && this.element.checked != ch)
+         this.element.checked = ch;
       sc_Bind_c.sendChangedEvent(this, "checked");
    }
 }

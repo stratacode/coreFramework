@@ -35,7 +35,7 @@ sc_DynUtil_c.addDynInnerObject = function(typeName, inst, outer) {
 }
 
 sc_DynUtil_c.addDynInnerInstance = function(typeName, inst, outer) {
-   if (inst.outer == null) // For objects who'se type we optimized out, we need to set the outer
+   if (inst.outer == null) // For objects simple enough where there's no class and the type of the instance itself is not an inner type, we set the outer type of the instance here
       inst.outer = outer;
    sc_DynUtil_c.addDynInstance(typeName, inst);
 }
@@ -547,6 +547,10 @@ sc_DynUtil_c.getScopeName = sc_DynUtil_c.getScopeNameForType = function(obj) {
 }
 
 sc_DynUtil_c.findType = function(name) {
+   if (name == null) {
+      console.error("Null name passed to findType");
+      return null;
+   }
    if (name.indexOf('[') != -1) // TODO: Do we need to create a new type for each element type?
       return jv_Array_c;
    var res = sc$classTable[name];
@@ -846,16 +850,24 @@ sc_DynUtil_c.getAnnotationValue = function(typeObj, annotName, valName) {
 }
 
 sc_DynUtil_c.getPropertyAnnotationValue = function(typeObj, propName, annotName, valName) {
-   var keyName = "_PT_";
+   var keyName = "_PT";
    var annots = typeObj[keyName];
-   if (annots == null)
-      return null;
-
-   var annotName = sc_CTypeUtil_c.getClassName(annotName);
-   var annotVal = annots[annotName];
-   if (annotVal == null)
-       return null;
-   return annotVal[valName];
+   if (annots != null)
+      annots = annots[propName];
+   if (annots != null) {
+      var annotName = sc_CTypeUtil_c.getClassName(annotName);
+      var annotVal = annots[annotName];
+      if (annotVal != null) {
+         var res = annotVal[valName];
+         if (res != null)
+            return res;
+      }
+   }
+   var extType = sc_DynUtil_c.getExtendsType(typeObj);
+   if (extType != null) {
+       return sc_DynUtil_c.getPropertyAnnotationValue(extType, propName, annotName, valName);
+   }
+   return null;
 }
 
 function sc_IDynChildManager() {

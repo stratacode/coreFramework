@@ -19,6 +19,10 @@ public class EditorContext extends ClientEditorContext {
       if (type == null)
          return ret;
       String typeName = ModelUtil.getTypeName(type);
+      if (typeName == null) {
+          System.err.println("*** Error: no type name for type!");
+          return ret;
+      }
       Object[] insts = DynUtil.getInstancesOfTypeAndSubTypes(typeName);
       int i = 0;
       // Add a null entry at the front to represent the <type> selection
