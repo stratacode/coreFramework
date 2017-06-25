@@ -40,7 +40,7 @@ public class EditorContext extends ClientEditorContext {
       int sz = insts.length;
       for (i = 0; i < max && i < sz; i++) { 
          Object inst = insts[i];
-         ret.add(new InstanceWrapper(this, inst, DynUtil.getTypeName(DynUtil.getType(inst), false)));
+         ret.add(new InstanceWrapper(this, inst, typeName));
       }
 
       return ret;
