@@ -866,14 +866,19 @@ js_HTMLElement_c.appendElement = function(tag, updateDOM) {
       }
 
       var tmp = document.createElement('div');
-      tmp.innerHTML = tag.output().toString();
-      // We want to append this element after curElem but there's only "insert before" in the DOM api
-      var nextElem = curElem.nextSibling;
-      var parentNode = curElem.parentNode;
-      if (nextElem === null)
-         parentNode.appendChild(tmp.childNodes[0]);
-      else
-         parentNode.insertBefore(tmp.childNodes[0], nextElem);
+      var outRes = tag.output().toString();
+      // If there are no contents here tmp.childNodes is an empty array.  This happens at least when
+      // the tag is invisible
+      if (outRes.length > 0) {
+         tmp.innerHTML = outRes;
+         // We want to append this element after curElem but there's only "insert before" in the DOM api
+         var nextElem = curElem.nextSibling;
+         var parentNode = curElem.parentNode;
+         if (nextElem === null)
+            parentNode.appendChild(tmp.childNodes[0]);
+         else
+            parentNode.insertBefore(tmp.childNodes[0], nextElem);
+      }
       //document.removeChild(tmp); ?? needs to be removed somehow
    }
    this.repeatTags.push(tag);
@@ -897,7 +902,8 @@ js_HTMLElement_c.insertElement = function(tag, ix, updateDOM) {
           return true;
        }
        var tmp = document.createElement('div');
-       tmp.innerHTML = tag.output().toString();
+       var outRes = tag.output().toString();
+       tmp.innerHTML = outRes;
        var repeatTag = this.repeatTags[ix];
        var curElem = repeatTag.element;
        if (curElem == null) {
@@ -907,7 +913,7 @@ js_HTMLElement_c.insertElement = function(tag, ix, updateDOM) {
              needsRefresh = true;
           }
        }
-       if (!needsRefresh)
+       if (!needsRefresh && outRes.length > 0)
           curElem.parentNode.insertBefore(tmp.childNodes[0], curElem);
        //document.removeChild(tmp); ?? does this need to be removed - it throws an exception?
    }

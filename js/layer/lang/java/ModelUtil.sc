@@ -20,6 +20,15 @@ public class ModelUtil {
          return sc.dyn.DynUtil.getPackageName(type);
    }
 
+   public static String getExtendsTypeName(Object type) {
+      if (type instanceof TypeDeclaration)
+         return ((TypeDeclaration) type).extendsTypeName;
+      else {
+         Object extType = DynUtil.getExtendsType(type);
+         return extType == null ? null : DynUtil.getTypeName(extType, false);
+      }
+   }
+
    public static String getPropertyName(Object type) {
       if (type instanceof String)
          return (String) type;
@@ -46,12 +55,20 @@ public class ModelUtil {
          throw new UnsupportedOperationException();
    }
 
+   public static boolean hasAnnotation(Object def, String annotName) {
+      if (def instanceof Definition) {
+         return ((Definition) def).hasAnnotation(annotName);
+      }
+      else
+         return DynUtil.hasAnnotation(def, annotName);
+   }
+
    public static Object getAnnotationValue(Object def, String annotName, String valName) {
-       if (def instanceof Definition) {
-          return ((Definition) def).getAnnotationValue(annotName, valName);
-       }
-       else
-         throw new UnsupportedOperationException();
+      if (def instanceof Definition) {
+         return ((Definition) def).getAnnotationValue(annotName, valName);
+      }
+      else
+         return DynUtil.getAnnotationValue(def, annotName, valName);
    }
 
    public static String getInnerTypeName(Object type) {
@@ -92,6 +109,13 @@ public class ModelUtil {
       return type instanceof TypeDeclaration && ((TypeDeclaration) type).getDeclarationType() == DeclarationType.ENUMCONSTANT;
    }
 
+   public static Object[] getEnumConstants(Object type) {
+      if (type instanceof TypeDeclaration)
+         return ((TypeDeclaration) type).getEnumValues();
+      else
+         return DynUtil.getEnumConstants(type);
+   }
+
    public static boolean isInterface(Object type) {
       return type instanceof InterfaceDeclaration;
    }
@@ -110,13 +134,9 @@ public class ModelUtil {
       return DynUtil.getTypeName(type, false);
    }
 
-   public static boolean hasModifier(Object type, String modName) {
-      if (type instanceof TypeDeclaration) {
-         ArrayList<String> modifiers = ((TypeDeclaration) type).getClientModifiers();
-         if (modifiers != null) {
-            return modifiers.indexOf(modName) != -1;
-         }
-      }
+   public static boolean hasModifier(Object def, String modName) {
+      if (def instanceof Definition)
+         return ((Definition) def).hasModifier(modName);
       return false;
    }
 
@@ -198,5 +218,9 @@ public class ModelUtil {
 
       PropertyAssignment pa = (PropertyAssignment) def;
       return pa.operatorStr != null && pa.operatorStr.equals("=:");
+   }
+
+   public static boolean isCompiledClass(Object type) {
+      return type instanceof Class;
    }
 }

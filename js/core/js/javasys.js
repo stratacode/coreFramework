@@ -1,6 +1,6 @@
-var Error_c = sc_newClass("Error", Error, null, null);
+var Error_c = sc_newClass("java.lang.Error", Error, null, null);
 
-var Number_c = sc_newClass("Number", Number, null, null);
+var Number_c = sc_newClass("java.lang.Number", Number, null, null);
 
 Number_c.TYPE = Number_c;
 
@@ -155,7 +155,7 @@ String.prototype.equalsIgnoreCase = function(o) {
 function jv_Object() {
 }
 
-var jv_Object_c = sc_newClass("jv_Object", jv_Object, null, null);
+var jv_Object_c = sc_newClass("java.lang.Object", jv_Object, null, null);
 
 jv_Object_c.equals = function(other) {
    return this == other;
@@ -172,17 +172,17 @@ jv_Object_c.getName = function() {
    throw new UnsupportedOperationException();
 }
 
-var Boolean_c = sc_newClass("Boolean", Boolean, null, null);
-sc_addTypeAlias("Boolean", "boolean");
+var Boolean_c = sc_newClass("java.lang.Boolean", Boolean, null, null);
+sc_addTypeAlias("java.lang.Boolean", "boolean");
 
 Boolean_c.FALSE = false;
 Boolean_c.TRUE = true;
 
 function jv_Void() {}
-var jv_Void_c = sc_newClass("jv_Void", jv_Void, null, null);
+var jv_Void_c = sc_newClass("java.lang.Void", jv_Void, null, null);
 
 function jv_Byte() {}
-var jv_Byte_c = sc_newClass("jv_Byte", jv_Byte, null, null);
+var jv_Byte_c = sc_newClass("java.lang.Byte", jv_Byte, null, null);
 
 Error.prototype.printStackTrace = function() {
   if (this.stack)
@@ -192,7 +192,7 @@ Error.prototype.printStackTrace = function() {
 function jv_System() {
 }
 
-var jv_System_c = sc_newClass("jv_System", jv_System, null, null);
+var jv_System_c = sc_newClass("java.lang.System", jv_System, null, null);
 
 jv_System_c.out = new jv_PrintStream();
 jv_System_c.err = new jv_PrintStream(true);
@@ -227,7 +227,7 @@ function jv_PrintStream() {
    this.err = arguments.length == 1 && arguments[0];
 }
 
-var jv_PrintStream_c = sc_newClass("jv_PrintStream", jv_PrintStream, null, null);
+var jv_PrintStream_c = sc_newClass("java.io.PrintStream", jv_PrintStream, null, null);
 
 jv_PrintStream_c.println = function() {
    var res = "";
@@ -262,7 +262,7 @@ function jv_Enum(name, ord) {
    this._ordinal = ord;
 }
 
-jv_Enum_c = sc_newClass("jv_Enum", jv_Enum);
+jv_Enum_c = sc_newClass("java.lang.Enum", jv_Enum);
 
 jv_Enum_c.toString = jv_Enum_c.name = function() {
    return this._name;
@@ -288,7 +288,7 @@ function jv_StringBuilder() {
 }
 
 
-jv_StringBuilder_c = sc_newClass("jv_StringBuilder", jv_StringBuilder);
+jv_StringBuilder_c = sc_newClass("java.lang.StringBuilder", jv_StringBuilder);
 
 jv_StringBuilder_c.append = function(v) {
    if (v != null)
@@ -345,7 +345,7 @@ function jv_Exception() {
    this.stack = new Error().stack;
 }
 
-jv_Exception_c = sc_newClass("jv_Exception", jv_Exception, jv_Object, null);
+jv_Exception_c = sc_newClass("java.lang.Exception", jv_Exception, jv_Object, null);
 
 jv_Exception_c.printStackTrace = function() {
    console.log(this.stack);
@@ -370,7 +370,7 @@ function jv_assert(expr) {
 function jv_Character() {
 }
 
-jv_Character_c = sc_newClass("jv_Character", jv_Character);
+jv_Character_c = sc_newClass("java.lang.Character", jv_Character);
 
 jv_Character_c.isLowerCase = function(c) {
    return /[a-z]/.test(c);
@@ -404,7 +404,7 @@ jv_Character_c.isJavaIdentifierPart = function(c) {
 function jv_Math() {
 }
 
-jv_Math_c = sc_newClass("jv_Math", jv_Math);
+jv_Math_c = sc_newClass("java.lang.Math", jv_Math);
 
 jv_Math_c.max = function(arg1,arg2) {
    return Math.max(arg1, arg2);

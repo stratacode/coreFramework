@@ -215,6 +215,10 @@ sc_DynUtil_c.isEnumConstant = function(obj) {
    return sc_instanceOf(obj, jv_Enum);
 }
 
+sc_DynUtil_c.isEnumType = function(type) {
+   return sc_isAssignableFrom(jv_Enum, obj);
+}
+
 sc_DynUtil_c.getObjectId = function(obj, type, typeName) {
    var objId = sc$objectIds[sc_id(obj)];
    if (objId !== undefined)
@@ -263,6 +267,12 @@ sc_DynUtil_c.getInstanceName = function(obj) {
    var type = sc_DynUtil_c.getType(obj);
    if (type.$objectType)
       return sc_DynUtil_c.getTypeName(type, false);
+
+   if (sc_DynUtil_c.isObject(obj)) {
+      var res = sc_DynUtil_c.getObjectName(obj);
+      if (res != null)
+         return res;
+   }
 
    var str = obj.toString();
    if (str != null && str.length < 60 && str != "[object Object]")
@@ -495,14 +505,14 @@ sc_DynUtil_c.setAndReturn = function(obj, prop, val) {
 }
 
 sc_DynUtil_c.getInnerTypeName = function(type) {
-   var typeName = type.$typeName;
+   var typeName = sc_DynUtil_c.getTypeName(type, false);
    if (type.$outerClass == null)
       return sc_CTypeUtil_c.getClassName(typeName);
    return sc_DynUtil_c.getInnerTypeName(type.$outerClass) + "." + sc_CTypeUtil_c.getClassName(typeName);
 }
 
 sc_DynUtil_c.getPackageName = function(type) {
-   var typeName = type.$typeName;
+   var typeName = sc_DynUtil_c.getTypeName(type, false);
    if (type.$outerClass == null)
       return sc_CTypeUtil_c.getPackageName(typeName);
    return sc_DynUtil_c.getPackageName(type.$outerClass);
@@ -558,7 +568,7 @@ sc_DynUtil_c.findType = function(name) {
       sc_clInit(res);
       return res.prototype;
    }
-   if (name == "int" || name == "float" || name == "double")
+   if (name == "int" || name == "float" || name == "double" || name == "long")
       return Number_c;
    if (name == "java.lang.String")
       return String_c;
@@ -724,6 +734,16 @@ sc_PTypeUtil_c.isPrimitive = function(type) {
    return false; // TODO: some way to reprent int.class etc.
 }
 
+sc_PTypeUtil_c.isANumber = function(type) {
+   var tot = typeof type;
+   return tot == "number" || (tot == "object" && type.constructor === Number);
+}
+
+sc_PTypeUtil_c.isStringOrChar = function(type) {
+   var tot = typeof type;
+   return tot == "string" || (tot == "object" && type.constructor === String);
+}
+
 sc_PTypeUtil_c.getArrayLength = sc_DynUtil_c.getArrayLength;
 sc_PTypeUtil_c.getArrayElement = sc_DynUtil_c.getArrayElement;
 
@@ -847,6 +867,14 @@ sc_DynUtil_c.getAnnotationValue = function(typeObj, annotName, valName) {
    if (val == null)
       return null;
    return val[valName];
+}
+
+sc_DynUtil_c.hasAnnotation = function(typeObj, annotName) {
+   var keyName = "_A_" + sc_CTypeUtil_c.getClassName(annotName);
+   var val = typeObj[keyName];
+   if (val === undefined)
+      return false;
+   return true;
 }
 
 sc_DynUtil_c.getPropertyAnnotationValue = function(typeObj, propName, annotName, valName) {

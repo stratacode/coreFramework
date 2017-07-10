@@ -100,6 +100,7 @@ class BodyTypeDeclaration extends Definition {
       return comment;
    }
 
+   /*
    ArrayList<String> clientModifiers;
    @Constant
    public ArrayList<String> getClientModifiers() {
@@ -108,6 +109,7 @@ class BodyTypeDeclaration extends Definition {
    public void setClientModifiers(ArrayList<String> newMods) {
       clientModifiers = newMods;
    }
+   */
 
    @Constant
    public boolean isEnumConstant() {
@@ -126,6 +128,11 @@ class BodyTypeDeclaration extends Definition {
 
    void markChanged() {
       sc.bind.Bind.sendChangedEvent(this, null);
+   }
+
+   // TODO: fix me - at least need to filter out only the enum constants here?
+   public Object[] getEnumValues() {
+      return declaredProperties == null ? null : declaredProperties.toArray();
    }
 
 }

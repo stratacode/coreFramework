@@ -2,6 +2,9 @@ import java.awt.event.ItemListener;
 import java.awt.event.ItemEvent;
 import sc.type.IBeanMapper;
 
+import java.awt.event.FocusListener;
+import java.awt.event.FocusEvent;
+
 @Component
 public class JCheckBox extends javax.swing.JCheckBox implements ComponentStyle {
    private static IBeanMapper selectedProp = sc.type.TypeUtil.getPropertyMapping(JCheckBox.class, "selected");
@@ -11,10 +14,18 @@ public class JCheckBox extends javax.swing.JCheckBox implements ComponentStyle {
    override @Bindable location;
    override @Bindable visible;
 
+   /** This event is fired whenever the user changes the text value - not when text is changed otherwise */
+   @Bindable
+   public int userEnteredCount = 0;
+
+   @Bindable
+   public boolean focus = false;
+
    {
       addItemListener(new ItemListener() {
-         /** Listen to the slider. */
+         /** Listen to the checkbox. */
           public void itemStateChanged(ItemEvent e) {
+             userEnteredCount++;
              SwingUtil.sendDelayedEvent(sc.bind.IListener.VALUE_CHANGED, JCheckBox.this, selectedProp);
           }});
    }
@@ -23,5 +34,17 @@ public class JCheckBox extends javax.swing.JCheckBox implements ComponentStyle {
    public void setText(String text) {
       super.setText(text);
       sc.bind.Bind.sendEvent(sc.bind.IListener.VALUE_CHANGED, this, SwingUtil.preferredSizeProp);
+   }
+
+   {
+      addFocusListener(new FocusListener() {
+         public void focusGained(FocusEvent e) {
+            focus = true;
+         }
+
+         public void focusLost(FocusEvent e) {
+            focus = false;
+         }
+      });
    }
 }

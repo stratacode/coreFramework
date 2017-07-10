@@ -74,7 +74,6 @@ public class JTextField extends javax.swing.JTextField implements TextComponentS
       });
    }
 
-
    public void fireUserChange() {
       enteredText = text;
       userEnteredCount++;
@@ -82,14 +81,14 @@ public class JTextField extends javax.swing.JTextField implements TextComponentS
 
    {
       addFocusListener(new FocusListener() {
-                   public void focusGained(FocusEvent e) {
-                      focus = true;
-                   }
+         public void focusGained(FocusEvent e) {
+            focus = true;
+         }
 
-                   public void focusLost(FocusEvent e) {
-                      focus = false;
-                   }});
-
+         public void focusLost(FocusEvent e) {
+            focus = false;
+         }
+      });
    }
 
 }

@@ -37,6 +37,8 @@ public class JComboBox extends javax.swing.JComboBox implements ComponentStyle {
    private boolean inSet = false;
    private boolean inSelectedIndex = false;
 
+   private Integer pendingSelectedIndex = null;
+
    override @Bindable preferredSize;
    override @Bindable location;
 
@@ -96,6 +98,9 @@ public class JComboBox extends javax.swing.JComboBox implements ComponentStyle {
          for (Object item:_items)
             addItem(item);
       }
+      if (pendingSelectedIndex != null) {
+         selectedIndex = pendingSelectedIndex;
+      }
    }
 
    @Bindable
@@ -107,6 +112,12 @@ public class JComboBox extends javax.swing.JComboBox implements ComponentStyle {
 
    @Bindable(manual=true)
    public void setSelectedIndex(int index) {
+      if (!_inited) {
+         pendingSelectedIndex = index;
+         return;
+      }
+      else
+         pendingSelectedIndex = null;
       try {
          inSelectedIndex = true;
          super.setSelectedIndex(index);
