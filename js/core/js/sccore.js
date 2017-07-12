@@ -97,6 +97,7 @@ function sc_newArray(arrayClass) {
    return sc_initArray(null, arrayClass, arguments, 0);
 }
 
+// TODO: right now dim is 0 based - so a 1D array is dim = 0 - see also BinaryExpression and JSTypeParameters for the places to fix this
 function sc_initArray(array, arrayClass, args, dim) {
    var len = Math.floor(args[1 + dim]);  // skipping original arrayClass arg - len converted to an int just in case it needs to be...
    var ndim = args.length - 2 - dim;
@@ -158,6 +159,7 @@ function sc_instanceOf(srcObj, dstClass) {
    return sc_isAssignableFrom(srcObj.constructor, dstClass);
 }
 
+// TODO: right now ndim is 0 based - so a 1D array is ndim = 0
 function sc_arrayInstanceOf(srcObj, dstClass, ndim) {
    return srcObj != null && srcObj._class != null && srcObj._ndim == ndim && sc_isAssignableFrom(srcObj._class.constructor, dstClass);
 }
