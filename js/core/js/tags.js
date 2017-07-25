@@ -984,7 +984,7 @@ js_HTMLElement_c.moveElement = function(tag, oldIx, newIx, updateDOM) {
 js_HTMLElement_c.getId = function() {
    if (this.id != null)
       return this.id;
-   if (this.element === null)
+   if (this.element == null)
       return null;
    return this.element.id;
 }

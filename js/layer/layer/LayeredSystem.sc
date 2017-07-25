@@ -2,15 +2,19 @@ import sc.obj.Constant;
 import sc.obj.Sync;
 import sc.js.URLPath;
 import sc.bind.Bind;
+import sc.lang.java.BodyTypeDeclaration;
 
 import java.util.List;
+import java.util.HashMap;
 
-/** The client view of this file (a subset of the original one -
- * TODO: should be using layers to keep them in sync but that will require breaking the cord with Java and building SC with SC
+/** The client view of the LayeredSystem which is a subset of the real LayeredSystem
+ * TODO: should be using layers to keep this class in sync with the original but that will require building SC with SC which has some downsides
  */
 @Sync(onDemand=true)
 public class LayeredSystem {
    public List<Layer> layers;
+
+   public HashMap<String,BodyTypeDeclaration> typesByNameIndex = new HashMap<String,BodyTypeDeclaration>();
 
    public static LayeredSystem current = null;
 
@@ -68,7 +72,7 @@ public class LayeredSystem {
    }
 
    public static LayeredSystem getCurrent() {
-      return null;
+      return current;
    }
 
    public static List<URLPath> getURLPaths() {

@@ -1,6 +1,7 @@
 import java.util.List;
 import java.util.ArrayList;
 import sc.layer.Layer;
+import sc.layer.LayeredSystem;
 import sc.obj.Constant;
 
 // A version of the BodyTypeDeclaration for clients that cannot run the full dynamic runtime.
@@ -19,6 +20,9 @@ class BodyTypeDeclaration extends Definition {
    @Constant
    public void setFullTypeName(String ftn) {
       fullTypeName = ftn;
+
+      if (ftn != null && LayeredSystem.current != null)
+         LayeredSystem.current.typesByNameIndex.put(fullTypeName, this);
    }
    public String getFullTypeName() {
       return fullTypeName;

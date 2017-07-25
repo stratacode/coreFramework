@@ -88,6 +88,21 @@ public class ModelUtil {
    }
 
    public static Object getPropertyType(Object prop) {
+      return getPropertyType(prop, null);
+   }
+
+   public static Object findTypeDeclaration(LayeredSystem sys, String typeName, Layer refLayer, boolean layerResolve) {
+      return sys.typesByNameIndex.get(typeName);
+   }
+
+   public static Object findType(LayeredSystem sys, String typeName) {
+      Object res = findTypeDeclaration(sys, typeName, null, false);
+      if (res != null)
+         return res;
+      return DynUtil.findType(typeName);
+   }
+
+   public static Object getPropertyType(Object prop, LayeredSystem sys) {
       if (prop instanceof VariableDefinition) {
          return DynUtil.findType(((VariableDefinition) prop).variableTypeName);
       }
@@ -222,5 +237,9 @@ public class ModelUtil {
 
    public static boolean isCompiledClass(Object type) {
       return type instanceof Class;
+   }
+
+   public static Object resolveSrcTypeDeclaration(LayeredSystem sys, Object type) {
+      return type; // TODO: LayeredSystem should store both a typesByName map and a typeNames Set... so we can tell which types we can edit in this model before loading the metadata for all of the types
    }
 }

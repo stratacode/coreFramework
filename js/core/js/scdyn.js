@@ -72,6 +72,13 @@ sc_DynUtil_c.getType = sc_DynUtil_c.getSType = function(o) {
    return o.constructor.prototype;
 }
 
+sc_DynUtil_c.getTypeOfObj = function(o) {
+    if (sc_DynUtil_c.isType(o)) // In JS the getClass() method does not work on the _c class object but we need this for getting the right sync behavior of the class as an instance
+       return jv_Class_c;
+   else
+       return sc_DynUtil_c.getType(o);
+}
+
 sc_DynUtil_c.resolveMethod = function(vartype, methName, sig) {
    return {type:sc_clInit(vartype), name:methName, paramSig:sig};
 }
@@ -324,7 +331,8 @@ sc_DynUtil_c.getObjChildren = function(obj, scopeName, create) {
 }
 
 sc_DynUtil_c.equalObjects = function(o1, o2) {
-   return o1 == o2 || (o1 != null && (o1.equals != null && o1.equals(o2)));
+   // Need to check typeof for == because it will do a conversion and for example 0 == "" is true
+   return (o1 == o2 && typeof o1 == typeof o2) || (o1 != null && (o1.equals != null && o1.equals(o2)));
 }
 
 sc_DynUtil_c.equalArrays = function(a1, a2) {
