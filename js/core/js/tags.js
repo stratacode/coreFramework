@@ -1299,7 +1299,7 @@ js_HTMLElement_c.invalidate = function() {
 js_HTMLElement_c.schedRefresh = function(tagList, validName) {
    if (this[validName]) {
       if (!js_Element_c.globalRefreshScheduled) {
-         this[validName] = false; 
+         this[validName] = false;
          // Need to refresh the element even if it's not visible at least to set the valid flag back to true so we refresh it again to make it visible
          if (!js_Element_c.refreshScheduled) {
             js_Element_c.refreshScheduled = true;
@@ -1687,6 +1687,8 @@ js_Select_c.getOptionDataSource = function() {
 // a different way to implement sub-tags which is not stateful, more code-control by rendering each option after setting the data source.  
 // The outputBody method is not really used here directly which means we have to override refreshBody as well.
 js_Select_c.outputTag = function(sb) {
+   if (!this.visible)
+      return;
    var ds = this.optionDataSource;
    if (ds == null) {
       js_HTMLElement_c.outputTag.call(this, sb);
@@ -1698,6 +1700,8 @@ js_Select_c.outputTag = function(sb) {
 }
 
 js_Select_c.outputSelectBody = function(sb) {
+   if (!this.visible)
+      return;
    var ds = this.optionDataSource;
    var dataLen = ds == null ? 0 : sc_length(ds);
    if (dataLen == 0) {
