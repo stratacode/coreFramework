@@ -122,7 +122,7 @@ function sc_initArray(array, arrayClass, args, dim) {
 }
 
 function sc_isAssignableFrom(srcClass, dstClass) {
-   if (dstClass === jv_Object)
+   if (srcClass === jv_Object)
       return true;
    if (srcClass === dstClass)
       return true;
@@ -130,18 +130,16 @@ function sc_isAssignableFrom(srcClass, dstClass) {
       if (srcClass.$typeName == dstClass.$typeName) {
          return true;
       }
-      if (srcClass.$implements) {
-	  for (var i=0; i < srcClass.$implements.length; i++) {
-              var impl = srcClass.$implements[i];
-              if (sc_isAssignableFrom(impl, dstClass))
+      var impl = dstClass.$implements;
+      if (impl) {
+	  for (var i=0; i < impl.length; i++) {
+              var impl = impl[i];
+              if (sc_isAssignableFrom(srcClass, impl))
 		  return true;
           }
       }
-      if (srcClass.$extendsClass != null)
-         srcClass = srcClass.$extendsClass;
-      else
-         srcClass = null;
-   } while (srcClass);
+      dstClass = dstClass.$extendsClass; 
+   } while (dstClass);
    return false;
 }
 
@@ -156,12 +154,12 @@ function sc_instanceOf(srcObj, dstClass) {
    if (srcObj == null)
       return false;
 
-   return sc_isAssignableFrom(srcObj.constructor, dstClass);
+   return sc_isAssignableFrom(dstClass, srcObj.constructor);
 }
 
 // TODO: right now ndim is 0 based - so a 1D array is ndim = 0
 function sc_arrayInstanceOf(srcObj, dstClass, ndim) {
-   return srcObj != null && srcObj._class != null && srcObj._ndim == ndim && sc_isAssignableFrom(srcObj._class.constructor, dstClass);
+   return srcObj != null && srcObj._class != null && srcObj._ndim == ndim && sc_isAssignableFrom(dstClass, srcObj._class.constructor);
 }
 
 function sc_instanceOfChar(srcObj, type) {
@@ -240,19 +238,23 @@ function sc_methodArgCallback(thisObj, method, arg) {
 var sc_runLaterMethods = [];
 
 function sc_runRunLaterMethods() {
-   try {
-      for (var i = 0; i < sc_runLaterMethods.length; i++) {
-         var rlm = sc_runLaterMethods[i];
-         rlm.method.call(rlm.thisObj);
-      }
-   }
-   finally {
+   while (sc_runLaterMethods.length > 0) {
+      var toRunLater = sc_runLaterMethods.slice(0);
       sc_runLaterMethods = [];
+      for (var i = 0; i < toRunLater.length; i++) {
+         var rlm = toRunLater[i];
+         try {
+            rlm.method.call(rlm.thisObj);
+         }
+         catch (e) {
+            console.error("Exception: " + e + " in run later method: " + rlm);
+         }
+      }
    }
    sc_runLaterScheduled = false;
 }
 
-// Override this to delay when runLaters are called - perhaps till right before refresh
+// Set this to true when you need to pause runLaters - e.g. wait till you are about to do the next UI refresh.
 var sc_runLaterScheduled = false;
 
 function sc_addRunLaterMethod(thisObj, method, priority) {

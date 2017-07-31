@@ -149,6 +149,10 @@ public class ModelUtil {
       return DynUtil.getTypeName(type, false);
    }
 
+   public static Object getArrayComponentType(Object arrType) {
+      return DynUtil.getComponentType(arrType);
+   }
+
    public static boolean hasModifier(Object def, String modName) {
       if (def instanceof Definition)
          return ((Definition) def).hasModifier(modName);
@@ -240,6 +244,9 @@ public class ModelUtil {
    }
 
    public static Object resolveSrcTypeDeclaration(LayeredSystem sys, Object type) {
-      return type; // TODO: LayeredSystem should store both a typesByName map and a typeNames Set... so we can tell which types we can edit in this model before loading the metadata for all of the types
+      Object srcRes = findTypeDeclaration(sys, ModelUtil.getTypeName(type), null, false);
+      if (srcRes != null)
+         return srcRes;
+      return type;
    }
 }

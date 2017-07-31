@@ -1,6 +1,7 @@
 var sc$instancesByType = new Object();
 var sc$objectIds = new Object();
 var sc$typeIdCounts = new Object();
+var sc$dynListeners = null;
 
 if (!Array.isArray) {
    Array.isArray = function (arg) {
@@ -25,6 +26,11 @@ sc_DynUtil_c.addDynInstance = function(typeName, inst) {
       sc$instancesByType[typeName] = insts = new Object();
    }
    insts[sc_id(inst)] = inst;
+
+   if (sc$dynListeners != null) {
+      for (var i = 0; i < sc$dynListeners.length; i++)
+         sc$dynListeners[i].instanceAdded(inst);
+   }
 }
 
 sc_DynUtil_c.addDynInnerObject = function(typeName, inst, outer) {
@@ -38,6 +44,20 @@ sc_DynUtil_c.addDynInnerInstance = function(typeName, inst, outer) {
    if (inst.outer == null) // For objects simple enough where there's no class and the type of the instance itself is not an inner type, we set the outer type of the instance here
       inst.outer = outer;
    sc_DynUtil_c.addDynInstance(typeName, inst);
+}
+
+sc_DynUtil_c.addDynListener = function(listener) {
+   if (sc$dynListeners == null)
+      sc$dynListeners = [];
+   sc$dynListeners.push(listener);
+}
+
+sc_DynUtil_c.removeDynListener = function(listener) {
+   var ix;
+   if (sc$dynListeners == null || (ix = sc$dynListeners.indexOf(listener)) == -1)
+      console.error("No dynListener to remove");
+   else
+      sc$dynListeners.splice(ix, 1);
 }
 
 sc_DynUtil_c.initComponent = function(c) {
@@ -227,15 +247,20 @@ sc_DynUtil_c.isEnumType = function(type) {
 }
 
 sc_DynUtil_c.getObjectId = function(obj, type, typeName) {
-   var objId = sc$objectIds[sc_id(obj)];
+   var scid = sc_id(obj);
+   var objId = sc$objectIds[scid];
    if (objId !== undefined)
       return objId;
 
    if (typeName == null) 
       typeName = sc_DynUtil_c.getInstanceId(type);
    var typeIdStr = "__" + sc_DynUtil_c.getTypeIdCount(typeName);
-   objId = sc$objectIds[sc_id(obj)] = typeName + typeIdStr;
+   objId = sc$objectIds[scid] = typeName + typeIdStr;
    return objId;
+}
+
+sc_DynUtil_c.setObjectId = function(obj, name) {
+   sc$objectIds[sc_id(obj)] = name;
 }
 
 sc_DynUtil_c.getTypeIdCount = function(typeName) {
@@ -248,6 +273,10 @@ sc_DynUtil_c.getTypeIdCount = function(typeName) {
       sc$typeIdCounts[typeName] = 1 + typeId;
    }
    return typeId;
+}
+
+sc_DynUtil_c.updateTypeIdCount = function(typeName, ct) {
+   sc$typeIdCounts[typeName] = ct;
 }
 
 sc_DynUtil_c.isType = function(obj) {
@@ -281,11 +310,16 @@ sc_DynUtil_c.getInstanceName = function(obj) {
          return res;
    }
 
+   var scid = sc_id(obj);
+   var id = sc$objectIds[scid];
+   if (id != null)
+      return id;
+
    var str = obj.toString();
    if (str != null && str.length < 60 && str != "[object Object]")
       return str;
 
-   return obj.$protoName + '__' + sc_id(obj);
+   return sc_CTypeUtil_c.getClassName(obj.$protoName) + '__' + scid;
 }
 
 sc_DynUtil_c.arrayToInstanceName = function(list) {
@@ -696,6 +730,10 @@ sc_DynUtil_c.invokeLater = function(runnable, priority) {
 }
 
 sc_DynUtil_c.dispose = function(obj, disposeChildren) {
+   if (sc$dynListeners != null) {
+      for (var i = 0; i < sc$dynListeners.length; i++)
+         sc$dynListeners[i].instanceRemoved(obj);
+   }
    sc_SyncManager_c.removeSyncInst(obj);
    sc_Bind_c.removeBindings(obj, false);
 
