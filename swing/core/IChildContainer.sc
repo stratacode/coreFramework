@@ -5,6 +5,8 @@ public interface IChildContainer {
 
    public java.awt.Component getParentComponent();
 
+   public java.awt.Component getLastComponent();
+
    /** Implemented by components that wrap swing children.  This lets you implement groups of swing components or other groups without adding a new swing parent.  Do not confuse this with IObjChildren.getObjChildren - this will collate children and do other processing.  */
    public Object[] getChildren();
 }

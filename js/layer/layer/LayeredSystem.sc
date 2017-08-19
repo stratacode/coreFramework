@@ -4,8 +4,12 @@ import sc.js.URLPath;
 import sc.bind.Bind;
 import sc.lang.java.BodyTypeDeclaration;
 
+import sc.dyn.DynUtil;
+
 import java.util.List;
 import java.util.HashMap;
+
+import sc.type.IResponseListener;
 
 /** The client view of the LayeredSystem which is a subset of the real LayeredSystem
  * TODO: should be using layers to keep this class in sync with the original but that will require building SC with SC which has some downsides
@@ -89,4 +93,29 @@ public class LayeredSystem {
       return null;
    }
 
+   private class FetchTypeResponseListener implements IResponseListener {
+      String typeName;
+      IResponseListener wrapped;
+      FetchTypeResponseListener(String typeName, IResponseListener wrap) {
+         this.wrapped = wrap;
+         this.typeName = typeName;
+      }
+
+      public void response(Object response) {
+         typesByNameIndex.put(typeName, (BodyTypeDeclaration)response);
+         if (response != null)
+            wrapped.response(response);
+      }
+      public void error(int errorCode, Object error) {
+         System.err.println("*** Error trying to fetch type declaration: " + errorCode + ": " + error);
+      }
+   }
+
+   public void fetchRemoteTypeDeclaration(String typeName, IResponseListener resp) {
+      // We cache null if there's no src type declaration to avoid trying this over and over again
+      if (!typesByNameIndex.containsKey(typeName)) {
+         sc.dyn.RemoteResult res = DynUtil.invokeRemote(this, DynUtil.resolveRemoteMethod(this, "getSrcTypeDeclaration", "Ljava/lang/String;"), typeName);
+         res.listener = new FetchTypeResponseListener(typeName, resp);
+      }
+   }
 }

@@ -16,6 +16,8 @@ public abstract class RepeatComponent<T> implements IChildContainer {
    public boolean disableRefresh = false;
    public boolean valid = true; // start out true so the first invalidate triggers the refresh
 
+   public boolean manageChildren = true;
+
    disableRefresh =: invalidate();
    repeat =: invalidate();
 
@@ -189,17 +191,27 @@ public abstract class RepeatComponent<T> implements IChildContainer {
    }
 
    public void appendElement(T elem) {
+      if (manageChildren && parentComponent != null)
+         SwingUtil.addChild(parentComponent, elem);
    }
 
    public void insertElement(T elem, int ix) {
+      if (manageChildren && parentComponent != null)
+         SwingUtil.addChild(parentComponent, elem, ix);
    }
 
    public void removeElement(T elem, int ix) {
+      if (manageChildren && parentComponent != null)
+         SwingUtil.removeChild(parentComponent, elem);
       // Remove all of the bindings on all of the children when we remove the tag.  ?? Do we need to queue these up and do them later for some reason?
       DynUtil.dispose(elem, true);
    }
 
    public void moveElement(T elem, int fromIx, int toIx) {
+      if (manageChildren && parentComponent != null) {
+         SwingUtil.removeChild(parentComponent, elem);
+         SwingUtil.addChild(parentComponent, elem, toIx);
+      }
    }
 
    /** Sets the parent widget.  The children can use this to figure out which swing component to add themselves to for dynamically created components */
@@ -213,5 +225,20 @@ public abstract class RepeatComponent<T> implements IChildContainer {
 
    public Object[] getChildren() {
       return repeatComponents.toArray();
+   }
+
+   public java.awt.Component getLastComponent() {
+      int sz = repeatComponents.size();
+      if (sz == 0)
+         return parentComponent;
+      else {
+         Object c = repeatComponents.get(sz - 1);
+         if (c instanceof java.awt.Component)
+            return (java.awt.Component) c;
+         else if (c instanceof IChildContainer)
+            return ((IChildContainer) c).getLastComponent();
+         else
+            return null;
+      }
    }
 }

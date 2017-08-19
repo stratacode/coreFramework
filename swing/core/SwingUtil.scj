@@ -127,20 +127,30 @@ public class SwingUtil {
    }
 
    public static void removeChild(Object parent, Object child) {
-      if (parent instanceof Container)
-         removeChild((Container) parent, child);
-      else if (parent instanceof JComponent)
-         removeChild((JComponent) parent, child);
-      else
-         throw new IllegalArgumentException("Invalid parent type for removeChild:" + parent);
+      if (child instanceof IChildContainer) {
+         Object[] subChildren = ((IChildContainer) child).getChildren();
+         if (subChildren != null) {
+            for (Object subChild:subChildren) {
+               removeChild(parent, subChild);
+            }
+         }
+      }
+      else {
+         if (parent instanceof Container && child instanceof java.awt.Component)
+            removeChild((Container) parent, (java.awt.Component) child);
+         else if (parent instanceof JComponent && child instanceof JComponent)
+            removeChild((JComponent) parent, (JComponent) child);
+         else
+            throw new IllegalArgumentException("Invalid parent/child type for removeChild:" + parent + " : " + child);
+      }
    }
 
-   public static void removeChild(Container parent, Object child) {
-      parent.remove((java.awt.Component) child);
+   public static void removeChild(Container parent, java.awt.Component child) {
+      parent.remove(child);
    }
 
-   public static void removeChild(JComponent parent, Object child) {
-      parent.remove((JComponent) child);
+   public static void removeChild(JComponent parent, JComponent child) {
+      parent.remove(child);
    }
 
    public static Rectangle getBoundingRectangle(Object child) {
@@ -155,8 +165,8 @@ public class SwingUtil {
              Rectangle childBounds = getBoundingRectangle(innerChild);
              resBounds.x = resBounds.x == -1 ? childBounds.x : Math.min(resBounds.x, childBounds.x);
              resBounds.y = resBounds.y == -1 ? childBounds.y : Math.min(resBounds.y, childBounds.y);
-             resBounds.width = Math.min(resBounds.width, childBounds.width);
-             resBounds.height = Math.min(resBounds.height, childBounds.height);
+             resBounds.width = Math.max(resBounds.width, childBounds.width);
+             resBounds.height = Math.max(resBounds.height, childBounds.height);
          }
          return resBounds;
       }

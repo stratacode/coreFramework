@@ -319,3 +319,7 @@ function sc_addTypeAliases(type, list) {
 function sc_addTypeAlias(fromName, toName) {
    sc$classTable[toName] = sc$classTable[fromName];
 }
+
+function sc_noMeth(name) {
+   throw new Error("Invalid method call to: " + name);
+}

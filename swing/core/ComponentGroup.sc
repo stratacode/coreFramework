@@ -37,4 +37,19 @@ public class ComponentGroup<T> extends ComponentList<T> implements IChildContain
    public java.awt.Component getParentComponent() {
      return parentComponent; 
    }
+
+   public java.awt.Component getLastComponent() {
+      int sz = size();
+      if (sz == 0)
+         return parentComponent;
+      else {
+         Object c = get(sz-1);
+         if (c instanceof java.awt.Component)
+            return (java.awt.Component) c;
+         else if (c instanceof IChildContainer)
+            return ((IChildContainer) c).getLastComponent();
+         else
+            return null;
+      }
+   }
 }

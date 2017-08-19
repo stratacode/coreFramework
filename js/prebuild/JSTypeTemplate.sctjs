@@ -115,6 +115,7 @@ if (needsConstructor) {
                   }
              } %>   }<%           first = false;
          } %>
+   else sc_noMeth("<%= meth.name %>");
 <%
       } else { %><% 
          int methCt = 0;
