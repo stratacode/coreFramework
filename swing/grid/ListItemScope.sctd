@@ -30,6 +30,19 @@ java.awt.Component getParentComponent() {
    return parentComponent;
 }
 
+java.awt.Component getLastComponent() {
+   Object[] children = getChildren();
+   if (children == null || children.length == 0)
+      return null;
+
+   Object lastChild = children[children.length-1];
+   if (lastChild instanceof java.awt.Component)
+      return (java.awt.Component) lastChild;
+   else if (lastChild instanceof IChildContainer)
+      return ((IChildContainer) lastChild).getLastComponent();
+   return null;
+}
+
 public Object[] getChildren() {
   return getObjChildren(true);
 }

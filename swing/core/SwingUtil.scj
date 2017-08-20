@@ -229,4 +229,13 @@ public class SwingUtil {
          System.err.println("*** invalid caret position for component");
       }
    }
+
+   public static java.awt.Component getLastComponent(Object component) {
+      if (component instanceof java.awt.Component)
+         return (java.awt.Component) component;
+      else if (component instanceof IChildContainer) 
+         return ((IChildContainer) component).getLastComponent();
+      return null;
+   }
+
 }

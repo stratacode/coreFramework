@@ -34,7 +34,8 @@ abstract class ListView<T> implements IChildContainer {
    }
 
    /** Stores the reference to the last child created.  You can use this in data binding expressions to find where the list ends  */
-   Object lastComponent;
+   @Bindable
+   java.awt.Component lastComponent;
 
    boolean visible = true;
    visible =: propagateVisible();
@@ -132,7 +133,7 @@ abstract class ListView<T> implements IChildContainer {
          currentComponents.remove(i);
          anyComponentsChanged = true;
       }
-      Object newLastComponent = currentComponents.size() == 0 ? null : getLastElement(currentComponents.get(currentComponents.size()-1));
+      java.awt.Component newLastComponent = SwingUtil.getLastComponent(currentComponents.size() == 0 ? null : getLastElement(currentComponents.get(currentComponents.size()-1)));
       if (!DynUtil.equalObjects(newLastComponent, oldLastComponent))
          lastComponent = newLastComponent;
       if (anyComponentsChanged) {

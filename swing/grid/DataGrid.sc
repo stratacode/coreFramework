@@ -8,6 +8,10 @@ DataGrid implements IChildContainer {
       return parentComponent;
    }
 
+   java.awt.Component getLastComponent() {
+      return getRootPanel();
+   }
+
    /** Allows the grid to be used as a child object of a UIPanel or other container.  Bubbles up the actual JComponent children from panel generated. */
    JComponent[] getChildren() {
       JComponent[] res = new JComponent[1];
