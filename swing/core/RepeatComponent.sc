@@ -2,7 +2,7 @@ import sc.dyn.DynUtil;
 import sc.type.PTypeUtil;
 import java.util.Arrays;
 
-public abstract class RepeatComponent<T> implements IChildContainer {
+public abstract class RepeatComponent<T> implements IChildContainer, sc.dyn.IObjChildren {
    java.awt.Component parentComponent;
 
    /** Either Object[] or List[] */
@@ -18,8 +18,11 @@ public abstract class RepeatComponent<T> implements IChildContainer {
 
    public boolean manageChildren = true;
 
+   public boolean visible = true;
+
    disableRefresh =: invalidate();
    repeat =: invalidate();
+   visible =: invalidate();
 
    // TODO: by default we could define a separate class from the children of this component using an IChildContainer
    // this could create an instance of that generated class.  This is similar to how repeat works in schtml.
@@ -51,6 +54,12 @@ public abstract class RepeatComponent<T> implements IChildContainer {
 
    public void refreshList() {
       valid = true;
+
+      if (!visible) {
+         removeAllElements();
+         return;
+      }
+
       Object repeatVal = repeat;
       int sz = repeatVal == null ? 0 : DynUtil.getArrayLength(repeatVal);
 
@@ -207,6 +216,14 @@ public abstract class RepeatComponent<T> implements IChildContainer {
       DynUtil.dispose(elem, true);
    }
 
+   public void removeAllElements() {
+      List<T> children = new ArrayList<T>(repeatComponents);
+      for (int i = repeatComponents.size() - 1; i >= 0; i--) {
+         removeElement(repeatComponents.get(i), i);
+      }
+      repeatComponents.clear();
+   }
+
    public void moveElement(T elem, int fromIx, int toIx) {
       if (manageChildren && parentComponent != null) {
          SwingUtil.removeChild(parentComponent, elem);
@@ -241,4 +258,9 @@ public abstract class RepeatComponent<T> implements IChildContainer {
             return null;
       }
    }
+
+   public Object[] getObjChildren(boolean create) {
+      return repeatComponents.toArray();
+   }
+
 }

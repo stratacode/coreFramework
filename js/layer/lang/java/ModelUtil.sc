@@ -13,6 +13,14 @@ public class ModelUtil {
       return null;
    }
 
+   public static Layer getLayerForMember(LayeredSystem sys, Object member) {
+      if (member instanceof VariableDefinition)
+         return ((VariableDefinition) member).layer;
+      else if (member instanceof BodyTypeDeclaration)
+         return ((BodyTypeDeclaration) member).layer;
+      return null;
+   }
+
    public static String getPackageName(Object type) {
       if (type instanceof TypeDeclaration)
          return ((TypeDeclaration) type).packageName;

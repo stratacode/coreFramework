@@ -1,6 +1,6 @@
 Component {
 /*
-  override @Constant size;
-  override @Constant location;
+  override @Bindable size;
+  override @Bindable location;
 */
 }
