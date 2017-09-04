@@ -14,6 +14,10 @@ jetty.lib extends log4j {
       url = "mvn://org.eclipse.jetty/jetty-webapp/8.1.17.v20150415";
    }
 
+   object jettySchemas extends MvnRepositoryPackage {
+      url = "mvn://org.eclipse.jetty.toolchain/jetty-schemas/3.1.RC0";
+   }
+
    object log4jPkg extends MvnRepositoryPackage {
       url = "mvn://org.slf4j/slf4j-log4j12/1.7.0";
    }
