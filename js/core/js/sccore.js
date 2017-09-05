@@ -247,7 +247,7 @@ function sc_runRunLaterMethods() {
             rlm.method.call(rlm.thisObj);
          }
          catch (e) {
-            console.error("Exception: " + e + " in run later method: " + rlm);
+            console.error("Exception: " + e + " in run later method: " + rlm + " stack:" + e.stack);
          }
       }
    }

@@ -433,7 +433,7 @@ jv_Class_c = {};
 
 jv_Class_c.equals = jv_Object_c.equals;
 jv_Class_c.hashCode = jv_Object_c.hashCode;
-jv_Class_c.getName = function() {
+Number_c.getName = jv_Class_c.getName = function() {
    return this.$protoName;
 }
 
