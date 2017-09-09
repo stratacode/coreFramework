@@ -599,6 +599,10 @@ sc_DynUtil_c.getScopeName = sc_DynUtil_c.getScopeNameForType = function(obj) {
    return null;
 }
 
+sc_DynUtil_c.getScopeByName = function(name) {
+   return sc_ScopeDefinition_c.getScopeByName(name);
+}
+
 sc_DynUtil_c.findType = function(name) {
    if (name == null) {
       console.error("Null name passed to findType");
