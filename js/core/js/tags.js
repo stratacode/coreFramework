@@ -40,15 +40,25 @@ js_Element_c.trace = false;
 js_Element_c.verbose = false;
 js_Element_c.verboseRepeat = false;
 js_Element_c.needsRefresh = false;
+js_Element_c.isPageElement = function() { return false; }
 js_Element_c.getURLPaths = function() {
    return [];
 }
 
-js_Element_c.doRefreshTags = function(tagList, startName, validName) {
+js_Element_c.doRefreshTags = function(tagList, refName, validName, tree) {
    for (var i = 0; i < tagList.length; i++) {
       var tag = tagList[i];
-      if (!tag[validName])
-         tag[startName]();
+      if (!tag[validName]) {
+         if (tree) {
+            var encl = tag.getEnclosingTag();
+            if (encl != null && !encl[validName]) {
+               if (js_Element_c.trace)
+                  console.log("skipping: " + refName + " for: " + tag.getId() + " waiting for parent to refresh: " + encl.getId());
+               continue;
+            }
+         }
+         tag[refName]();
+      }
    }
 }
 
@@ -63,13 +73,13 @@ js_Element_c.refreshTags = function() {
       var toRefresh = js_Element_c.refreshBodyTags;
       js_Element_c.refreshBodyTags = [];
       // TODO: could optimize this by sorting or removing child nodes whose parents are in the refresh list.  If we do refresh a higher level item before a lower level one, the child validate call at least should not happpen since we validate it already.
-      js_Element_c.doRefreshTags(toRefresh, "refreshBody", "bodyValid");
+      js_Element_c.doRefreshTags(toRefresh, "refreshBody", "bodyValid", true);
       toRefresh = js_Element_c.refreshStartTags;
       js_Element_c.refreshStartTags = [];
-      js_Element_c.doRefreshTags(toRefresh, "refreshStart", "startValid");
+      js_Element_c.doRefreshTags(toRefresh, "refreshStart", "startValid", false);
       toRefresh = js_Element_c.refreshRepeatTags;
       js_Element_c.refreshRepeatTags = [];
-      js_Element_c.doRefreshTags(toRefresh, "refreshRepeat", "repeatTagsValid");
+      js_Element_c.doRefreshTags(toRefresh, "refreshRepeat", "repeatTagsValid", false);
 
       if (js_Element_c.refreshBodyTags.length > 0 ||
           js_Element_c.refreshStartTags.length > 0 ||
@@ -138,6 +148,18 @@ js_HTMLElement_c.getParentNode = function() {
    return this.parentNode;
 }
 
+js_HTMLElement_c.getEnclosingTag = function() {
+   if (this.parentNode != null)
+      return this.parentNode;
+   var outer = this.outer;
+   while (outer !== undefined) {
+      if (sc_instanceOf(outer, js_HTMLElement_c))
+         return outer;
+      outer = outer.outer;
+   }
+   return null;
+}
+
 js_HTMLElement_c.getPreviousElementSibling = function() {
    var elem = this.element;
    if (elem == null)
@@ -153,6 +175,11 @@ js_HTMLElement_c.getPreviousElementSibling = function() {
 js_HTMLElement_c.setVisible = function(vis) {
    if (vis != this.visible) {
       this.visible = vis;
+      var domElem = this.element != null;
+      if (domElem != vis)
+         this.invalidate();
+      else
+         console.log("***");
       this.invalidate();
       sc_Bind_c.sendEvent(sc_IListener_c.VALUE_CHANGED, this, "visible" , vis);
    }
@@ -165,10 +192,16 @@ js_HTMLElement_c.isVisible = function() {
 js_HTMLElement_c.isVisibleInView = function() {
    if (!this.visible)
       return false;
-   if (this.outer !== undefined && !this.outer.isVisibleInView())
+   var par = this.getEnclosingTag();
+   if (par != null)
+      return par.isVisibleInView();
+   if (this.isPageElement())
+      return true;
+   else {
+      // Tag not attached to hierarchy but not a 'Page' type so it's not visible
+      // TODO: do we need a warning or debug message here?
       return false;
-   // TODO: is this a top-level node?  If not, maybe it should return false here since we have to be attached to something
-   return true;
+   }
 }
 
 js_HTMLElement_c.setHTMLClass = function(cl) {
@@ -229,7 +262,8 @@ js_HTMLElement_c.removeFromDOM = function() {
       console.error("removeFromDOM for tag: " + this.id + " did not find a DOM element to remove even though this tag had one set: " + a);
    }
    this.setDOMElement(null);
-   this.startValid = this.bodyValid = true;
+   this.startValid = true;
+   this.updateBodyValid(true);
    return true;
 }
 
@@ -416,6 +450,7 @@ js_HTMLElement_c.addAttributeListener = function() {
    if (this._attListener !== undefined)
       return;
 
+   // TODO: performance: we could keep track of which domEvents and attNames are used by each tag, maybe in a bitmask so we could cut down on the overhead of this method
    var attNames = this.refreshAttNames;
    var domEvents = this.domEvents;
    if (attNames !== null || domEvents != null) {
@@ -582,8 +617,10 @@ js_HTMLElement_c.getRepeat = function() {
 }
 
 js_HTMLElement_c.setRepeatVar = function(v) {
-   this.repeatVar = v;
-   sc_Bind_c.sendChangedEvent(this, "repeatVar");
+   if (v != this.repeatVar) {
+      this.repeatVar = v;
+      sc_Bind_c.sendChangedEvent(this, "repeatVar");
+   }
 }
 
 js_HTMLElement_c.getRepeatVar = function() {
@@ -591,8 +628,10 @@ js_HTMLElement_c.getRepeatVar = function() {
 }
 
 js_HTMLElement_c.setRepeatIndex = function(v) {
-   this.repeatIndex = v;
-   sc_Bind_c.sendChangedEvent(this, "repeatIndex");
+   if (v != this.repeatIndex) {
+      this.repeatIndex = v;
+      sc_Bind_c.sendChangedEvent(this, "repeatIndex");
+   }
 }
 
 js_HTMLElement_c.getRepeatIndex = function() {
@@ -659,9 +698,13 @@ js_HTMLElement_c.repeatNeedsSync = function() {
    return false;
 }
 
-js_HTMLElement_c.refreshRepeat = function() {
+js_HTMLElement_c.refreshRepeat = function(noRefresh) {
    if (this.repeat && this.syncRepeatTags(true)) {
-      this.refreshBody();
+      if (!noRefresh)
+         this.refreshBody();
+      // This is called on the repeatWrapper which does not have an dom element so we need to refresh the parent tag
+      else
+         this.getEnclosingTag().invalidateBody();
    }
 }
 
@@ -1057,7 +1100,8 @@ js_HTMLElement_c.getChildrenById = function(id) {
 js_HTMLElement_c.refresh = function() {
    if (this.serverContent) {
       if (this.element == null) { // Attach to the dom generated by the server
-         this.startValid = this.bodyValid = true;
+         this.startValid = true;
+         this.updateBodyValid(true);
          this.updateDOM();
          if (this.element == null)
             console.error("No element: " + this.getId() + " in the DOM for refresh of serverContent for tag object");
@@ -1074,6 +1118,8 @@ js_HTMLElement_c.makeRoot = function() {
       sc$rootTags[id] = this;
       sc$rootTagsArray.push(this);
    }
+   else
+      console.log("Making second root tag");
 }
 
 js_HTMLElement_c.refreshBodyContent = function(sb) {
@@ -1086,32 +1132,38 @@ js_HTMLElement_c.refreshBody = function() {
    if (this.element === null) {
       // We were made invisible or possibly our parent is invisible
       if (!this.isVisibleInView()) {
-         this.bodyValid = true;
+         this.updateBodyValid(true);
          return;
       }
       // Go to the top level tag and start the output process up there.  It needs to attach us to the tree
-      if (this.outer !== undefined && this.outer.refresh !== null) {
-         this.bodyValid = true; // or should we mark this as true when the parent refreshes?
+      var par = this.getEnclosingTag();
+      if (par != null && par.refreshBody !== null) {
          if (js_Element_c.trace)
-            console.log("refreshBody of: " + this.id + " refreshing parent body: " + this.outer.id);
-         this.outer.refreshBody();
+            console.log("refreshBody of: " + this.id + " refreshing parent body: " + par.id);
+         par.refreshBody();
          return;
       }
       else {
          create = true;
       }
    }
-   this.bodyValid = true;
+   this.updateBodyValid(true);
 
-   if (this.outer === undefined && this.element == null) {
-      this.makeRoot();
+   var par = this.getEnclosingTag();
+   if (par == null && this.element == null) {
+      if (this.isPageElement())
+         this.makeRoot();
+      else {
+         console.error("Attempt to refresh tag not attached where parentNode is not defined")
+         return;
+      }
    }
 
    if (create) {
       if (js_Element_c.trace)
          console.log("refreshBody creating DOM for top level node: " + this.id);
       sb = this.output();
-      this.bodyValid = true;
+      this.updateBodyValid(true);
 
       // Top level object - need to replace the body?  Or should we append to it?
       var outRes = sb.toString();
@@ -1189,7 +1241,7 @@ js_HTMLElement_c.createRepeatElement = function(rv, ix, oldTag) {
    var elem;
    var flush = sc_SyncManager_c.beginSyncQueue();
    if (sc_instanceOf(this, js_IRepeatWrapper)) {
-       elem = this.createElement(rv, ix, oldTag);
+      elem = this.createElement(rv, ix, oldTag);
    }
    else {  // TODO: remove? This is the older case where the generated code did not generate the separate wrapper class
       elem = sc_DynUtil_c.createInnerInstance(this.constructor, null, this.outer);
@@ -1200,6 +1252,7 @@ js_HTMLElement_c.createRepeatElement = function(rv, ix, oldTag) {
       sc_Bind_c.removePropertyBindings(elem, "repeat", true, true);
       elem.repeat = null;
    }
+   elem.parentNode = this;
    if (elem != null)
       js_HTMLElement_c.registerSyncInstAndChildren(elem);
    if (flush)
@@ -1273,7 +1326,8 @@ js_HTMLElement_c.outputTag = function(sb) {
          for (var i = 0; i < this.repeatTags.length; i++) {
             var rtag = this.repeatTags[i];
             rtag.outputTag(sb);
-            rtag.startValid = rtag.bodyValid = true;
+            rtag.startValid = true;
+            rtag.updateBodyValid(true);
          }
       }
    }
@@ -1296,10 +1350,16 @@ js_HTMLElement_c.invalidate = function() {
    this.invalidateBody();
 }
 
-js_HTMLElement_c.schedRefresh = function(tagList, validName) {
+js_HTMLElement_c.schedRefresh = function(tagList, validName, tree) {
    if (this[validName]) {
       if (!js_Element_c.globalRefreshScheduled) {
-         this[validName] = false;
+         // When we render this tag we'll validate all of the children, so we proactively invalidate all of them now
+         // so that we can avoid adding extra refresh calls and so we can avoid refreshing any children already scheduled
+         // that will be re-rendered when we refresh this node.
+         if (tree) // assert validName = 'bodyValid'
+            this.updateBodyValid(false);
+         else
+            this[validName] = false;
          // Need to refresh the element even if it's not visible at least to set the valid flag back to true so we refresh it again to make it visible
          if (!js_Element_c.refreshScheduled) {
             js_Element_c.refreshScheduled = true;
@@ -1310,12 +1370,28 @@ js_HTMLElement_c.schedRefresh = function(tagList, validName) {
    }
 }
 
+js_HTMLElement_c.updateBodyValid = function(val) {
+   if (this.bodyValid != val) {
+      this.bodyValid = val;
+      /*
+      var clist = this.getObjChildren(false);
+      if (clist != null) {
+         var len = clist.length;
+         for (var i = 0; i < len; i++) {
+            c = clist[i];
+            c.updateBodyValid(val);
+         }
+      }
+      */
+   }
+}
+
 js_HTMLElement_c.invalidateBody = function() {
-   this.schedRefresh(js_Element_c.refreshBodyTags, "bodyValid");
+   this.schedRefresh(js_Element_c.refreshBodyTags, "bodyValid", true);
 }
 
 js_HTMLElement_c.invalidateStartTag = function() {
-   this.schedRefresh(js_Element_c.refreshStartTags, "startValid");
+   this.schedRefresh(js_Element_c.refreshStartTags, "startValid", false);
 }
 
 js_HTMLElement_c.invalidateRepeatTags = function() {
@@ -1332,7 +1408,7 @@ js_HTMLElement_c.invalidateRepeatTags = function() {
    if (needsRefresh)
       this.invalidateBody();
    else
-      this.schedRefresh(js_Element_c.refreshRepeatTags, "repeatTagsValid");
+      this.schedRefresh(js_Element_c.refreshRepeatTags, "repeatTagsValid", false);
 }
 
 js_HTMLElement_c.domEvents = {clickEvent:{}, dblClickEvent:{}, mouseDownEvent:{}, mouseMoveEvent:{}, mouseOverEvent:{aliases:["hovered"], computed:true}, mouseOutEvent:{aliases:["hovered"], computed:true}, mouseUpEvent:{}, keyDownEvent:{}, keyPressEvent:{}, keyUpEvent:{}, submitEvent:{}, changeEvent:{}, blurEvent:{}, focusEvent:{}, resizeEvent:{aliases:["innerWidth","innerHeight"]}};
@@ -1730,13 +1806,13 @@ js_Select_c.outputSelectBody = function(sb) {
       else {
          var subOption = defChildren[dix % defChildren.length];
          // disable refresh by marking this invalid before we change the data
-         subOption.bodyValid = false;
+         subOption.updateBodyValid(false);
          subOption.startValid = false;
          subOption.setSelected(selected);
          subOption.setOptionData(dv);
          // TODO: right now the tag itself must render 'selected' but should we have a way to inject that attribute if it's not already specified?
          subOption.outputTag(sb);
-         subOption.bodyValid = true;
+         subOption.updateBodyValid(true);
          subOption.startValid = true;
       }
    }
@@ -1884,6 +1960,8 @@ function js_Img() {
    this.src = null;
    this.height = this.width = 0;
 }
+
+js_HtmlPage_c.isPageElement = js_Page_c.isPageElement = function() { return true; }
 
 js_Img_c = sc_newClass("js_Img", js_Img, js_HTMLElement, null);
 js_Img_c.refreshAttNames = js_HTMLElement_c.refreshAttNames.concat(["src", "width", "height"]);

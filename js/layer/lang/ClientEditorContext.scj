@@ -10,8 +10,11 @@ import java.util.ArrayList;
 
 import java.util.*;
 
+import sc.obj.Sync;
+import sc.obj.SyncMode;
+
 /** This is the part of the editor context we share on the client. It's a workaround for the fact that we don't depend on the modify operator to build SC (so the IDE can build it directly) */
-@sc.obj.Sync(onDemand=true)
+@Sync(onDemand=true)
 public class ClientEditorContext {
    LayeredSystem system;
 
@@ -21,6 +24,7 @@ public class ClientEditorContext {
 
    ArrayList<BodyTypeDeclaration> currentTypes = new ArrayList<BodyTypeDeclaration>();
 
+   @Sync(syncMode=SyncMode.Disabled)
    boolean currentModelStale = false;
 
    public Layer currentLayer;
@@ -30,6 +34,7 @@ public class ClientEditorContext {
    HashMap<SrcEntry,MemoryEditSession> memSessions = new HashMap<SrcEntry, MemoryEditSession>();
 
    private boolean memorySessionChanged = false;
+   @Sync(syncMode=SyncMode.Disabled)
    @Bindable(manual=true)
    public boolean getMemorySessionChanged() {
       return memorySessionChanged;

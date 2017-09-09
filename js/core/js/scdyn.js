@@ -2,6 +2,7 @@ var sc$instancesByType = new Object();
 var sc$objectIds = new Object();
 var sc$typeIdCounts = new Object();
 var sc$dynListeners = null;
+var sc$propNameTable = new Object();
 
 if (!Array.isArray) {
    Array.isArray = function (arg) {
@@ -450,8 +451,8 @@ sc_DynUtil_c.newInnerInstance = function(type, outer, constrSig, params) {
    }
    var t = outer == null ? type : outer;
    var typeName = sc_DynUtil_c.getTypeName(type);
-   var name = sc_capitalizeProperty(sc_CTypeUtil_c.getClassName(typeName));
-   var newMeth = t['new' + name];
+   var name = sc_CTypeUtil_c.getClassName(typeName);
+   var newMeth = t[sc_newName(name)];
    if (!newMeth)
       throw new jv_IllegalArgumentException("No method: " + typeName + ':' + name);
    return newMeth.apply(outer, params);
@@ -479,22 +480,22 @@ sc_DynUtil_c.getPropertyType = function(type, propName) {
    return null;
 }
 
-sc_DynUtil_c.hasProperty = function(obj, propName) {
-   return obj[propName] !== undefined || obj["get" + sc_capitalizeProperty(propName)] !== undefined;
+sc_DynUtil_c.hasProperty = function(obj, prop) {
+   return obj[prop] !== undefined || obj[sc_getName(prop)] !== undefined;
 }
 
-sc_DynUtil_c.getStaticProperty = function(type, propName) {
-   var getName = "get" + sc_capitalizeProperty(propName);
-   var getMethod = type[getName];
-   if (getMethod !== undefined) {
+sc_DynUtil_c.getStaticProperty = function(type, prop) {
+   var gn = sc_getName(prop);
+   var gm = type[gn];
+   if (gm !== undefined) {
       // there may be a getMethod but it may have args - the code gen will return undefined in this case so we just ignore the getX method then.
-      var res = getMethod.apply(null);
+      var res = gm.apply(null);
       if (res !== undefined)
          return res;
    }
-   var propVal = type[propName];
-   if (propVal !== undefined)
-      return propVal;
+   var pval = type[prop];
+   if (pval !== undefined)
+      return pval;
    return null;
 }
 
@@ -506,17 +507,15 @@ sc_DynUtil_c.getProperty = function(obj, prop) {
 }
 
 sc_DynUtil_c.getPropertyValue = function(obj, prop, ignoreError) {
-   var capPropName = sc_capitalizeProperty(prop);
-   // TODO: perf - we should cache this info in the obj's type to avoid doing multiple lookups and string building each time.
-   var getName = "get" + capPropName;
-   var getMethod = obj[getName];
+   var gn = sc_getName(prop);
+   var getMethod = obj[gn];
    if (getMethod !== undefined) {
       var res = getMethod.call(obj); 
       if (res !== undefined)
          return res;
    }
-   getName = "is" + capPropName;
-   getMethod = obj[getName];
+   gn = sc_isName(prop);
+   getMethod = obj[gn];
    if (getMethod !== undefined) {
       var res = getMethod.call(obj); 
       if (res !== undefined)
@@ -533,8 +532,7 @@ sc_DynUtil_c.getPropertyValue = function(obj, prop, ignoreError) {
 }
 
 sc_DynUtil_c.setPropertyValue = function(obj, prop, val) {
-   var setName = "set" + sc_capitalizeProperty(prop);
-   var setMethod = obj[setName];
+   var setMethod = obj[sc_setName(prop)];
    if (setMethod !== undefined)
       setMethod.call(obj, val); 
    else
@@ -948,6 +946,51 @@ function sc_IDynChildManager() {
 }
 
 sc_IDynChildManager_c = sc_newClass("sc_IDynChildManager", sc_IDynChildManager, null, null);
+
+function sc_propTable(prop) {
+   var tab = sc$propNameTable[prop];
+   if (tab == null)
+      sc$propNameTable[prop] = tab = {cap:sc_capitalizeProperty(prop)};
+   return tab;
+}
+
+function sc_getName(prop, tab) {
+   if (!tab)
+      tab = sc_propTable(prop);
+   var res = tab.getN;
+   if (!res) {
+      res = tab.getN = "get" + tab.cap;
+   }
+   return res;
+}
+
+function sc_newName(prop) {
+   var tab = sc_propTable(prop);
+   var res = tab.newN;
+   if (!res) {
+      res = tab.newN = "new" + tab.cap;
+   }
+   return res;
+}
+
+function sc_setName(prop) {
+   var tab = sc_propTable(prop);
+   var res = tab.setN;
+   if (!res) {
+      res = tab.setN = "set" + tab.cap;
+   }
+   return res;
+}
+
+function sc_isName(prop, tab) {
+   if (!tab)
+      tab = sc_propTable(prop);
+   var res = tab.isN;
+   if (!res) {
+      res = tab.isN = "is" + tab.cap;
+   }
+   return res;
+}
 
 function sc_capitalizeProperty(prop) {
    if (prop == null || prop.length == 0)

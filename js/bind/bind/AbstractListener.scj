@@ -1,7 +1,7 @@
 import sc.dyn.DynUtil;
 
 public abstract class AbstractListener implements IListener {
-   boolean activated = true;  // Set to false on nested bindings deactic
+   boolean activated = true;  // Set to false on nested bindings when they are not in an active code path (i.e. the not-chosen option for a ternary or part of a conditional that's not reached)
 
    IListener.SyncType sync = SyncType.IMMEDIATE;
    public SyncType getSync() {

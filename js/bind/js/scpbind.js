@@ -116,7 +116,7 @@ sc_PBindUtil_c.removeListener = function(obj, prop, listener, eventMask) {
 
    var i;
    var len = plist.length;
-   for (var i = 0; i < len; i++) {
+   for (var i = len - 1; i >= 0; i--) { // from back to front to match removeBindings order to minimize search and splice time
       var ent = plist[i];
       if (ent.listener === listener && ent.eventMask == eventMask) {
          plist.splice(i,1);
