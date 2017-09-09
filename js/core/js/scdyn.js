@@ -470,9 +470,12 @@ sc_DynUtil_c.createInstance = function(newClass, paramSig, paramValues) {
 sc_DynUtil_c.getPropertyType = function(type, propName) {
    var res = null;
    if (type._PROPS) {
-      res = sc_DynUtil_c.findType(type._PROPS[propName]);
-      if (res != null)
-         return res;
+      var typeName = type._PROPS[propName];
+      if (typeName) {
+         res = sc_DynUtil_c.findType(typeName);
+         if (res != null)
+            return res;
+      }
    }
    var ext = sc_DynUtil_c.getExtendsType(type);
    if (ext)
