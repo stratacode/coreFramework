@@ -28,6 +28,9 @@ public abstract class RepeatComponent<T> implements IChildContainer, sc.dyn.IObj
    // this could create an instance of that generated class.  This is similar to how repeat works in schtml.
    abstract public T createRepeatElement(Object val, int index, Object oldComp);
 
+   public void listChanged() {
+   }
+
    void invalidate() {
       if (valid && !disableRefresh) {
          // TODO: We used to remove the form when we invalidate it so we do not refresh the old form unnecessarily before rebuildForm's stuff runs
@@ -36,7 +39,8 @@ public abstract class RepeatComponent<T> implements IChildContainer, sc.dyn.IObj
 
          SwingUtilities.invokeLater(new Runnable() {
             public void run() {
-               refreshList();
+               if (refreshList())
+                  listChanged();
                }});
 
       }
@@ -52,16 +56,17 @@ public abstract class RepeatComponent<T> implements IChildContainer, sc.dyn.IObj
       return -1;
    }
 
-   public void refreshList() {
+   public boolean refreshList() {
       valid = true;
 
       if (!visible) {
          removeAllElements();
-         return;
+         return true;
       }
 
       Object repeatVal = repeat;
       int sz = repeatVal == null ? 0 : DynUtil.getArrayLength(repeatVal);
+      boolean anyChanges = false;
 
       // TODO: remove this?  We can't disable sync entirely.  We need to turn it on before we call "output" since there can be side-effect changes
       // in there which need to be synchronized.  Now that we do not sync the page objects, this should not be needed anyway.
@@ -81,6 +86,7 @@ public abstract class RepeatComponent<T> implements IChildContainer, sc.dyn.IObj
                }
                T arrayComp = createRepeatElement(arrayVal, i, null);
                components.add(arrayComp);
+               anyChanges = true;
             }
          }
          else {
@@ -102,6 +108,7 @@ public abstract class RepeatComponent<T> implements IChildContainer, sc.dyn.IObj
                   Object oldArrayVal = lastValues == null || i > lastValues.size() ? null : lastValues.get(i);
                   // The guy in this spot is not our guy.
                   if (oldArrayVal != arrayVal && (oldArrayVal == null || !oldArrayVal.equals(arrayVal))) {
+                     anyChanges = true;
                      // The current guy is new to the list
                      if (curIx == -1) {
                         // Either replace or insert a row
@@ -157,6 +164,7 @@ public abstract class RepeatComponent<T> implements IChildContainer, sc.dyn.IObj
                   }
                }
                else {
+                  anyChanges = true;
                   if (curIx == -1) {
                      T arrayElem = createRepeatElement(arrayVal, i, null);
                      components.add(arrayElem);
@@ -176,6 +184,7 @@ public abstract class RepeatComponent<T> implements IChildContainer, sc.dyn.IObj
                int ix = components.size() - 1;
                T toRem = components.remove(ix);
                removeElement(toRem, ix);
+               anyChanges = true;
             }
          }
 
@@ -184,6 +193,7 @@ public abstract class RepeatComponent<T> implements IChildContainer, sc.dyn.IObj
       finally {
          //SyncManager.setSyncState(oldSyncState);
       }
+      return anyChanges;
    }
 
    private static List<Object> cloneRepeatList(Object list) {

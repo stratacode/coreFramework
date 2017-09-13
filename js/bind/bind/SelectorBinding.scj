@@ -500,14 +500,10 @@ public class SelectorBinding extends DestinationListener {
    }
 
    private void reactivate(Object obj) {
-      Object bindingParent = null;
       if (direction.doForward()) {
-         boundValues[0] = PBindUtil.getPropertyValue(obj, boundProps[0]);
-         bindingParent = boundValues[0];
-      }
-      int last = boundProps.length - 1;
-      for (int i = 1; i <= last; i++) {
-         if (direction.doForward()) {
+         Object bindingParent = obj;
+         int last = boundProps.length - 1;
+         for (int i = 0; i <= last; i++) {
             Object oldValue = boundValues[i];
             if (isValidObject(bindingParent)) {
                boundValues[i] = bindingParent = PBindUtil.getPropertyValue(bindingParent, boundProps[i]);
@@ -515,7 +511,7 @@ public class SelectorBinding extends DestinationListener {
             else {
                boundValues[i] = bindingParent = UNSET_VALUE_SENTINEL;
             }
-            if (i < last) {
+            if (i < last) { // need to do this part for the first one but not the last one
                // Need to add/remove the listeners if the instance changed
                if ((!DynUtil.equalObjects(oldValue, boundValues[i]) || oldValue != boundValues[i])) {
                   if (isValidObject(oldValue)) {
@@ -537,7 +533,6 @@ public class SelectorBinding extends DestinationListener {
       }
       valid = true;
    }
-
 
    public int refreshBinding() {
       if (!activated)

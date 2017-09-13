@@ -13,8 +13,10 @@ public abstract class DestinationListener extends AbstractListener implements IB
          sb.append(objectToString(dstObj));
          sb.append('.');
          sb.append(dstProp);
-         sb.append(" ");
-         sb.append(direction.getOperatorString());
+         if (direction != null) {
+            sb.append(" ");
+            sb.append(direction.getOperatorString());
+         }
          sb.append(" ");
          return sb.toString();
       }

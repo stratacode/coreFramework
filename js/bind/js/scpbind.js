@@ -80,9 +80,27 @@ sc_PBindUtil_c.addListener = function(obj, prop, listener, eventMask, priority) 
    if (plist == null)
       bls[prop] = [newEntry];
    else {
-      for (var i = 0; i < plist.length && plist[i].priority <= priority; i++) {
+      var lastFreeIx = -1;
+      for (var i = 0; i < plist.length; i++) {
+         var pent = plist[i];
+         if (!pent) {
+            lastFreeIx = i;
+         }
+         // If the new entry is higher priority, we need to put newEntry before pent
+         else if (pent.priority < priority)
+            break;
+         // Otherwise, add this guy in the first free slot (if any) with the same priority
+         else if (pent.priority == priority) {
+            if (lastFreeIx != -1)
+               break;
+         }
+         else
+            lastFreeIx = -1; // Any free slot is too high priority for this new one
       }
-      plist.splice(i, 0, newEntry);
+      if (lastFreeIx != -1)
+         plist[lastFreeIx] = newEntry;
+      else
+         plist.splice(i, 0, newEntry);
    }
    plist = bls[null]; // "null" key represents listeners on the object itself - ok since null is a keyword and not a valid property name.
 
@@ -90,7 +108,7 @@ sc_PBindUtil_c.addListener = function(obj, prop, listener, eventMask, priority) 
    if (plist != null) {
       for (var i = 0; i < plist.length; i++) {
          var defaultEntry = plist[i];
-         if ((defaultEntry.eventMask & sc_IListener_c.LISTENER_ADDED) != 0) {
+         if (defaultEntry && (defaultEntry.eventMask & sc_IListener_c.LISTENER_ADDED) != 0) {
             defaultEntry.listener.listenerAdded(obj, prop, listener, eventMask, priority);
          }
       }
@@ -116,29 +134,51 @@ sc_PBindUtil_c.removeListener = function(obj, prop, listener, eventMask) {
 
    var i;
    var len = plist.length;
+   var anyLeft = false;
+   var found = false;
+   var freeAtEnd = 0;
    for (var i = len - 1; i >= 0; i--) { // from back to front to match removeBindings order to minimize search and splice time
       var ent = plist[i];
+      if (ent == null) {
+         freeAtEnd++;
+         continue;
+      }
       if (ent.listener === listener && ent.eventMask == eventMask) {
-         plist.splice(i,1);
+         plist[i] = null;
+         found = true;
+         freeAtEnd++;
+      }
+      else {
+         freeAtEnd = 0;
+         anyLeft = true;
+      }
+      if (found && anyLeft) {
+         if (i < len - 1)
+            freeAtEnd = 0;
          break;
       }
    }
    if (i == len)
       console.log("no listener to remove");
-   else if (plist.length == 0) {
+   else if (!anyLeft) {
       delete bls[prop];
       if (Object.keys(bls).length == 0) {
          if (sc_PBindUtil_c.trackAllObjects)
             delete sc_PBindUtil_c.allObjects[sc_id(obj)];
       }
    }
+   else if (freeAtEnd > 8) {
+      plist.splice(plist.length - freeAtEnd, freeAtEnd, 0, 0);
+   }
 }
 
 sc_PBindUtil_c.sendEvent = function(event, obj, prop, detail) {
    var listeners = sc_PBindUtil_c.getBindingListeners(obj, prop);
    if (listeners != null) {
-      // When the event is a value changed event, we want to first run the invalidated listeners, then the validated listeners for
-      // optimal efficient and preservation of the order of operations.
+      // When the event is "value changed", we want to first invalidate all of the listeners, then validated them all
+      // Otherwise, we will validate more bindings overall and some of those validations occur using stale values (because we did not
+      // notify other bindings).  Maybe there's a way to avoid the two pass by better sorting of bindings (i.e. do other bindings as higher priority than
+      // the final assignment?)
       if ((event & sc_IListener_c.VALUE_CHANGED) == sc_IListener_c.VALUE_CHANGED) {
          sc_PBindUtil_c.dispatchListeners(listeners, sc_IListener_c.VALUE_INVALIDATED, obj, prop, detail);
          sc_PBindUtil_c.dispatchListeners(listeners, sc_IListener_c.VALUE_VALIDATED, obj, prop, detail);
@@ -152,6 +192,8 @@ sc_PBindUtil_c.sendEvent = function(event, obj, prop, detail) {
 sc_PBindUtil_c.dispatchListeners = function(listeners, event, obj, prop, detail) {
    for (var i = 0; i < listeners.length; i++) {
       var listener = listeners[i];
+      if (!listener)
+         continue;
       var mask = listener.eventMask & event;
       if (mask != 0)
          sc_Bind_c.dispatchEvent(mask, obj, prop, listener.listener, detail);
@@ -167,7 +209,8 @@ sc_PBindUtil_c.sendAllEvents = function(event, obj) {
       if (plist != null) {
          for (var i = 0; i < plist.length; i++) {
             var listener = plist[i];
-            sc_Bind_c.dispatchEvent(listener.eventMask, obj, prop, listener.listener, detail);
+            if (listener)
+               sc_Bind_c.dispatchEvent(listener.eventMask, obj, prop, listener.listener, detail);
          }
       }
    }
@@ -201,7 +244,9 @@ sc_PBindUtil_c.printBindingListeners = function(obj) {
          if (plist != null) {
             console.log("  " + prop);
             for (var i = 0; i < plist.length; i++) {
-               var listener = sc_Bind_c.getRootListener(plist[i].listener);
+               var l = plist[i];
+               if (!l) continue;
+               var listener = sc_Bind_c.getRootListener(l.listener);
                var toStr = listener.toString();
                if (toStr == "[object Object]")
                   toStr = listener.$protoName;

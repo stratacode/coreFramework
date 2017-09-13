@@ -44,6 +44,7 @@ js_Element_c.isPageElement = function() { return false; }
 js_Element_c.getURLPaths = function() {
    return [];
 }
+js_Element_c.getName = function() { return this.$protoName; }
 
 js_Element_c.doRefreshTags = function(tagList, refName, validName, tree) {
    for (var i = 0; i < tagList.length; i++) {
