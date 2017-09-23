@@ -33,6 +33,8 @@ import javax.persistence.Transient;
 import javax.persistence.Lob;
 
 jpa.basejpa extends util {
+   compiledOnly = true;
+
    codeType = sc.layer.CodeType.Framework;
    codeFunction = sc.layer.CodeFunction.Program;
 

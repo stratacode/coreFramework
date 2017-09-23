@@ -3,6 +3,8 @@ import org.datanucleus.api.jpa.annotations.PersistenceAware;
 // TODO: Depends on mysql driver here to force the order - otherwise the JDBC driver is not accessible from the datanucleus class loader due to how we chain
 // parent and child classloaders..  We really should depend on a 'jdbc' layer which picks a default or adds a dependency onto an included layer
 jpa.datanucleus extends basejpa, log4j, jdbc.mysql {
+   compiledOnly = true;
+
    codeType = sc.layer.CodeType.Framework;
    codeFunction = sc.layer.CodeFunction.Program;
 

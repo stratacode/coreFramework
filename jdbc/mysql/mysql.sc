@@ -1,4 +1,9 @@
 jdbc.mysql {
+   compiledOnly = true;
+
+   codeType = sc.layer.CodeType.Framework;
+   codeFunction = sc.layer.CodeFunction.Program;
+
    public void start() {
       String componentName = "mysql-connector-java-";
       String version = "5.1.35";
