@@ -25,6 +25,7 @@ public class JCheckBox extends javax.swing.JCheckBox implements ComponentStyle {
       addItemListener(new ItemListener() {
          /** Listen to the checkbox. */
           public void itemStateChanged(ItemEvent e) {
+             SwingUtil.updateUserAction();
              userEnteredCount++;
              SwingUtil.sendDelayedEvent(sc.bind.IListener.VALUE_CHANGED, JCheckBox.this, selectedProp);
           }});

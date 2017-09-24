@@ -55,10 +55,12 @@ public class JTextField extends javax.swing.JTextField implements TextComponentS
       // Swing does not support binding events on its text property.
       getDocument().addDocumentListener(new DocumentListener() {
          public void insertUpdate(DocumentEvent e) {
+            SwingUtil.updateUserAction();
             if (!suppressEvents)
                SwingUtil.sendDelayedEvent(sc.bind.IListener.VALUE_CHANGED, JTextField.this, textProperty);
          }
          public void removeUpdate(DocumentEvent e) {
+            SwingUtil.updateUserAction();
             if (!suppressEvents)
                SwingUtil.sendDelayedEvent(sc.bind.IListener.VALUE_CHANGED, JTextField.this, textProperty);
          }

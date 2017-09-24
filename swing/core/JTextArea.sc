@@ -13,10 +13,12 @@ public class JTextArea extends javax.swing.JTextArea implements TextComponentSty
       // Swing does not support binding events on its text property.
       getDocument().addDocumentListener(new DocumentListener() {
          public void insertUpdate(DocumentEvent e) {
+            SwingUtil.updateUserAction();
             if (!suppressEvents)
                SwingUtil.sendDelayedEvent(sc.bind.IListener.VALUE_CHANGED, JTextArea.this, textProperty);
          }
          public void removeUpdate(DocumentEvent e) {
+            SwingUtil.updateUserAction();
             if (!suppressEvents)
                SwingUtil.sendDelayedEvent(sc.bind.IListener.VALUE_CHANGED, JTextArea.this, textProperty);
          }

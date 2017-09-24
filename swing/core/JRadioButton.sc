@@ -8,6 +8,7 @@ public class JRadioButton extends javax.swing.JRadioButton implements ComponentS
    {
       addItemListener(new ItemListener() {
           public void itemStateChanged(ItemEvent e) {
+             SwingUtil.updateUserAction();
              SwingUtil.sendDelayedEvent(sc.bind.IListener.VALUE_CHANGED, JRadioButton.this, selectedProp);
           }});
    }

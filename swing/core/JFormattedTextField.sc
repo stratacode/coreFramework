@@ -11,12 +11,16 @@ public class JFormattedTextField extends javax.swing.JFormattedTextField {
       // Swing does not support binding events on its text property.
       getDocument().addDocumentListener(new DocumentListener() {
          public void insertUpdate(DocumentEvent e) {
+            SwingUtil.updateUserAction();
             SwingUtil.sendDelayedEvent(sc.bind.IListener.VALUE_CHANGED, JFormattedTextField.this, textProperty);
          }
          public void removeUpdate(DocumentEvent e) {
+            SwingUtil.updateUserAction();
             SwingUtil.sendDelayedEvent(sc.bind.IListener.VALUE_CHANGED, JFormattedTextField.this, textProperty);
          }
-         public void changedUpdate(DocumentEvent e) {}
+         public void changedUpdate(DocumentEvent e) {
+            SwingUtil.updateUserAction();
+         }
       });
    }
 

@@ -19,6 +19,15 @@ import sc.dyn.DynUtil;
 public class SwingUtil {
    public static sc.type.IBeanMapper preferredSizeProp = sc.type.TypeUtil.getPropertyMapping(JComponent.class, "preferredSize");
 
+   public static long lastUserActionTime;
+   static {
+      updateUserAction(); // init on startup
+   }
+
+   public static void updateUserAction() {
+       lastUserActionTime = System.currentTimeMillis();
+   }
+
    public static void addChild(Object parent, Object child) {
       if (parent instanceof JComponent)
          SwingUtil.addChild((JComponent) parent, child, -1);

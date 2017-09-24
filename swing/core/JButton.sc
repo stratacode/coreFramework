@@ -14,6 +14,7 @@ public class JButton extends javax.swing.JButton implements ComponentStyle {
    {
       addActionListener(new ActionListener() {
          public void actionPerformed(ActionEvent e) {
+            SwingUtil.updateUserAction();
             // clickCount++; TODO fixme!
             clickCount = clickCount + 1;
          }

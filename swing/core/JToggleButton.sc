@@ -10,6 +10,7 @@ public class JToggleButton extends javax.swing.JToggleButton implements Componen
       addItemListener(new ItemListener() {
          /** Listen to the slider. */
           public void itemStateChanged(ItemEvent e) {
+             SwingUtil.updateUserAction();
              SwingUtil.sendDelayedEvent(sc.bind.IListener.VALUE_CHANGED, JToggleButton.this, selectedProp);
           }});
    }
