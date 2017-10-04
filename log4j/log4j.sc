@@ -12,6 +12,11 @@ log4j extends sys.std {
       url = "mvn://org.slf4j/slf4j-api/1.7.0";
    }
 
+   // Supplying a default log4j - this can be overridden if frameworks need a specific version (e.g. jetty/lib)
+   object log4jPkg extends MvnRepositoryPackage {
+      url = "mvn://org.apache.logging.log4j/log4j-core/2.9.1";
+   }
+
    // The resourceFileProcessor layer component is defined in sys.std 
    // and defines standard Java rules for copying src files into the 
    // classpath so they can be loaded  as Java resources.  
@@ -22,7 +27,8 @@ log4j extends sys.std {
    resourceFileProcessor {
       {
          // Treat this file as a resource so it goes in the classpath
-         addPatterns("log4j\\.properties");
+         addPatterns("log4j\\.properties", "log4j2\\.properties");
+         // TODO: add log4j2.xml and .json here?
       }
    }
 

@@ -18,7 +18,7 @@ jetty.lib extends log4j {
       url = "mvn://org.eclipse.jetty.toolchain/jetty-schemas/3.1.RC0";
    }
 
-   object log4jPkg extends MvnRepositoryPackage {
+   log4jPkg {
       url = "mvn://org.slf4j/slf4j-log4j12/1.7.0";
    }
 

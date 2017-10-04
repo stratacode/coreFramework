@@ -10,7 +10,8 @@ jpa.datanucleus extends basejpa, log4j, jdbc.mysql {
 
    object dataNucleusPkg extends MvnRepositoryPackage {
       //url = "mvn://org.datanucleus/datanucleus-rdbms/4.0.6";
-      url = "mvn://org.datanucleus/datanucleus-accessplatform-jpa-rdbms/4.0.6";
+      url = "mvn://org.datanucleus/datanucleus-accessplatform-jpa-rdbms/5.1.2";
+      //url = "mvn://org.datanucleus/datanucleus-accessplatform-jpa-rdbms/4.0.6";
       includeProvided = true; // includes javax.persistence
    }
 
@@ -54,6 +55,8 @@ jpa.datanucleus extends basejpa, log4j, jdbc.mysql {
                                  "        first = false; " +
                                  "        %><%= entity.getClassFileName(getBuildClassesDir()) %><% " +
                                  "     }" +
-                                 "   } %>]");
+                                 "   } %>]",
+                                 // Writing this to a file because it messes with the auto-test verification and there seems to be no way to turn it off - -q may work in v5.0 but does not seem to work here
+                                 "&>", "/tmp/dataNucleusEnhance.out");
    }
 }

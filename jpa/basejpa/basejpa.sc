@@ -57,6 +57,21 @@ jpa.basejpa extends util {
       entityProc.compiledOnly = true; // These types must be compiled, even if put into a dynamic layer as the JPA integration has no dynamic support
       registerAnnotationProcessor("javax.persistence.Entity", entityProc);
 
+      // Place this annotation on the generated field only to avoid warnings
+      // from the JPA engine.  TODO: would be relatively easy to put it on
+      // get methods if the field is being expanded to a get/set
+      sc.lang.DefaultAnnotationProcessor memberProc = new sc.lang.DefaultAnnotationProcessor();
+      memberProc.typeGroupName = "JPAAnnotation";
+      memberProc.validOnField = true;
+      memberProc.validOnMethod = true;
+      memberProc.setOnField = true;
+      registerAnnotationProcessor("javax.persistence.Column", memberProc);
+      registerAnnotationProcessor("javax.persistence.Lob", memberProc);
+      registerAnnotationProcessor("javax.persistence.OneToOne", memberProc);
+      registerAnnotationProcessor("javax.persistence.OneToMany", memberProc);
+      registerAnnotationProcessor("javax.persistence.ManyToOne", memberProc);
+      registerAnnotationProcessor("javax.persistence.ManyToMany", memberProc);
+      // TODO: more of these here?
 
       // Layers web files in the "doc" folder of any downstream layers
       sc.layer.LayerFileProcessor persistenceXML = new sc.layer.LayerFileProcessor();
