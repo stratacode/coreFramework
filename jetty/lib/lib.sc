@@ -1,17 +1,18 @@
 package sc.jetty;
 
-jetty.lib extends log4j {
+jetty.lib extends log4j.core {
    compiledOnly = true;
 
    codeType = sc.layer.CodeType.Framework;
    codeFunction = sc.layer.CodeFunction.Program;
 
    object servletPkg extends MvnRepositoryPackage {
-      url = "mvn://javax.servlet/javax.servlet-api/3.0.1";
+      url = "mvn://javax.servlet/javax.servlet-api/3.1.0";
    }
 
    object jettyPkg extends MvnRepositoryPackage {
-      url = "mvn://org.eclipse.jetty/jetty-webapp/8.1.17.v20150415";
+      //url = "mvn://org.eclipse.jetty/jetty-webapp/8.1.17.v20150415";
+      url = "mvn://org.eclipse.jetty/jetty-webapp/9.4.7.v20170914";
    }
 
    object jettySchemas extends MvnRepositoryPackage {
@@ -19,7 +20,7 @@ jetty.lib extends log4j {
    }
 
    log4jPkg {
-      url = "mvn://org.slf4j/slf4j-log4j12/1.7.0";
+      url = "mvn://org.slf4j/slf4j-log4j12/1.7.25";
    }
 
    public void init() {

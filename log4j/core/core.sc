@@ -1,5 +1,5 @@
 // Pull in the log4 layer
-log4j extends sys.std {
+log4j.core extends sys.std {
    compiledOnly = true;
 
    codeType = sc.layer.CodeType.Framework;
@@ -9,7 +9,7 @@ log4j extends sys.std {
    // packages need to define the impl library.  Here we only pull in the api.
 
    object slf4jApiPkg extends MvnRepositoryPackage {
-      url = "mvn://org.slf4j/slf4j-api/1.7.0";
+      url = "mvn://org.slf4j/slf4j-api/1.7.25";
    }
 
    // Supplying a default log4j - this can be overridden if frameworks need a specific version (e.g. jetty/lib)

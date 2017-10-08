@@ -6,7 +6,9 @@ import org.eclipse.jetty.util.component.LifeCycle;
 //import org.mortbay.jetty.security.UserRealm;
 import org.eclipse.jetty.security.LoginService;
 
-jetty.meta extends lib, v8compat {
+// Uncomment v8compat for jetty 8 support - though we could make this transparent easily enough jetty 8 is not supported 
+// anymore
+jetty.meta extends lib /*, v8compat */ {
    annotationLayer = true;
    compiledOnly = true;
 
