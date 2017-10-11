@@ -1,0 +1,32 @@
+<%@ 
+   import sc.js.URLPath;
+   import sc.layer.LayeredSystem;
+   import java.util.List;
+   import sc.util.FileUtil;
+%>#!/bin/sh
+
+# TODO: fix for linux, windows, or other platforms or require that's in the path?
+alias chrome="/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome"
+
+TEST_DIR=${TEST_DIR:-/tmp}
+TEST_PAGES_DIR=${TEST_DIR}/pages
+#echo "Autotest storing results in $TEST_DIR"
+mkdir -p "$TEST_PAGES_DIR"
+
+<%
+  // A simple script which opens up each of the root pages, one by one
+  LayeredSystem sys = LayeredSystem.getCurrent();
+  List<URLPath> paths = sys.getURLPaths();
+  if (paths != null) {
+     for (URLPath path:paths) {
+         String url = path.url;
+         if (url.equals("") && !sys.serverEnabled)
+            url = "index.html";
+         if (url.startsWith("/"))
+            url = url.substring(1);
+         if (sys.testPatternMatches(path.name)) { %>
+chrome --headless --disable-gpu --dump-dom <%= FileUtil.concatNormalized(sys.serverURL, url) %> > ${TEST_PAGES_DIR}/<%= path.name %>
+         <% } 
+     }
+  }
+%>
