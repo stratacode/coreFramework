@@ -25,7 +25,8 @@ mkdir -p "$TEST_PAGES_DIR"
          if (url.startsWith("/"))
             url = url.substring(1);
          if (sys.testPatternMatches(path.name)) { %>
-chrome --headless --disable-gpu --dump-dom <%= FileUtil.concatNormalized(sys.serverURL, url) %> > ${TEST_PAGES_DIR}/<%= path.name %>
+#chrome --headless --disable-gpu --dump-dom --timeout=30000 --deterministic-fetch --user-profile=/tmp/chrome-test-profile-dir <%= FileUtil.concatNormalized(sys.serverURL, url) %> > ${TEST_PAGES_DIR}/<%= path.name %>
+chrome --headless --disable-gpu --dump-dom --timeout=30000 --user-profile=/tmp/chrome-test-profile-dir <%= FileUtil.concatNormalized(sys.serverURL, url) %> > ${TEST_PAGES_DIR}/<%= path.name %>
          <% } 
      }
   }

@@ -24,6 +24,7 @@ import javax.servlet.ServletResponse;
 
 import sc.obj.ScopeEnvironment;
 import sc.sync.SyncManager;
+import sc.sync.RuntimeIOException;
 
 /** 
   * The SyncServlet responds to the sync requests made by the client.  It receives a layer of changes, parses and applies
@@ -141,6 +142,12 @@ class SyncServlet extends HttpServlet {
 
          if (SyncManager.trace || PageDispatcher.trace)
             System.out.println("Sync complete: session: " + DynUtil.getTraceObjId(session.getId()) + " thread: " + PageDispatcher.getCurrentThreadString() + ": " + traceBuffer + ": " + PageDispatcher.getRuntimeString(startTime));
+      }
+      catch (RuntimeIOException exc) {
+         // For the case where the client side just is closed while we are waiting to write.  Only log this as a verbose message for now because it messages up autotests
+         // since we are exiting the chrome headless app in mid-sync sometimes
+         if (SyncManager.trace || PageDispatcher.trace)
+            System.out.println("Sync IO error while sending sync: " + exc.toString());
       }
       catch (RuntimeException exc) {
          if (sys == null) {

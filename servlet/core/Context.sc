@@ -12,6 +12,8 @@ import sc.lang.html.Window;
 
 import java.util.Enumeration;
 
+import sc.sync.RuntimeIOException;
+
 /** 
   * An abstraction around the servlet request and response, stored in thread-local so any code running
   * in the context of the request can get access to per-request, per-session and per-window data, run
@@ -254,8 +256,15 @@ class Context {
       }
       try {
          writer = response.getWriter();
+         if (writer.checkError())
+            throw new RuntimeIOException("response already closed on write");
          writer.print(str);
          writer.flush();
+      }
+      // Jetty throws org.eclipse.jetty.io.RuntimeIOException but we don't want to burn in a dependency here
+      catch (RuntimeException ioexc) {
+         if (ioexc.getClass().getName().contains("RuntimeIOException"))
+            throw new RuntimeIOException(ioexc.toString());
       }
       catch (IOException exc) {
          throw new IllegalArgumentException("failed to write to client: " + exc.toString());
