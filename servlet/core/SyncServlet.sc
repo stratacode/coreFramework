@@ -138,6 +138,32 @@ class SyncServlet extends HttpServlet {
          // Now collect up all changes and write them as the response layer.  TODO: is default scope right here?
          mgr.sendSync(syncGroup, SyncManager.getDefaultScope().scopeId, false, codeUpdates);
 
+         // TODO - accept a 'wait=waitTimeMillis' option.   If it's true and there are no codeUpdates or items to send back, we wait on
+         // a request-scoped object that's chained off of a window
+         //    - woken up if - any code updates are delivered
+         //    - another SyncServlet initiates a request from the same window - in this case, we leave any pending changes to the new SyncServlet.
+         //      (i.e. it may be pushing other changes and so let it handle the response)
+         //    - any changes are delivered on any scopes below WindowScope -> Session, App, etc.
+
+         // Missing: ScopeContext.childContexts - set of windows for a session, set of AppSessions for an Application, set of applications for a global,
+         //    Need the child to register and de-register on create/delete like SyncContext... reimplement using that data structure as a guide but maybe some factoring?
+
+         //  Implementing the wait:
+         //     - give up locks
+         //     - wait for any change made to the scope
+         //     - wait (ScopeContext.notifyChangeLock) object
+         //      new methods:
+         //          - waitForChange([time])
+         //          - contextChanged() - called from sync system or from setValue on the context.  Get's child contexts and notifies that they have changed - e.g. session change notifies all app-sessions and windows on that session.
+         //               - does a notify on the notifyChangeObject
+
+         // How is locking managed?   Initially:  single lock-scope, set based on the scope of the top-level object.  Eventually, generate lockScope metadata for all dependent scopes:
+         //   "request<w>, window<w>, appSession<w>, session<w>, application<r>, global<r>.
+         // Eventually: detect scope dependencies from the data binding graph of top-level/page object - filter up the read and write dependencies and propagate them out so we don't do any writes of a parent context for
+         // which we do reads.
+
+         // cmd interpreter... uses the dyn lock for everything which is added to the chain of objects.  So after a cmdInterpreter change, everyone wakes up and checks for changes.
+
          syncSession.lastSyncTime = System.currentTimeMillis();
 
          if (SyncManager.trace || PageDispatcher.trace)
