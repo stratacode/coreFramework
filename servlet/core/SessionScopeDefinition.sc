@@ -29,6 +29,7 @@ object SessionScopeDefinition extends ScopeDefinition {
                if (ScopeDefinition.verbose)
                    System.out.println("Creating session context: " + session.getId());
                session.setAttribute("_sessionScopeContext", ctx);
+               ctx.init();
             }
          }
       }

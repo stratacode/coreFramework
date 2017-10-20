@@ -37,6 +37,7 @@ object AppSessionScopeDefinition extends ScopeDefinition {
                if (ScopeDefinition.verbose)
                    System.out.println("Creating appSession context for app: " + appId + " session: " + session.getId());
                session.setAttribute(key, ctx);
+               ctx.init();
             }
          }
       }
