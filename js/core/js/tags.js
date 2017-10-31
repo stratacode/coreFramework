@@ -1895,6 +1895,7 @@ function js_Page() {
    // Schedule a refresh once this script is done loading
    sc_addLoadMethodListener(this, js_Page_c.refresh);
    sc_runLaterScheduled = true;
+   this.refreshedOnce = false;
    // Signal to others not to bother refreshing individually - avoids refreshing individual tags when we are going to do it at the page level anyway
    js_Element_c.globalRefreshScheduled = true;
    this.makeRoot();
@@ -1913,6 +1914,10 @@ js_Page_c.refresh = function() {
    else */
    js_HTMLElement_c.refresh.call(this);
    js_Element_c.globalRefreshScheduled = false;
+   if (!this.refreshedOnce) {
+      this.refreshedOnce = true;
+      sc_runClientInitJobs();
+   }
 }
 
 function js_Div() {

@@ -25,6 +25,9 @@ import javax.servlet.ServletResponse;
 import sc.obj.ScopeEnvironment;
 import sc.sync.SyncManager;
 import sc.sync.RuntimeIOException;
+import sc.sync.SyncResult;
+
+import sc.obj.IScopeChangeListener;
 
 /** 
   * The SyncServlet responds to the sync requests made by the client.  It receives a layer of changes, parses and applies
@@ -89,6 +92,8 @@ class SyncServlet extends HttpServlet {
       StringBuilder traceBuffer = new StringBuilder();
       LayeredSystem sys = LayeredSystem.getCurrent();
 
+      boolean locksAcquired = false;
+
       Context ctx = null;
       try {
          if (url != null) {
@@ -114,6 +119,7 @@ class SyncServlet extends HttpServlet {
             pageOutput = pageDispatcher.getPageOutput(ctx, url, isReset, false, locks, sys, null);
             if (pageOutput == null)
                return true;
+            locksAcquired = true;
          }
 
          // For the reset=true case, we need to first render the pages from the default initial state, then apply
@@ -135,39 +141,88 @@ class SyncServlet extends HttpServlet {
             codeUpdates = sys.refreshJS(syncSession.lastSyncTime);
          }
 
-         // Now collect up all changes and write them as the response layer.  TODO: is default scope right here?
-         mgr.sendSync(syncGroup, SyncManager.getDefaultScope().scopeId, false, codeUpdates);
+         int waitTime = -1;
+         String waitTimeStr = request.getParameter("waitTime");
+         if (waitTimeStr != null) {
+            try {
+               waitTime = Integer.parseInt(waitTimeStr);
+            }
+            catch (NumberFormatException exc) {
+               System.err.println("*** Invalid waitTime parameter to SyncServlet: " + waitTimeStr);
+            }
+         }
 
-         // TODO - accept a 'wait=waitTimeMillis' option.   If it's true and there are no codeUpdates or items to send back, we wait on
-         // a request-scoped object that's chained off of a window
-         //    - woken up if - any code updates are delivered
-         //    - another SyncServlet initiates a request from the same window - in this case, we leave any pending changes to the new SyncServlet.
-         //      (i.e. it may be pushing other changes and so let it handle the response)
-         //    - any changes are delivered on any scopes below WindowScope -> Session, App, etc.
+         boolean repeatSync;
+         do {
+            repeatSync = false;
+            // If another request is waiting, let them know we are handling the next sync
+            ctx.windowCtx.waitingContext = null;
 
-         // Missing: ScopeContext.childContexts - set of windows for a session, set of AppSessions for an Application, set of applications for a global,
-         //    Need the child to register and de-register on create/delete like SyncContext... reimplement using that data structure as a guide but maybe some factoring?
+            // Now collect up all changes and write them as the response layer.  TODO: should this be request?
+            SyncResult syncRes = mgr.sendSync(syncGroup, WindowScopeDefinition.scopeId, false, codeUpdates);
 
-         //  Implementing the wait:
-         //     - give up locks
-         //     - wait for any change made to the scope
-         //     - wait (ScopeContext.notifyChangeLock) object
-         //      new methods:
-         //          - waitForChange([time])
-         //          - contextChanged() - called from sync system or from setValue on the context.  Get's child contexts and notifies that they have changed - e.g. session change notifies all app-sessions and windows on that session.
-         //               - does a notify on the notifyChangeObject
+            // If there is nothing to send back to the client now and we have a waitTime supplied, we can wait for changes for "real time" response to the client
+            if ((codeUpdates == null || codeUpdates.length() == 0) && waitTime != -1 && !syncRes.anyChanges && syncRes.errorMessage == null) {
+               ctx.windowCtx.waitingContext = ctx;
 
-         // How is locking managed?   Initially:  single lock-scope, set based on the scope of the top-level object.  Eventually, generate lockScope metadata for all dependent scopes:
-         //   "request<w>, window<w>, appSession<w>, session<w>, application<r>, global<r>.
-         // Eventually: detect scope dependencies from the data binding graph of top-level/page object - filter up the read and write dependencies and propagate them out so we don't do any writes of a parent context for
-         // which we do reads.
+               if (locksAcquired) {
+                  PageDispatcher.releaseLocks(locks, session);
+                  locksAcquired = false;
+               }
+               else // TODO: this should not happen right?
+                  System.err.println("*** Locks not acquired during sync!");
 
-         // cmd interpreter... uses the dyn lock for everything which is added to the chain of objects.  So after a cmdInterpreter change, everyone wakes up and checks for changes.
+               final IScopeChangeListener listener = new IScopeChangeListener() {
+                  synchronized void scopeChanged() {
+                     this.notify();
+                  }
+               };
+
+               boolean interrupted = false;
+               long sleepStartTime = 0;
+               try {
+                  ctx.windowCtx.addChangeListener(listener);
+
+                  synchronized (listener) {
+                     if (SyncManager.trace || PageDispatcher.trace) {
+                        sleepStartTime = System.currentTimeMillis();
+                        System.out.println("Sync servlet waiting: " + waitTime + PageDispatcher.getTraceInfo(session));
+                     }
+                     try {
+                        listener.wait(waitTime);
+                     }
+                     catch (InterruptedException exc) {
+                        interrupted = true;
+                     }
+                  }
+               }
+               finally {
+                  ctx.windowCtx.removeChangeListener(listener);
+               }
+
+               // Make sure we're still the first SyncServlet request waiting...
+               if (ctx.windowCtx.waitingContext == ctx) {
+                  PageDispatcher.acquireLocks(locks, url);
+                  locksAcquired = true;
+
+                  // checking again now that we have the locks
+                  if (ctx.windowCtx.waitingContext == ctx) {
+                     repeatSync = true;
+                     if (SyncManager.trace || PageDispatcher.trace)
+                        System.out.println("Sync servlet awoke - resyncing on thread: " + PageDispatcher.getTraceInfo(session) + " after " + (System.currentTimeMillis() - sleepStartTime) + " millis (interrupted: " + interrupted + ")");
+                  }
+               }
+               if (!repeatSync) {
+                  if (SyncManager.trace || PageDispatcher.trace)
+                     System.out.println("Sync servlet awoke - replaced by another request, returning empty sync: " + PageDispatcher.getTraceInfo(session) + " after " + (System.currentTimeMillis() - sleepStartTime) + " millis (interrupted: " + interrupted + ")");
+               }
+            }
+         } while (repeatSync);
 
          syncSession.lastSyncTime = System.currentTimeMillis();
 
          if (SyncManager.trace || PageDispatcher.trace)
-            System.out.println("Sync complete: session: " + DynUtil.getTraceObjId(session.getId()) + " thread: " + PageDispatcher.getCurrentThreadString() + ": " + traceBuffer + ": " + PageDispatcher.getRuntimeString(startTime));
+            System.out.println("Sync complete:" + PageDispatcher.getTraceInfo(session) + ": " + traceBuffer + ": " + PageDispatcher.getRuntimeString(startTime));
       }
       catch (RuntimeIOException exc) {
          // For the case where the client side just is closed while we are waiting to write.  Only log this as a verbose message for now because it messages up autotests
@@ -188,6 +243,10 @@ class SyncServlet extends HttpServlet {
       finally {
          try {
             if (ctx != null) {
+               if (!locksAcquired && ctx.hasDoLaterJobs()) {
+                  PageDispatcher.acquireLocks(locks, url);
+                  locksAcquired = true;
+               }
                ctx.execLaterJobs();
                Context.clearContext();
                ScopeEnvironment.setAppId(null);
@@ -198,7 +257,8 @@ class SyncServlet extends HttpServlet {
             exc.printStackTrace();
          }
          finally {
-            PageDispatcher.releaseLocks(locks, session);
+            if (locksAcquired)
+               PageDispatcher.releaseLocks(locks, session);
          }
       }
       return true;
@@ -222,7 +282,7 @@ class SyncServlet extends HttpServlet {
 
       if (SyncManager.trace || PageDispatcher.trace) {
          // TODO: add session id, timestamp.
-         System.out.println("Received sync from client: " + (isReset ? "reset" : "sync") + " session:" + DynUtil.getTraceObjId(session.getId()) + " thread: " + PageDispatcher.getCurrentThreadString() + ":\n" + bufStr + "");
+         System.out.println("Received sync from client: " + (isReset ? "reset" : "sync") + PageDispatcher.getTraceInfo(session) + ":\n" + bufStr + "");
       }
 
        // Apply changes from the client.

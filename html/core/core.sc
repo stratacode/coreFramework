@@ -124,7 +124,7 @@ html.core extends sys.std {  // Extending sys.std because we override the standa
       // The .sc and .schtml files replace each other in the type system - i.e. not part of the "processed id" which lets one file in a subsequent layer from processing that file in the next layer
       // the suffix will be .java when compiledTemplate is true and one of process or postBuild template
       //htmlLang.processByUniqueSuffix = true;
-      registerLanguage(htmlLang, "schtml");
+      registerLanguage(htmlLang, sc.lang.HTMLLanguage.SC_HTML_SUFFIX);
 
    }
 

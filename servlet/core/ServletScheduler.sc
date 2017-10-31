@@ -52,4 +52,10 @@ class ServletScheduler implements sc.dyn.IScheduler {
          }
       }
    }
+
+   public boolean hasPendingJobs() {
+      synchronized(invokeNextRequestLock) {
+         return toInvokeNextRequest.size() > 0;
+      }
+   }
 }

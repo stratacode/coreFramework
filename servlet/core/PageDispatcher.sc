@@ -189,7 +189,6 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       int scopeId = -1;
       ScopeContext scopeCtx = null;
 
-      ScopeEnvironment.setAppId(uri);
 
       // first we'll loop through all page objects and figure out which scopes and locks are needed for this request
       // that way we can acquire locks "all or none" to avoid deadlocks.
@@ -211,10 +210,13 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             }
 
             if (locks != null && !scopeNames.contains(scopeName)) {
-               // TODO: For now all dyn types are synchronized globally.  We do not have proper synchronization around loading new types (but we should just like class loader)
-               boolean isDyn = ModelUtil.isDynamicType(pageType);
+               // For now all dyn types are synchronized globally because we do not have proper synchronization around loading new types (but we should just like class loader)
+               // Also, if the command interpreter is enabled, we'll also lock just the dyn global lock so that we can update things from the command line.  We might only
+               // need a read-only lock though need to consider that refreshing code changes will need a write
+               boolean isDyn = ModelUtil.isDynamicType(pageType) || sys.commandLineEnabled();
                String lockScope = pageEnt.lockScope;
                if (isDyn) {
+                  // TODO: can we make this the read lock - unless we are going to refresh because some source was changed
                   Lock dynLock = sys.getDynWriteLock();
                   if (!locks.contains(dynLock)) {
                      locks.add(dynLock);
@@ -242,7 +244,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                         if (rwLock == null) {
                            rwLock = new ReentrantReadWriteLock();
                            if (traceLocks)
-                              System.out.println("Page: new lock created for scope: " + lockScope + " " + rwLock + " session: " + DynUtil.getTraceObjId(session.getId()) + " thread: " + getCurrentThreadString());
+                              System.out.println("Page: new lock created for scope: " + lockScope + " " + rwLock + getTraceInfo(session));
                            lockScopeCtx.setValue("_lock", rwLock);
                         }
                      }
@@ -399,6 +401,10 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       return TextUtil.format("#.##", (((System.currentTimeMillis() - startTime))/1000.0)) + " secs.";
    }
 
+   static String getTraceInfo(HttpSession session) {
+      return " session: " + (session == null ? "<none>" : DynUtil.getTraceObjId(session.getId())) + " thread: " + getCurrentThreadString();
+   }
+
    /** Don't put the ugly thread ids into the logs - normalize them with an incremending integer */
    static String getCurrentThreadString() {
       return DynUtil.getTraceObjId(Thread.currentThread());
@@ -411,7 +417,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
    static void releaseLocks(List<Lock> locks, HttpSession session) {
       if (traceLocks)
-         System.out.println("Page - releasing " + locks.size() + " locks: " + locks + " session: " + (session == null ? "<none>" : DynUtil.getTraceObjId(session.getId())) + " thread: " + getCurrentThreadString());
+         System.out.println("Page - releasing " + locks.size() + " locks: " + locks + getTraceInfo(session));
       releaseLocks(locks, 0, locks.size());
       if (traceLocks)
          System.out.println("Page - released locks.");
@@ -580,6 +586,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       String uri = request.getRequestURI();
       ArrayList<Lock> locks = new ArrayList<Lock>();
       HttpSession session = null;
+
+      ScopeEnvironment.setAppId(uri);
       try {
          boolean isPage = false;
          List<PageEntry> pageEnts = getPageEntries(uri);;
@@ -638,7 +646,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                }
 
                if (verbose)
-                  System.out.println("Page complete: session: " + DynUtil.getTraceObjId(session.getId()) + " thread: " + getCurrentThreadString() + traceBuffer + ": " + getRuntimeString(startTime));
+                  System.out.println("Page complete: session: " + getTraceInfo(session) + traceBuffer + ": " + getRuntimeString(startTime));
             }
             finally {
                try {
@@ -666,6 +674,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
          }
          finally {
             releaseLocks(locks, session);
+            ScopeEnvironment.setAppId(null);
          }
       }
    }

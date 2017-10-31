@@ -27,6 +27,9 @@ object ClientSyncDestination extends SyncDestination {
    allowCodeEval = true; // Allows the browser to evaluate code that's sent from the server
    clientDestination = true; // Objects received by this destination are registered as 'fixed' - i.e. we don't post them back on a reset
 
+   /** How much time should we wait on the server for changes?  This can be set as high as it's ok to keep an HTTP connection open  */
+   int waitTime = realTime ? 1200000 : -1;
+
    public void writeToDestination(String layerDef, String syncGroup, IResponseListener listener, String paramStr, CharSequence codeUpdates) {
       String useParams = paramStr;
       if (syncGroup != null) {
@@ -42,6 +45,7 @@ object ClientSyncDestination extends SyncDestination {
       else
          useParams = "?" + useParams + (urlParam == null ? "" : "&" + urlParam);
 
+
       int winId = PTypeUtil.getWindowId();
       if (winId != -1) {
          if (useParams == null)
@@ -55,6 +59,8 @@ object ClientSyncDestination extends SyncDestination {
       else
          useParams += "&";
       useParams += "lang=" + sendLanguage;
+      if (waitTime != -1)
+         useParams += "&waitTime=" + waitTime;
       PTypeUtil.postHttpRequest("/sync" + useParams, layerDef, "text/plain", listener);
    }
 
@@ -103,5 +109,18 @@ object ClientSyncDestination extends SyncDestination {
 
    public boolean isSendingSync() {
       return true;
+   }
+
+   /** After we've received the response from one sync, unless we've already scheduled another, set up a job to resync if we are doing realtime */
+   public void postCompleteSync() {
+      if (pollTime != -1 && numSendsInProgress == 0 && connected) {
+         DynUtil.invokeLater(new Runnable() {
+            public void run() {
+               if (numSendsInProgress == 0) {
+                  syncManager.autoSync();
+               }
+            }
+         }, pollTime);
+      }
    }
 }

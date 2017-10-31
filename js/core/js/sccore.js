@@ -236,6 +236,7 @@ function sc_methodArgCallback(thisObj, method, arg) {
 }
 
 var sc_runLaterMethods = [];
+var sc_clientInitMethods = [];
 
 function sc_runRunLaterMethods() {
    while (sc_runLaterMethods.length > 0) {
@@ -275,8 +276,20 @@ function sc_addRunLaterMethod(thisObj, method, priority) {
       sc_runLaterMethods.splice(i, 0, newEnt);
 }
 
-function sc_setMethodTimer(thisObj, method, timeInMillis) {
-   return setTimeout(sc_methodCallback(thisObj, method),timeInMillis);
+function sc_hasPendingJobs() {
+   return sc_runLaterMethods.length > 0;
+}
+
+function sc_addScheduledJob(thisObj, method, timeInMillis, repeat) {
+   var f = repeat ? setInterval : setTimeout;
+   return f(sc_methodCallback(thisObj, method),timeInMillis);
+}
+
+function sc_cancelScheduledJob(h, repeat) {
+   if (repeat)
+      clearInterval(h);
+   else
+      clearTimeout(h);
 }
 
 function sc_addLoadMethodListener(thisObj, method) {
@@ -288,6 +301,26 @@ function sc_addLoadMethodListener(thisObj, method) {
    } 
    else {
       window.attachEvent("onload", sc_methodCallback(thisObj, method));
+   }
+}
+
+function sc_addClientInitJob(thisObj, method) {
+   sc_clientInitMethods.push({thisObj:thisObj, method:method});
+}
+
+function sc_runClientInitJobs() {
+   while (sc_clientInitMethods.length > 0) {
+      var toRun = sc_clientInitMethods.slice(0);
+      sc_clientInitMethods = [];
+      for (var i = 0; i < toRun.length; i++) {
+         var rm = toRun[i];
+         try {
+            rm.method.call(rm.thisObj);
+         }
+         catch (e) {
+            console.error("Exception: " + e + " in client init method: " + rm + " stack:" + e.stack);
+         }
+      }
    }
 }
 

@@ -132,7 +132,6 @@ class Context {
       ScopeContext requestCtx = RequestScopeDefinition.getRequestScopeDefinition().getScopeContext(false);
       if (requestCtx != null) {
          requestCtx.scopeDestroyed();
-         requestCtx = null;
       }
    }
 
@@ -185,6 +184,7 @@ class Context {
             winScope.scopeDestroyed();
          }
          ctxList.clear();
+         session.removeAttribute("_windowContexts");
       }
    }
 
@@ -276,5 +276,9 @@ class Context {
       if (toInvokeLater == null)
          toInvokeLater = new ArrayList<ScheduledJob>();
       ScheduledJob.addToJobList(toInvokeLater, sj);
+   }
+
+   boolean hasDoLaterJobs() {
+      return toInvokeLater != null && toInvokeLater.size() > 0;
    }
 }

@@ -5,13 +5,13 @@ public class Transition implements Runnable {
    public int numSteps = 10;
    public boolean inTransition = false;
    public int currentStep = 0;
-   public boolean enabled = PTypeUtil.isInvokeLaterSupported();
+   public boolean enabled = true; // TODO: set this to false for the server?
 
    public void startTransition() {
       if (enabled) {
          inTransition = true;
          currentStep = 0;
-         PTypeUtil.invokeLater(this, (long)(delay * 1000));
+         PTypeUtil.addScheduledJob(this, (long)(delay * 1000), false);
       }
       else {
          endTransition();
@@ -25,7 +25,7 @@ public class Transition implements Runnable {
    public void transitionStep() {
       currentStep++;
       if (currentStep < numSteps) {
-         PTypeUtil.invokeLater(this, (long)(delay * 1000));
+         PTypeUtil.addScheduledJob(this, (long)(delay * 1000), false);
       }
       else {
          endTransition();

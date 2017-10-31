@@ -16,4 +16,8 @@ public class SwingScheduler implements sc.dyn.IScheduler {
    public void execLaterJobs() {
       System.err.println("*** SwingScheduler does not support execLaterJobs");
    }
+
+   public boolean hasPendingJobs() {
+      return false; // TODO: do we need this?
+   }
 }

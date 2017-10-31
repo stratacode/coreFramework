@@ -16,6 +16,31 @@ class ClientSyncManager extends SyncManager {
 
    ClientSyncManager(SyncDestination dest) {
       super(dest);
+
+      if (dest.realTime) {
+         // Once the client has fully initialized itself, we'll schedule the first sync to get us connected when in real time mode.
+         PTypeUtil.addClientInitJob(new Runnable() {
+            void run() {
+               scheduleConnectSync(syncDestination.pollTime);
+            }
+         });
+      }
+   }
+
+   void scheduleConnectSync(long waitToSyncTime) {
+      PTypeUtil.addScheduledJob(new Runnable() {
+         void run() {
+            // Once we do an initial sync, the response handler will start the next one
+            if (numSendsInProgress == 0 || (numSendsInProgress == 1 && syncDestination.realTime)) {
+               long now = System.currentTimeMillis();
+               if (!sc.dyn.DynUtil.hasPendingJobs() && (lastSentTime == -1 || lastSentTime - now > syncMinDelay)) {
+                  autoSync();
+               }
+               else // wait one more poll interval to sync on comment
+                  scheduleConnectSync(syncDestination.pollTime);
+            }
+         }
+      }, waitToSyncTime, false);
    }
 
    class ClientSyncContext extends SyncManager.SyncContext implements Runnable {
@@ -36,18 +61,22 @@ class ClientSyncManager extends SyncManager {
                 delay = 0;
              else
                 delay = syncMinDelay - timeSinceLastSend;
-             PTypeUtil.invokeLater(this, delay);
+             PTypeUtil.addScheduledJob(this, delay, false);
           }
        }
 
        void run() {
-          if (autoSyncDest == null)
-             sendSync(autoSyncGroup, false);
-          else {
-             sendSync(autoSyncDest, autoSyncGroup, false, null);
-             lastSentTime = System.currentTimeMillis();
-          }
+          autoSync();
        }
+   }
+
+   void autoSync() {
+      if (autoSyncDest == null)
+         sendSync(autoSyncGroup, false);
+      else {
+         sendSync(autoSyncDest, autoSyncGroup, false, null);
+         lastSentTime = System.currentTimeMillis();
+      }
    }
 
    SyncContext newSyncContext(String name) {

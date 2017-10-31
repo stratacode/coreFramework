@@ -14,6 +14,8 @@ public class WindowScopeContext extends BaseScopeContext {
    // The javascript window object
    Window window;
 
+   Context waitingContext;
+
    public WindowScopeContext(int windowId, Window window) {
       this.windowId = windowId;
       this.window = window;

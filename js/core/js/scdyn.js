@@ -12,7 +12,8 @@ if (!Array.isArray) {
 
 function sc_DynUtil() {}
 
-sc_DynUtil_c = sc_newClass("sc_DynUtil", sc_DynUtil, null, null);
+sc_DynUtil_c = sc_newClass("sc.dyn.DynUtil", sc_DynUtil, null, null);
+sc_DynUtil_c.getName = jv_Class_c.getName;
 
 sc_DynUtil_c.addDynObject = function(typeName, inst) {
    inst.$objectName = typeName;
@@ -128,6 +129,8 @@ sc_DynUtil_c.getMethodName = function(method) {
    return method.name;
 }
 
+sc_DynUtil_c.getParameterTypes = function() { return null; }
+
 sc_DynUtil_c.invokeMethod = function(obj, method, paramValues) {
    if (method.methStatic)
       return method.type[method.name].apply(null, paramValues);
@@ -146,9 +149,8 @@ sc_DynUtil_c.invokeMethod = function(obj, method, paramValues) {
    }
 }
 
-// TODO: make this a pluggable hook so we can do remote methods with data binding using other RPC, not just the sync system
 sc_DynUtil_c.invokeRemote = function(obj, method, paramValues) {
-   return sc_SyncManager_c.invokeRemote(obj, method.name, method.paramSig, paramValues);
+   return sc_SyncManager_c.invokeRemote(null, null, obj, null, method.name, method.paramSig, paramValues);
 }
 
 sc_DynUtil_c.evalArithmeticExpression = function(operator, expectedType, lhsVal, rhsVal) {
@@ -280,7 +282,7 @@ sc_DynUtil_c.updateTypeIdCount = function(typeName, ct) {
    sc$typeIdCounts[typeName] = ct;
 }
 
-sc_DynUtil_c.isType = function(obj) {
+sc_DynUtil_c.isType = sc_DynUtil_c.isSType = function(obj) {
    return obj.hasOwnProperty("$protoName") || obj.hasOwnProperty("$typeName");
 }
 
@@ -768,18 +770,18 @@ sc_DynUtil_c.isComponentType = function(type) {
 
 function sc_IObjChildren() {}
 
-sc_IObjChildren_c = sc_newClass("sc_IObjChildren", sc_IObjChildren, null, null);
+sc_IObjChildren_c = sc_newClass("sc.dyn.IObjChildren", sc_IObjChildren, null, null);
 
 function sc_IStoppable() {}
-sc_IStoppable_c = sc_newClass("sc_IStoppable", sc_IStoppable, null, null);
+sc_IStoppable_c = sc_newClass("sc.obj.IStoppable", sc_IStoppable, null, null);
 
 function sc_IComponent() {}
 
-sc_IComponent_c = sc_newClass("sc_IComponent", sc_IComponent, sc_IStoppable, null);
+sc_IComponent_c = sc_newClass("sc.obj.IComponent", sc_IComponent, sc_IStoppable, null);
 
 function sc_PTypeUtil() {}
 
-sc_PTypeUtil_c = sc_newClass("sc_PTypeUtil", sc_PTypeUtil, null, null);
+sc_PTypeUtil_c = sc_newClass("sc.type.PTypeUtil", sc_PTypeUtil, null, null);
 
 sc_PTypeUtil_c.isPrimitive = function(type) {
    return false; // TODO: some way to reprent int.class etc.
@@ -836,10 +838,16 @@ sc_PTypeUtil_c.postHttpRequest = function(url, postData, contentType, listener) 
    httpReq.send(postData);
 }
 
-sc_PTypeUtil_c.isInvokeLaterSupported = function() { return true; }
+sc_PTypeUtil_c.addScheduledJob = function(runnable, delay, repeat) {
+   return sc_addScheduledJob(runnable, runnable.run, delay, repeat);
+}
 
-sc_PTypeUtil_c.invokeLater = function(runnable, delay) {
-  sc_setMethodTimer(runnable, runnable.run, delay);
+sc_PTypeUtil_c.cancelScheduledJob = function(handle, repeat) {
+   sc_cancelScheduledJob(handle, repeat);
+}
+
+sc_PTypeUtil_c.addClientInitJob = function(runnable) {
+   sc_addClientInitJob(runnable, runnable.run);
 }
 
 sc_PTypeUtil_c.getWindowId = function() {
@@ -952,7 +960,7 @@ sc_DynUtil_c.getPropertyAnnotationValue = function(typeObj, propName, annotName,
 function sc_IDynChildManager() {
 }
 
-sc_IDynChildManager_c = sc_newClass("sc_IDynChildManager", sc_IDynChildManager, null, null);
+sc_IDynChildManager_c = sc_newClass("sc.dyn.IDynChildManager", sc_IDynChildManager, null, null);
 
 function sc_propTable(prop) {
    var tab = sc$propNameTable[prop];
@@ -1122,4 +1130,8 @@ sc_DynUtil_c.applySyncLayer = function(lang, dest, scope, layerDef, isReset, all
 
 sc_DynUtil_c.isAssignableFrom = function(s, d) {
    return sc_isAssignableFrom(s.constructor, d.constructor);
+}
+
+sc_DynUtil_c.hasPendingJobs = function() {
+   return sc_hasPendingJobs();
 }
