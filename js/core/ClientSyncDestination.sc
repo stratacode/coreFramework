@@ -27,6 +27,12 @@ object ClientSyncDestination extends SyncDestination {
    allowCodeEval = true; // Allows the browser to evaluate code that's sent from the server
    clientDestination = true; // Objects received by this destination are registered as 'fixed' - i.e. we don't post them back on a reset
 
+   {
+      // When loaded as a local file on the client, turn off real time since there's no server to talk to
+      if (PTypeUtil.getServerName() == null)
+         realTime = false;
+   }
+
    /** How much time should we wait on the server for changes?  This can be set as high as it's ok to keep an HTTP connection open  */
    int waitTime = realTime ? 1200000 : -1;
 

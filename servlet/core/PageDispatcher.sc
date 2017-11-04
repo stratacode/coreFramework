@@ -31,6 +31,8 @@ import sc.obj.ScopeDefinition;
 import sc.obj.ScopeEnvironment;
 import sc.obj.RequestScopeDefinition;
 
+import sc.js.URLPath;
+
 import sc.sync.SyncManager;
 
 import javax.servlet.Filter;
@@ -213,7 +215,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                // For now all dyn types are synchronized globally because we do not have proper synchronization around loading new types (but we should just like class loader)
                // Also, if the command interpreter is enabled, we'll also lock just the dyn global lock so that we can update things from the command line.  We might only
                // need a read-only lock though need to consider that refreshing code changes will need a write
-               boolean isDyn = ModelUtil.isDynamicType(pageType) || sys.commandLineEnabled();
+               boolean isDyn = ModelUtil.isDynamicType(pageType) || (sys != null && sys.commandLineEnabled());
                String lockScope = pageEnt.lockScope;
                if (isDyn) {
                   // TODO: can we make this the read lock - unless we are going to refresh because some source was changed
@@ -289,8 +291,6 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                SyncManager.setInitialSync("jsHttp", uri, RequestScopeDefinition.getRequestScopeDefinition().scopeId, true);
             }
             else {
-               //ScopeEnvironment.setAppId(uri);
-
                // When we get the page for a sync reset operation, we do not record the changes and it's not the "initial sync" layer
                if (resetSync)
                   SyncManager.setSyncState(SyncManager.SyncState.ApplyingChanges);
@@ -587,7 +587,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       ArrayList<Lock> locks = new ArrayList<Lock>();
       HttpSession session = null;
 
-      ScopeEnvironment.setAppId(uri);
+      ScopeEnvironment.setAppId(URLPath.getAppNameFromURL(uri));
       try {
          boolean isPage = false;
          List<PageEntry> pageEnts = getPageEntries(uri);;

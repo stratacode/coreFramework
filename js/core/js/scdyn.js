@@ -149,8 +149,8 @@ sc_DynUtil_c.invokeMethod = function(obj, method, paramValues) {
    }
 }
 
-sc_DynUtil_c.invokeRemote = function(obj, method, paramValues) {
-   return sc_SyncManager_c.invokeRemote(null, null, obj, null, method.name, method.paramSig, paramValues);
+sc_DynUtil_c.invokeRemote = function(def, ctx, obj, method, paramValues) {
+   return sc_SyncManager_c.invokeRemote(def, ctx, obj, null, method.name, method.paramSig, paramValues);
 }
 
 sc_DynUtil_c.evalArithmeticExpression = function(operator, expectedType, lhsVal, rhsVal) {
@@ -799,6 +799,10 @@ sc_PTypeUtil_c.isStringOrChar = function(type) {
 
 sc_PTypeUtil_c.getArrayLength = sc_DynUtil_c.getArrayLength;
 sc_PTypeUtil_c.getArrayElement = sc_DynUtil_c.getArrayElement;
+
+sc_PTypeUtil_c.getServerName = function() {
+   return window.location.hostname;
+}
 
 sc_PTypeUtil_c.postHttpRequest = function(url, postData, contentType, listener) {
    var httpReq = new XMLHttpRequest();

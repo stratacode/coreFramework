@@ -29,6 +29,8 @@ import sc.sync.SyncResult;
 
 import sc.obj.IScopeChangeListener;
 
+import sc.js.URLPath;
+
 /** 
   * The SyncServlet responds to the sync requests made by the client.  It receives a layer of changes, parses and applies
   * that layer, then gathers up any response data to the sync in the response layer.  That layer gets converted to Java
@@ -74,7 +76,8 @@ class SyncServlet extends HttpServlet {
       }
 
       long startTime = 0;
-      if (SyncManager.trace || PageDispatcher.trace)
+      boolean verbosePage = SyncManager.trace || PageDispatcher.trace || PageDispatcher.verbose;
+      if (verbosePage)
          startTime = System.currentTimeMillis();
 
       // Resetting the session - need to create it!
@@ -97,7 +100,7 @@ class SyncServlet extends HttpServlet {
       Context ctx = null;
       try {
          if (url != null) {
-            ScopeEnvironment.setAppId(url);
+            ScopeEnvironment.setAppId(URLPath.getAppNameFromURL(url));
          }
 
          ctx = Context.initContext(request, response);
@@ -186,7 +189,7 @@ class SyncServlet extends HttpServlet {
                   synchronized (listener) {
                      if (SyncManager.trace || PageDispatcher.trace) {
                         sleepStartTime = System.currentTimeMillis();
-                        System.out.println("Sync servlet waiting: " + waitTime + PageDispatcher.getTraceInfo(session));
+                        System.out.println("Sync wait: " + url + " time: " + waitTime + PageDispatcher.getTraceInfo(session));
                      }
                      try {
                         listener.wait(waitTime);
@@ -209,34 +212,34 @@ class SyncServlet extends HttpServlet {
                   if (ctx.windowCtx.waitingContext == ctx) {
                      repeatSync = true;
                      if (SyncManager.trace || PageDispatcher.trace)
-                        System.out.println("Sync servlet awoke - resyncing on thread: " + PageDispatcher.getTraceInfo(session) + " after " + (System.currentTimeMillis() - sleepStartTime) + " millis (interrupted: " + interrupted + ")");
+                        System.out.println("Sync woke: " + url + PageDispatcher.getTraceInfo(session) + " after " + (System.currentTimeMillis() - sleepStartTime) + " millis (interrupted: " + interrupted + ")");
                   }
                }
                if (!repeatSync) {
                   if (SyncManager.trace || PageDispatcher.trace)
-                     System.out.println("Sync servlet awoke - replaced by another request, returning empty sync: " + PageDispatcher.getTraceInfo(session) + " after " + (System.currentTimeMillis() - sleepStartTime) + " millis (interrupted: " + interrupted + ")");
+                     System.out.println("Sync woke: " + url +  PageDispatcher.getTraceInfo(session) + " after " + (System.currentTimeMillis() - sleepStartTime) + " millis (interrupted: " + interrupted + ")" + " replaced - returning empty sync: ");
                }
             }
          } while (repeatSync);
 
          syncSession.lastSyncTime = System.currentTimeMillis();
 
-         if (SyncManager.trace || PageDispatcher.trace)
-            System.out.println("Sync complete:" + PageDispatcher.getTraceInfo(session) + ": " + traceBuffer + ": " + PageDispatcher.getRuntimeString(startTime));
+         if (verbosePage)
+            System.out.println("Sync complete:" + url + PageDispatcher.getTraceInfo(session) + (traceBuffer.length() > 0 ? (": " + traceBuffer + ": ") : " ") + PageDispatcher.getRuntimeString(startTime));
       }
       catch (RuntimeIOException exc) {
          // For the case where the client side just is closed while we are waiting to write.  Only log this as a verbose message for now because it messages up autotests
          // since we are exiting the chrome headless app in mid-sync sometimes
          if (SyncManager.trace || PageDispatcher.trace)
-            System.out.println("Sync IO error while sending sync: " + exc.toString());
+            System.out.println("Sync IO error while sending sync: " + url + ": " + exc.toString());
       }
       catch (RuntimeException exc) {
          if (sys == null) {
-            System.err.println("Sync request error: " + exc);
+            System.err.println("Sync request error: " + url + PageDispatcher.getTraceInfo(session) + exc);
             exc.printStackTrace();
          }
          else {
-            sys.error("Sync request error: " + exc.toString());
+            sys.error("Sync request error: " + url + PageDispatcher.getTraceInfo(session) + exc.toString());
             exc.printStackTrace();
          }
       }
@@ -280,14 +283,14 @@ class SyncServlet extends HttpServlet {
 
       String bufStr = new String(buf);
 
-      if (SyncManager.trace || PageDispatcher.trace) {
-         // TODO: add session id, timestamp.
-         System.out.println("Received sync from client: " + (isReset ? "reset" : "sync") + PageDispatcher.getTraceInfo(session) + ":\n" + bufStr + "");
+      if (bufStr.length() > 0) {
+         if (SyncManager.trace || PageDispatcher.trace) {
+            System.out.println("Client " + (isReset ? "reset" : "sync") + ": " + url + PageDispatcher.getTraceInfo(session) + ":\n" + bufStr + "");
+         }
+
+          // Apply changes from the client.
+         ServletSyncDestination.applySyncLayer(bufStr, receiveLanguage, isReset);
       }
-
-       // Apply changes from the client.
-      ServletSyncDestination.applySyncLayer(bufStr, receiveLanguage, isReset);
-
       ctx.execLaterJobs();
 
    }

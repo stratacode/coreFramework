@@ -146,7 +146,8 @@ html.core extends sys.std {  // Extending sys.std because we override the standa
 
       // Add a shell script to use with the -t option and another to
       // use with -vt (test verify mode)
-      system.addTestCommand(system.options.testVerifyMode ? "./autoTest.sh" : "./runTest.sh");
+      system.options.testScriptName = "testScript.scr";
+      //system.addTestCommand(system.options.testVerifyMode ? "./autoTest.sh" : "./runTest.sh");
 
       // Warn the user if there's no upstream layer for either javascript or a server implementation
       if (activated && system.getLayerByDirName("js.template") == null && system.getLayerByDirName("servlet.schtml") == null && system.getLayerByDirName("wicket.core") == null && system.getLayerByDirName("html.schtml") == null && system.getLayerByDirName("js.schtml") == null) {

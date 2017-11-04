@@ -1,0 +1,73 @@
+import sc.js.URLPath;
+import java.util.List;
+import sc.util.FileUtil;
+import sc.obj.ScopeEnvironment;
+import sc.obj.AppGlobalScopeDefinition;
+import java.io.File;
+import sc.dyn.DynUtil;
+
+import sc.layer.AsyncResult;
+
+object pageLoader {
+   sc.layer.LayeredSystem sys = cmd.system;
+   List<URLPath> urlPaths = sys.getURLPaths();
+   boolean headless = true;
+   boolean skipIndex = true;
+   String chromeCmd = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+
+   AsyncResult loadPage(String url, String pageResultsFile) {
+      AsyncResult processRes = null;
+      if (headless) {
+         if (sys.serverEnabled)
+            processRes = cmd.execAsync('"' + chromeCmd + '"' + " --headless --disable-gpu --repl --user-profile=/tmp/chrome-test-profile-dir " + url + " > /tmp/chromeHeadless.out");
+         // client only hopefully we can just rely on chrome to save the dom with --dump-dom
+         else {
+            new File(pageResultsFile).getParentFile().mkdirs();
+            processRes = cmd.execAsync('"' + chromeCmd + '"' + " --headless --disable-gpu --dump-dom --user-profile=/tmp/chrome-test-profile-dir " + url + " > " + pageResultsFile);
+         }
+      }
+      else
+         cmd.exec("open " + url);
+      return processRes;
+   }
+
+   void loadPages() {
+      for (URLPath urlPath:urlPaths) {
+         if (skipIndex && urlPath.name.equals("index"))
+            continue;
+         String pageResultsFile = FileUtil.concat(sys.options.testResultsDir, "pages", urlPath.name);
+         System.out.println("Opening page: " + urlPath.name + " at: " + urlPath.url);
+
+         // Returns file:// or http:// depending on whether the server is enabled.  Also finds the files in the first buildDir where it exists
+         String loadUrl = sys.getURLForPath(urlPath.cleanURL(!sys.serverEnabled));
+
+         System.out.println("Loading url: " + loadUrl);
+
+         AsyncResult processRes = loadPage(loadUrl, pageResultsFile);
+
+         System.out.println("- Waiting for client to connect...");
+         cmd.sleep(1500);
+
+         if (sys.serverEnabled) {
+            System.out.println("Running evalRemoteScript for: " + urlPath.name);
+            // First set the app-id so we restrict the contexts we search to just this application - theoretically, we could iterate over the sessions here too to target a specific browser instance to make it more robust
+
+            ScopeEnvironment.setAppId(URLPath.getAppNameFromURL(urlPath.url));
+            String res = (String) DynUtil.evalRemoteScript(AppGlobalScopeDefinition.getAppGlobalScope(), "document.body.innerHTML;");
+            FileUtil.saveStringAsFile(pageResultsFile, res, true);
+            System.out.println("   results: " + urlPath.name + " length: " + res.length());
+
+            if (processRes != null) {
+               processRes.endProcess();
+            }
+         }
+      }
+      System.out.println("Done loading: " + urlPaths.size() + " pages...");
+   }
+}
+
+System.out.println("Waiting for server to start...");
+cmd.sleep(500);
+
+pageLoader.loadPages();
+

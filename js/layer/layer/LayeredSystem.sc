@@ -114,7 +114,7 @@ public class LayeredSystem {
    public void fetchRemoteTypeDeclaration(String typeName, IResponseListener resp) {
       // We cache null if there's no src type declaration to avoid trying this over and over again
       if (!typesByNameIndex.containsKey(typeName)) {
-         sc.dyn.RemoteResult res = DynUtil.invokeRemote(this, DynUtil.resolveRemoteMethod(this, "getSrcTypeDeclaration", "Ljava/lang/String;"), typeName);
+         sc.dyn.RemoteResult res = DynUtil.invokeRemote(null, null, this, DynUtil.resolveRemoteMethod(this, "getSrcTypeDeclaration", "Ljava/lang/String;"), typeName);
          res.listener = new FetchTypeResponseListener(typeName, resp);
       }
    }

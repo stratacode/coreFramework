@@ -11,11 +11,7 @@
   List<URLPath> paths = sys.getURLPaths();
   if (paths != null) {
      for (URLPath path:paths) {
-         String url = path.url;
-         if (url.equals("") && !sys.serverEnabled)
-            url = "index.html";
-         if (url.startsWith("/"))
-            url = url.substring(1);
+         String url = path.cleanURL(!sys.serverEnabled);
          if (sys.testPatternMatches(path.name) && !url.equals("index.html")) { %>
             sleep 3
             open <%= FileUtil.concatNormalized(sys.serverURL, url) %>

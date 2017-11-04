@@ -9,10 +9,11 @@ sys.std {
    object configFileProcessor extends LayerFileProcessor {
       prependLayerPackage = false;
       useSrcDir = false;
-      extensions = {"xml", "properties", "css", "sh", "policy", "xsd"};
+      extensions = {"xml", "properties", "css", "sh", "policy", "xsd", "scr"};
       srcPathTypes = {null, "config"};
+      // Need these in every build-dir, not just the first one since it's not an inherited file like resources which are in the classpath
+      processInAllLayers = true;
    }
-
 
    object resourceFileProcessor extends LayerFileProcessor {
       prependLayerPackage = false;
