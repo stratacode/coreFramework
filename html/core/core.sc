@@ -144,9 +144,12 @@ html.core extends sys.std {  // Extending sys.std because we override the standa
       if (system.options.openPageAtStartup)
          system.addRunCommand("open",  webURL);
 
+      // Use the -ts <script-name> option to specify a test script - if not specified, we default to testScript.scr
+      if (system.options.testScriptName == null)
+         system.options.testScriptName = "testScript.scr";
+
       // Add a shell script to use with the -t option and another to
       // use with -vt (test verify mode)
-      system.options.testScriptName = "testScript.scr";
       //system.addTestCommand(system.options.testVerifyMode ? "./autoTest.sh" : "./runTest.sh");
 
       // Warn the user if there's no upstream layer for either javascript or a server implementation
