@@ -12,7 +12,7 @@ object pageLoader {
    sc.layer.LayeredSystem sys = cmd.system;
    List<URLPath> urlPaths = sys.getURLPaths();
    boolean headless = true;
-   boolean skipIndex = true;
+   boolean skipIndexPage = true;
    String chromeCmd = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
    AsyncResult loadPage(String url, String pageResultsFile) {
@@ -26,15 +26,17 @@ object pageLoader {
             processRes = cmd.execAsync('"' + chromeCmd + '"' + " --headless --disable-gpu --dump-dom --user-profile=/tmp/chrome-test-profile-dir " + url + " > " + pageResultsFile);
          }
       }
-      else
+      else {
          cmd.exec("open " + url);
+         cmd.sleep(2000); // time for opening devtools
+      }
       return processRes;
    }
 
    void loadPages() {
       int numLoaded = 0;
       for (URLPath urlPath:urlPaths) {
-         if (skipIndex && urlPath.name.equals("index"))
+         if (skipIndexPage && urlPath.name.equals("index"))
             continue;
          numLoaded++;
          String pageResultsFile = FileUtil.concat(sys.options.testResultsDir, "pages", urlPath.name);
@@ -73,4 +75,3 @@ System.out.println("Waiting for server to start...");
 cmd.sleep(500);
 
 pageLoader.loadPages();
-
