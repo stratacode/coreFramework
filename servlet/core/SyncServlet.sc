@@ -23,6 +23,7 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 
 import sc.obj.ScopeEnvironment;
+import sc.obj.ScopeContext;
 import sc.sync.SyncManager;
 import sc.sync.RuntimeIOException;
 import sc.sync.SyncResult;
@@ -92,8 +93,10 @@ class SyncServlet extends HttpServlet {
       PageDispatcher.SyncSession syncSession = PageDispatcher.getSyncSession(session, url, true);
 
       ArrayList<Lock> locks = new ArrayList<Lock>();
+      ArrayList<String> lockScopeNames = new ArrayList<String>();
       StringBuilder traceBuffer = new StringBuilder();
       LayeredSystem sys = LayeredSystem.getCurrent();
+      PageDispatcher pageDispatcher = PageDispatcher.getPageDispatcher();
 
       boolean locksAcquired = false;
 
@@ -105,6 +108,22 @@ class SyncServlet extends HttpServlet {
 
          ctx = Context.initContext(request, response);
 
+         // Did not locate this page
+         List<PageDispatcher.PageEntry> pageEnts = pageDispatcher.getPageEntriesOrError(ctx, url);
+         if (pageEnts == null)
+            return true;
+
+         if (verbosePage) 
+            System.out.println("Sync request: " + url + PageDispatcher.getTraceInfo(session));
+
+         int sz = pageEnts.size();
+         List<Integer> scopeIds = new ArrayList<Integer>(sz);
+         List<String> scopeNames = new ArrayList<String>(sz);
+         List<ScopeContext> scopeCtxs = new ArrayList<ScopeContext>(sz);
+
+         // Acquires the locks for the context of this page
+         pageDispatcher.initPageContext(ctx, url, pageEnts, session, scopeIds, scopeNames, scopeCtxs, locks, lockScopeNames, sys);
+
          String syncGroup = request.getParameter("syncGroup");
          if (reset == null) {
             // Reads the POST data as a layer, applies that layer to the current context, and execs any jobs spawned
@@ -112,14 +131,13 @@ class SyncServlet extends HttpServlet {
             applySyncLayer(ctx, request, receiveLanguage, session, url, syncGroup, false);
          }
 
-         PageDispatcher pageDispatcher = PageDispatcher.getPageDispatcher();
          StringBuilder pageOutput;
          boolean isReset = reset != null;
          if (url != null) {
 
             // Setting initial = isReset here and resetSync = false. - when we are resetting it's the initial sync though we toss this page output.  It just sets up the page to be like the client's state when it's first page was shipped out.
             // TODO: setting traceBuffer = null here since we never see this output but are there any cases where it might help to debug things?
-            pageOutput = pageDispatcher.getPageOutput(ctx, url, isReset, false, locks, sys, null);
+            pageOutput = pageDispatcher.getPageOutput(ctx, url, pageEnts, scopeIds, scopeNames, scopeCtxs, isReset, false, sys, null);
             if (pageOutput == null)
                return true;
             locksAcquired = true;
@@ -132,7 +150,7 @@ class SyncServlet extends HttpServlet {
 
             // Also render the page after we do the reset so that we lazily init any objects that need synchronizing in this output
             // This time we render with initial = false and resetSync = true - so we do not record any changed made during this page rendering.  We're just resyncing the state of the application to be where the client is already.
-            pageOutput = pageDispatcher.getPageOutput(ctx, url, false, false, null, sys, traceBuffer);
+            pageOutput = pageDispatcher.getPageOutput(ctx, url, pageEnts, scopeIds, scopeNames, scopeCtxs, false, false, sys, traceBuffer);
             if (pageOutput == null)
                return true;
          }
@@ -155,18 +173,21 @@ class SyncServlet extends HttpServlet {
             }
          }
 
+         final SyncWaitListener listener = new SyncWaitListener(ctx);
+
          boolean repeatSync;
          do {
             repeatSync = false;
-            // If another request is waiting, let them know we are handling the next sync
-            ctx.windowCtx.waitingContext = null;
+            WindowScopeContext windowCtx = ctx.windowCtx;
 
             // Now collect up all changes and write them as the response layer.  TODO: should this be request?
             SyncResult syncRes = mgr.sendSync(syncGroup, WindowScopeDefinition.scopeId, false, codeUpdates);
 
             // If there is nothing to send back to the client now and we have a waitTime supplied, we can wait for changes for "real time" response to the client
             if ((codeUpdates == null || codeUpdates.length() == 0) && waitTime != -1 && !syncRes.anyChanges && syncRes.errorMessage == null) {
-               ctx.windowCtx.waitingContext = ctx;
+               SyncWaitListener oldListener = windowCtx.waitingListener;
+               windowCtx.waitingListener = listener;
+               windowCtx.addChangeListener(listener);
 
                if (locksAcquired) {
                   PageDispatcher.releaseLocks(locks, session);
@@ -175,44 +196,60 @@ class SyncServlet extends HttpServlet {
                else // TODO: this should not happen right?
                   System.err.println("*** Locks not acquired during sync!");
 
-               final IScopeChangeListener listener = new IScopeChangeListener() {
-                  synchronized void scopeChanged() {
-                     this.notify();
-                  }
-               };
-
                boolean interrupted = false;
                long sleepStartTime = 0;
                try {
-                  ctx.windowCtx.addChangeListener(listener);
+
+                  // Wake up the previous listener - if any, so there's only one thread per window that's waiting at any given time.
+                  if (oldListener != null && oldListener.waiting) {
+                     if (verbosePage) 
+                         System.out.println("Sync - replacing previous listener: " + listener);
+                     synchronized (oldListener) {
+                        oldListener.notify();
+                     }
+                  }
 
                   synchronized (listener) {
-                     if (SyncManager.trace || PageDispatcher.trace) {
-                        sleepStartTime = System.currentTimeMillis();
-                        System.out.println("Sync wait: " + url + " time: " + waitTime + PageDispatcher.getTraceInfo(session));
-                     }
-                     try {
-                        listener.wait(waitTime);
-                     }
-                     catch (InterruptedException exc) {
-                        interrupted = true;
+                     if (!Context.shuttingDown) { // Don't wait if the server is in the midst of shutting down
+                        if (verbosePage) {
+                           sleepStartTime = System.currentTimeMillis();
+                           System.out.println("Sync wait: " + url + " time: " + waitTime + PageDispatcher.getTraceInfo(session));
+                        }
+                        try {
+                           listener.waiting = true;
+                           listener.wait(waitTime);
+                           listener.waiting = false;
+                        }
+                        catch (InterruptedException exc) {
+                           interrupted = true;
+                        }
                      }
                   }
                }
                finally {
-                  ctx.windowCtx.removeChangeListener(listener);
+                  windowCtx.removeChangeListener(listener);
+               }
+
+               if (Context.shuttingDown) {
+                   if (verbosePage)
+                      System.out.println("Sync woke - shutdown: " + url + PageDispatcher.getTraceInfo(session) + (sleepStartTime == 0 ? "" : " after " + (System.currentTimeMillis() - sleepStartTime) + " millis"));
+                   // Sending the 410 - resource gone - response here to signal that we do not want the client to poll again.  If we are planning
+                   // on restarting, send the 205 - reset which means send all of your data on the next request cause your session is gone
+                   int resultCode = Context.restarting ? 205 : 410;
+                   response.sendError(resultCode, "Session expired for sync - client should do a reset");
+                   return true;
                }
 
                // Make sure we're still the first SyncServlet request waiting...
-               if (ctx.windowCtx.waitingContext == ctx) {
-                  PageDispatcher.acquireLocks(locks, url);
+               if (windowCtx.waitingListener == listener) {
+                  PageDispatcher.acquireLocks(locks, lockScopeNames, session, url);
                   locksAcquired = true;
 
                   // checking again now that we have the locks
-                  if (ctx.windowCtx.waitingContext == ctx) {
+                  if (windowCtx.waitingListener == listener) {
                      repeatSync = true;
                      if (SyncManager.trace || PageDispatcher.trace)
-                        System.out.println("Sync woke: " + url + PageDispatcher.getTraceInfo(session) + " after " + (System.currentTimeMillis() - sleepStartTime) + " millis (interrupted: " + interrupted + ")");
+                        System.out.println("Sync woke: " + url + PageDispatcher.getTraceInfo(session) + " after " + (System.currentTimeMillis() - sleepStartTime) + " millis" + (interrupted ? " *** interrupted" : ""));
                   }
                }
                if (!repeatSync) {
@@ -225,7 +262,7 @@ class SyncServlet extends HttpServlet {
          syncSession.lastSyncTime = System.currentTimeMillis();
 
          if (verbosePage)
-            System.out.println("Sync complete:" + url + PageDispatcher.getTraceInfo(session) + (traceBuffer.length() > 0 ? (": " + traceBuffer + ": ") : " ") + PageDispatcher.getRuntimeString(startTime));
+            System.out.println("Sync end:" + url + PageDispatcher.getTraceInfo(session) + (traceBuffer.length() > 0 ? (": " + traceBuffer + ": ") : " ") + PageDispatcher.getRuntimeString(startTime));
       }
       catch (RuntimeIOException exc) {
          // For the case where the client side just is closed while we are waiting to write.  Only log this as a verbose message for now because it messages up autotests
@@ -247,7 +284,9 @@ class SyncServlet extends HttpServlet {
          try {
             if (ctx != null) {
                if (!locksAcquired && ctx.hasDoLaterJobs()) {
-                  PageDispatcher.acquireLocks(locks, url);
+                  if (verbosePage)
+                     System.out.println("Reacquiring locks for post-page processing: " + PageDispatcher.getTraceInfo(session));
+                  PageDispatcher.acquireLocks(locks, lockScopeNames, session, url);
                   locksAcquired = true;
                }
                ctx.execLaterJobs();

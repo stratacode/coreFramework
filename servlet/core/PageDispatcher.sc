@@ -173,24 +173,11 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       return matchedEnts;
    }
 
-   public List<Object> initPageObjects(Context ctx, String uri, List<PageEntry> pageEnts, HttpSession session, boolean reset, boolean initial,
-                                       boolean resetSync, ArrayList<Lock> locks, LayeredSystem sys) {
-      if (pageEnts == null)
-         return null;
-
-      int sz = pageEnts.size();
-      List<Object> insts = new ArrayList<Object>(sz);
-      boolean hasInst = false;
-
-      List<Integer> scopeIds = new ArrayList<Integer>(sz);
-      List<String> scopeNames = new ArrayList<String>(sz);
-      List<String> lockScopeNames = new ArrayList<String>(sz);
-      List<ScopeContext> scopeCtxs = new ArrayList<ScopeContext>(sz);
-
+   public void initPageContext(Context ctx, String uri, List<PageEntry> pageEnts, HttpSession session, List<Integer> scopeIds, List<String> scopeNames, List<ScopeContext> scopeCtxs, 
+                               ArrayList<Lock> locks, ArrayList<String> lockScopeNames, LayeredSystem sys) {
       String scopeName;
       int scopeId = -1;
       ScopeContext scopeCtx = null;
-
 
       // first we'll loop through all page objects and figure out which scopes and locks are needed for this request
       // that way we can acquire locks "all or none" to avoid deadlocks.
@@ -246,7 +233,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                         if (rwLock == null) {
                            rwLock = new ReentrantReadWriteLock();
                            if (traceLocks)
-                              System.out.println("Page: new lock created for scope: " + lockScope + " " + rwLock + getTraceInfo(session));
+                              System.out.println("Page: new lock created for scope: " + lockScope + getTraceInfo(session));
                            lockScopeCtx.setValue("_lock", rwLock);
                         }
                      }
@@ -267,14 +254,23 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       }
 
       if (locks != null) {
-         if (traceLocks)
-            System.out.println("Page - acquiring locks: " + lockScopeNames + " session: " + DynUtil.getTraceObjId(session.getId()) + " thread: " + getCurrentThreadString());
-
-         acquireLocks(locks, uri);
-
-         if (traceLocks)
-            System.out.println("Page - locks acquired: " + lockScopeNames + locks + " session: " + DynUtil.getTraceObjId(session.getId()) + " thread: " + getCurrentThreadString());
+         acquireLocks(locks, lockScopeNames, session, uri);
       }
+   }
+
+   public List<Object> initPageObjects(Context ctx, String uri, List<PageEntry> pageEnts, HttpSession session, 
+                                       List<Integer> scopeIds, List<String> scopeNames, List<ScopeContext> scopeCtxs, boolean reset, boolean initial,
+                                       boolean resetSync, LayeredSystem sys) {
+      if (pageEnts == null)
+         return null;
+
+      int sz = pageEnts.size();
+      List<Object> insts = new ArrayList<Object>(sz);
+      boolean hasInst = false;
+
+      String scopeName;
+      int scopeId = -1;
+      ScopeContext scopeCtx = null;
 
       int i = 0;
       for (PageEntry pageEnt:pageEnts) {
@@ -340,7 +336,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
             if (verbose) {
                String pageTypeStr = (initial ? "Page" : (reset ? "Sync: reset session" : "Sync"));
-               System.out.println(pageTypeStr + " start: " + uri + " type:" + typeName + " uri:" + uri + " scope: " + scopeName + " session: " + DynUtil.getTraceObjId(session.getId()) + " thread: " + getCurrentThreadString() + " " + getTimeString() + " locks: " + lockScopeNames);
+               System.out.println(pageTypeStr + " start: " + uri + getTraceInfo(session) + " " + getTimeString());
             }
 
             if (pageEnt.doSync)
@@ -364,9 +360,12 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       return insts;
    }
 
-   static void acquireLocks(List<Lock> locks, String uri) {
+   static void acquireLocks(List<Lock> locks, List<String> lockScopeNames, HttpSession session, String uri) {
       if (locks.size() == 0)
          return;
+      if (traceLocks)
+         System.out.println("Page " + uri + " - acquiring locks: " + lockScopeNames + " session: " + DynUtil.getTraceObjId(session.getId()) + " thread: " + getCurrentThreadString());
+
       // Wait as normal to get the first lock
       locks.get(0).lock();
       int fetchFrom = 1;
@@ -395,14 +394,21 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
          if (repeat)
             fetchTo = repeatTo;
       } while (repeat);
+
+      if (traceLocks)
+         System.out.println("Page - locks acquired: " + lockScopeNames + getTraceInfo(session));
    }
 
    static String getRuntimeString(long startTime) {
       return TextUtil.format("#.##", (((System.currentTimeMillis() - startTime))/1000.0)) + " secs.";
    }
 
+   static String getSessionTraceInfo(HttpSession session) {
+      return " session: " + (session == null ? "<none>" : DynUtil.getTraceObjId(session.getId())); 
+   }
+
    static String getTraceInfo(HttpSession session) {
-      return " session: " + (session == null ? "<none>" : DynUtil.getTraceObjId(session.getId())) + " thread: " + getCurrentThreadString();
+      return getSessionTraceInfo(session) + " thread: " + getCurrentThreadString();
    }
 
    /** Don't put the ugly thread ids into the logs - normalize them with an incremending integer */
@@ -416,11 +422,16 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
    }
 
    static void releaseLocks(List<Lock> locks, HttpSession session) {
+      if (locks.size() == 0)
+         return;
+
       if (traceLocks)
-         System.out.println("Page - releasing " + locks.size() + " locks: " + locks + getTraceInfo(session));
+         System.out.println("Page - releasing " + locks.size() + " locks" + getTraceInfo(session));
       releaseLocks(locks, 0, locks.size());
+      /*
       if (traceLocks)
-         System.out.println("Page - released locks.");
+         System.out.println("Page - released locks: " + getTraceInfo(session));
+      */
    }
 
    static void releaseLocks(List<Lock> locks, int from, int to) {
@@ -585,18 +596,20 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       Context ctx = null;  
       String uri = request.getRequestURI();
       ArrayList<Lock> locks = new ArrayList<Lock>();
+      ArrayList<String> lockScopeNames = new ArrayList<String>();
       HttpSession session = null;
 
       ScopeEnvironment.setAppId(URLPath.getAppNameFromURL(uri));
       try {
          boolean isPage = false;
-         List<PageEntry> pageEnts = getPageEntries(uri);;
+         List<PageEntry> pageEnts = getPageEntries(uri);
 
          if (pageEnts != null && pageEnts.size() > 0) {
-            List<Object> insts = null;
-
+            int sz = pageEnts.size();
             if (verbose)
-               System.out.println("Page init: " + uri + " matched: " + pageEnts + " thread: " + getCurrentThreadString());
+               System.out.println("Page request: " + uri + " matched: " + sz + " objects" + getTraceInfo(session));
+
+            List<Object> insts = null;
 
             isPage = pageEnts.get(0).page || isPage;
 
@@ -617,11 +630,18 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                startTime = System.currentTimeMillis();
 
             try {
+               List<Integer> scopeIds = new ArrayList<Integer>(sz);
+               List<String> scopeNames = new ArrayList<String>(sz);
+               List<ScopeContext> scopeCtxs = new ArrayList<ScopeContext>(sz);
+
                // TODO: check if we need a session for this request before creating it
                session = request.getSession(true);
 
+               // Acquires the locks for the page and gets info
+               initPageContext(ctx, uri, pageEnts, session, scopeIds, scopeNames, scopeCtxs, locks, lockScopeNames, sys);
+
                // Make sure the page object is initialized for this request
-               insts = initPageObjects(ctx, uri, pageEnts, session, true, true, false, locks, sys);
+               insts = initPageObjects(ctx, uri, pageEnts, session, scopeIds, scopeNames, scopeCtxs, true, true, false, sys);
 
                // Something in creating the object rejected, redirected or whatever
                if (ctx.requestComplete) {
@@ -776,9 +796,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       pageDispatcher = this;
    }
 
-   public StringBuilder getPageOutput(Context ctx, String url, boolean initSync, boolean resetSync, ArrayList<Lock> locks, LayeredSystem sys, StringBuilder traceBuffer) {
-      StringBuilder pageOutput = null;
-      List<PageDispatcher.PageEntry> pageEnts = pageDispatcher.getPageEntries(url);
+   public List<PageDispatcher.PageEntry> getPageEntriesOrError(Context ctx, String url) {
+      List<PageDispatcher.PageEntry> pageEnts = getPageEntries(url);
       if (pageEnts == null) {
          try {
             ctx.response.sendError(HttpServletResponse.SC_NOT_FOUND, "No page found for url: " + url);
@@ -786,8 +805,14 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
          catch (IOException exc) {}
          return null;
       }
+      return pageEnts;
+   }
+
+   public StringBuilder getPageOutput(Context ctx, String url, List<PageDispatcher.PageEntry> pageEnts, List<Integer> scopeIds, List<String> scopeNames, List<ScopeContext> scopeCtxs,
+                                      boolean initSync, boolean resetSync, LayeredSystem sys, StringBuilder traceBuffer) {
+      StringBuilder pageOutput = null;
       try {
-         List<Object> insts = pageDispatcher.initPageObjects(ctx, url, pageEnts, ctx.session, false, initSync, resetSync, locks, sys);
+         List<Object> insts = pageDispatcher.initPageObjects(ctx, url, pageEnts, ctx.session, scopeIds, scopeNames, scopeCtxs, false, initSync, resetSync, sys);
 
          if (insts != null) {
          /*

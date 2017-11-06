@@ -19,7 +19,7 @@ object pageLoader {
       AsyncResult processRes = null;
       if (headless) {
          if (sys.serverEnabled)
-            processRes = cmd.execAsync('"' + chromeCmd + '"' + " --headless --disable-gpu --repl --user-profile=/tmp/chrome-test-profile-dir " + url + " > /tmp/chromeHeadless.out");
+            processRes = cmd.execAsync('"' + chromeCmd + '"' + " --headless --auto-open-devtools-for-tabs --disable-gpu --repl --user-profile=/tmp/chrome-test-profile-dir " + url + " > /tmp/chromeHeadless.out");
          // client only hopefully we can just rely on chrome to save the dom with --dump-dom
          else {
             new File(pageResultsFile).getParentFile().mkdirs();
@@ -32,9 +32,11 @@ object pageLoader {
    }
 
    void loadPages() {
+      int numLoaded = 0;
       for (URLPath urlPath:urlPaths) {
          if (skipIndex && urlPath.name.equals("index"))
             continue;
+         numLoaded++;
          String pageResultsFile = FileUtil.concat(sys.options.testResultsDir, "pages", urlPath.name);
          System.out.println("Opening page: " + urlPath.name + " at: " + urlPath.url);
 
@@ -45,24 +47,25 @@ object pageLoader {
 
          AsyncResult processRes = loadPage(loadUrl, pageResultsFile);
 
-         System.out.println("- Waiting for client to connect...");
+         System.out.println("--- Waiting for client to connect...");
          cmd.sleep(1500);
+         System.out.println("- Done waiting for client to connect");
 
          if (sys.serverEnabled) {
-            System.out.println("Running evalRemoteScript for: " + urlPath.name);
+            System.out.println("Get DOM: " + urlPath.name);
             // First set the app-id so we restrict the contexts we search to just this application - theoretically, we could iterate over the sessions here too to target a specific browser instance to make it more robust
 
             ScopeEnvironment.setAppId(URLPath.getAppNameFromURL(urlPath.url));
             String res = (String) DynUtil.evalRemoteScript(AppGlobalScopeDefinition.getAppGlobalScope(), "document.body.innerHTML;");
             FileUtil.saveStringAsFile(pageResultsFile, res, true);
-            System.out.println("   results: " + urlPath.name + " length: " + res.length());
+            System.out.println("- DOM results for: " + urlPath.name + " length: " + res.length());
 
             if (processRes != null) {
                processRes.endProcess();
             }
          }
       }
-      System.out.println("Done loading: " + urlPaths.size() + " pages...");
+      System.out.println("Done loading: " + numLoaded + " pages...");
    }
 }
 

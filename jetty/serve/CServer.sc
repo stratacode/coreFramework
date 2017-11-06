@@ -15,11 +15,32 @@ object CServer extends Server {
    }
 
    boolean sync = false;
+
+   boolean stopped = false;
+
+   static CServer theServer;
    
-   @sc.obj.MainSettings(produceScript = true, execName = "startSCJetty", debug = false)
+   @sc.obj.MainSettings(produceScript = true, execName = "startSCJetty", debug = false, stopMethod="stopServer")
    static void main(String[] args) throws Exception {
-      CServer s = CServer;
+      CServer s = theServer = CServer;
       if (s.sync)
          s.join();
+   }
+
+   void startShutdown() {
+   }
+
+   static void stopServer() {
+      try {
+         if (theServer != null) {
+            theServer.startShutdown();
+            theServer.stop();
+         }
+         else
+            System.err.println("*** No jetty server to stop!");
+      }
+      catch (Exception exc) {
+         System.err.println("*** Failed to stop jetty server: " + exc);
+      }
    }
 }

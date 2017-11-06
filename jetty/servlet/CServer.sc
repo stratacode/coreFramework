@@ -1,5 +1,8 @@
-CServer {
+import sc.servlet.Context;
+import sc.obj.GlobalScopeDefinition;
+import sc.obj.ScopeContext;
 
+CServer {
    // Replacing the previous handlers by redefining the HandlerList
    object handlerList extends HandlerList {
       object webAppHandler extends WebAppContext {
@@ -12,6 +15,16 @@ CServer {
 
          contextPath = "/";
          war="./web";
+      }
+   }
+
+   void startShutdown() {
+      Context.shuttingDown = true;
+      ScopeContext ctx = GlobalScopeDefinition.getScopeContext(false);
+      // Need to wake up any sync servlets that are waiting 
+      if (ctx != null) {
+         ctx.scopeChanged();
+         DynUtil.execLaterJobs();
       }
    }
 }

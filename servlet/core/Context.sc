@@ -34,6 +34,11 @@ class Context {
    ArrayList<ScheduledJob> toInvokeLater = null;
 
    WindowScopeContext windowCtx = null;
+  
+   /** Set to true when the server is in the midst of a shutdown */
+   public static boolean shuttingDown = false;
+   /** Set this to true when the server will restart */
+   public static boolean restarting = false;
 
    Context(HttpServletRequest req, HttpServletResponse res) {
       request = req;
