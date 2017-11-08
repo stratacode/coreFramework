@@ -36,7 +36,8 @@ object pageLoader {
    void loadPages() {
       int numLoaded = 0;
       for (URLPath urlPath:urlPaths) {
-         if (skipIndexPage && urlPath.name.equals("index"))
+         // Simple applications have only a single URL - the root.  Others have an index page and the application pages so we only skip when there's more than one
+         if (skipIndexPage && urlPath.name.equals("index") && urlPaths.size() > 1)
             continue;
          numLoaded++;
          String pageResultsFile = FileUtil.concat(sys.options.testResultsDir, "pages", urlPath.name);

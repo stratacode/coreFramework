@@ -6,10 +6,18 @@ sys.std {
    hidden = true;
    compiledOnly = true;
 
+   // Files always passed through without path modification, always the default processor
+   object simpleFileProcessor extends LayerFileProcessor {
+      prependLayerPackage = false;
+      useSrcDir = false;
+      extensions = {"scr"};
+      processInAllLayers = true;
+   }
+
    object configFileProcessor extends LayerFileProcessor {
       prependLayerPackage = false;
       useSrcDir = false;
-      extensions = {"xml", "properties", "css", "sh", "policy", "xsd", "scr"};
+      extensions = {"xml", "properties", "css", "sh", "policy", "xsd"};
       srcPathTypes = {null, "config"};
       // Need these in every build-dir, not just the first one since it's not an inherited file like resources which are in the classpath
       processInAllLayers = true;
