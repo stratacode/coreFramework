@@ -100,6 +100,9 @@ class SyncServlet extends HttpServlet {
 
       boolean locksAcquired = false;
 
+      SyncWaitListener waitListener = null;
+      boolean removeCodeUpdateListener = false;
+
       Context ctx = null;
       try {
          if (url != null) {
@@ -156,11 +159,6 @@ class SyncServlet extends HttpServlet {
          }
 
          SyncManager mgr = SyncManager.getSyncManager("jsHttp");
-         CharSequence codeUpdates = null;
-         // TODO: add "code update" as a feature of the sync manager using the 'js' language - move this code into ServletSyncDestination.
-         if (syncSession.lastSyncTime != -1 && sys != null && (refresh != null || sys.options.autoRefresh)) {
-            codeUpdates = sys.refreshJS(syncSession.lastSyncTime);
-         }
 
          int waitTime = -1;
          String waitTimeStr = request.getParameter("waitTime");
@@ -175,10 +173,22 @@ class SyncServlet extends HttpServlet {
 
          final SyncWaitListener listener = new SyncWaitListener(ctx);
 
+         if (sys != null && sys.options.autoRefresh) {
+            sys.registerCodeUpdateListener(listener);
+            removeCodeUpdateListener = true;
+            waitListener = listener;
+         }
+
          boolean repeatSync;
          do {
             repeatSync = false;
             WindowScopeContext windowCtx = ctx.windowCtx;
+
+            CharSequence codeUpdates = null;
+            // TODO: add "code update" as a feature of the sync manager using the 'js' language - move this code into ServletSyncDestination.
+            if (syncSession.lastSyncTime != -1 && sys != null && (refresh != null || sys.options.autoRefresh)) {
+               codeUpdates = sys.refreshJS(syncSession.lastSyncTime);
+            }
 
             // Now collect up all changes and write them as the response layer.  TODO: should this be request?
             SyncResult syncRes = mgr.sendSync(syncGroup, WindowScopeDefinition.scopeId, false, codeUpdates);
@@ -281,6 +291,8 @@ class SyncServlet extends HttpServlet {
          }
       }
       finally {
+         if (removeCodeUpdateListener)
+             sys.removeCodeUpdateListener(waitListener);
          try {
             if (ctx != null) {
                if (!locksAcquired && ctx.hasDoLaterJobs()) {

@@ -66,9 +66,7 @@ class ClientSyncManager extends SyncManager {
        }
 
        void run() {
-          // Another sendSync might have started since this was scheduled.  If so, it will retrieve any changes so no need to make a second request
-          if (numSendsInProgress == 0)
-             autoSync();
+          autoSync();
        }
    }
 
@@ -77,8 +75,8 @@ class ClientSyncManager extends SyncManager {
          sendSync(autoSyncGroup, false);
       else {
          sendSync(autoSyncDest, autoSyncGroup, false, null);
-         lastSentTime = System.currentTimeMillis();
       }
+      lastSentTime = System.currentTimeMillis();
    }
 
    SyncContext newSyncContext(String name) {

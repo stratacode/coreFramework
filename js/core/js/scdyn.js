@@ -213,7 +213,10 @@ sc_DynUtil_c.isEvalSupported = function() { return true; }
 sc_DynUtil_c.evalScript = function(script) {
    // Using window.eval here so the var _c classes are defined globally
    // We could also define them with window.sc_xx_c = sc_newClass(...)
-   return window.eval(script);
+   var res = window.eval(script);
+   if (!res)
+      return null; // The Java code has no way to represent 'undefined' and yet it's possibly we eval a script with no return value.
+   return res;
 }
 
 sc_DynUtil_c.cleanTypeName = function(tn) {
@@ -859,6 +862,12 @@ sc_PTypeUtil_c.getWindowId = function() {
       return sc_windowId;
    console.error("No sc_windowId defined - usually this is defined in a block of Javascript from the initial page load.");
    return -1;
+}
+
+sc_PTypeUtil_c.getStackTrace = function(exc) {
+   if (exc.stack)
+      return exc.stack;
+   return "";
 }
 
 var sc_threadLocalMap = new Object();

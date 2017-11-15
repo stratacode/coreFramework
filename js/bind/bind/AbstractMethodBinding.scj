@@ -343,13 +343,17 @@ public abstract class AbstractMethodBinding extends DestinationListener {
                return true;
             }
          }
-         // We add the default value listener both on the value of the dstObj for a top-level binding 
-         // (e.g. editorModel =: (x > y ? doX() : doY()) as well as to the methObj in:
-         // value :=: methObj.get(x).   In this later case the null event occurs on teh srcObj.  Doing the reverse
-         // binding will infinite loop us.
-         else if (srcProp == null && srcObject != methObj) {
-            if (apply)
-               applyReverseBinding(methObj, boundValue, this);
+         else if (srcProp == null) {
+            if (apply) {
+               if (direction.doForward())
+                  applyBinding(null, null, null);
+               // We add the default value listener both on the value of the dstObj for a top-level binding 
+               // (e.g. editorModel =: (x > y ? doX() : doY()) as well as to the methObj in:
+               // value :=: methObj.get(x).   In this later case the null event occurs on teh srcObj.  Doing the reverse
+               // binding will infinite loop us.
+               if (srcObject != methObj)
+                  applyReverseBinding(methObj, boundValue, this);
+            }
             return true;
          }
          return false;

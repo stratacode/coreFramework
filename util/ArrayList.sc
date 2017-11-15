@@ -58,13 +58,16 @@ public class ArrayList<E> extends java.util.ArrayList<E> implements sc.bind.ICha
   }
 
   public void clear() {
+     int sz = size();
      super.clear();
-     sc.bind.Bind.sendEvent(sc.bind.IListener.VALUE_CHANGED, this, null);
+     if (sz != 0)
+        sc.bind.Bind.sendEvent(sc.bind.IListener.VALUE_CHANGED, this, null);
   }
       
   public E set(int index, E element) {
      E res = super.set(index, element);
-     sc.bind.Bind.sendEvent(sc.bind.IListener.VALUE_CHANGED, this, null);
+     if (res != element && (res == null || !res.equals(element)))
+        sc.bind.Bind.sendEvent(sc.bind.IListener.VALUE_CHANGED, this, null);
      return res;
   }
 

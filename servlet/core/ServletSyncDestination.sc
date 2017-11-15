@@ -63,7 +63,7 @@ object ServletSyncDestination extends SyncDestination {
       }
       finally {
          if (listener != null) {
-            ((SyncListener) listener).completeSync(error);
+            ((SyncListener) listener).completeSync(error ? SYNC_FAILED_ERROR : null, null);
          }
       }
    }

@@ -1,6 +1,7 @@
 import sc.obj.IScopeChangeListener;
+import sc.obj.ICodeUpdateListener;
 
-class SyncWaitListener implements IScopeChangeListener {
+class SyncWaitListener implements IScopeChangeListener, ICodeUpdateListener {
    Context ctx;
    String threadName; // debug only
    boolean waiting = false;
@@ -15,5 +16,10 @@ class SyncWaitListener implements IScopeChangeListener {
 
    public String toString() {
       return PageDispatcher.getSessionTraceInfo(ctx.session) + ": " + threadName + (waiting ? " waiting" : "");
+   }
+
+   // So we get codeUpdates
+   public synchronized void codeUpdated() {
+      this.notify();
    }
 }

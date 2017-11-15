@@ -1,0 +1,14 @@
+// Eval expression in context <%= javaTypeName %>
+<%= runtimeTypeName %>_c._eval = function() { 
+    <% if (evalHasReturnValue) { %>
+       return <%= evalExpression %>;
+    <% } else { %>
+       <%= evalExpression %>;
+    <% } %>
+}
+<% if (staticExpr) { %>
+<%= runtimeTypeName %>_c._eval();
+<% } else { %>
+var _inst = sc_SyncManager_c.resolveOrCreateSyncInst("<%= javaTypeName %>", <%= runtimeTypeName %>, null);
+_inst._eval();
+<% } %>

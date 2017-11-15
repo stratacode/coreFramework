@@ -598,6 +598,13 @@ js_HTMLElement_c.getNeededListeners = function() {
    return res;
 }
 
+js_HTMLElement_c.click = function() {
+   var evt = new MouseEvent("click");
+   evt.currentTarget = evt.target = this;
+   this.clickEvent = evt;
+   sc_Bind_c.sendEvent(sc_IListener_c.VALUE_CHANGED, this, "clickEvent", evt);
+}
+
 js_HTMLElement_c.setRepeat = function(r) {
    if (r !== null) {
       if (this.repeatListener === undefined) {
@@ -1465,7 +1472,7 @@ js_HTMLElement_c.processEvent = function(elem, event, listener) {
          if (computed) {
             origValue = sc_DynUtil_c.getPropertyValue(scObj, listener.propName);
             // The getX method (e.g. getHovered) needs the info from the event to compute it's value properly
-            scObj[listener.scEventName] = eventValue;
+            scObj[listener.scEventName] = event;
          }
          // Access this for logs and so getHovered is called to cache the value of "hovered"
          eventValue = sc_DynUtil_c.getPropertyValue(scObj, listener.propName);
@@ -1869,6 +1876,13 @@ js_Form_c.submitEvent = function(event) {
       scObj.setSubmitCount(scObj.getSubmitCount()+1);
    else 
       console.log("Unable to find scObject to update in submitEvent");
+}
+
+js_Form_c.submit = function() {
+   var evt = new Event('submit');
+   evt.currentTarget = evt.target = this;
+   this.submitEvent = evt;
+   sc_Bind_c.sendEvent(sc_IListener_c.VALUE_CHANGED, this, "submitEvent", evt);
 }
 
 js_Form_c.domChanged = function(origElem, newElem) {

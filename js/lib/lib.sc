@@ -27,6 +27,7 @@ js.lib {
       runtimeProc.typeTemplateName = "sc.js.JSTypeTemplate";
       runtimeProc.syncMergeTemplateName = "sc.js.JSSyncMergeTemplate";
       runtimeProc.updateMergeTemplateName = "sc.js.JSUpdateMergeTemplate";
+      runtimeProc.evalTemplateName = "sc.js.JSEvalTemplate";
 
       setLayerRuntime(runtimeProc);
    }
