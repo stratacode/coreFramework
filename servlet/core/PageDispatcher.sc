@@ -78,7 +78,10 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
    static public boolean verbose = false, trace = false, traceLocks = false;
 
+   public static long serverStartTime = System.currentTimeMillis();
+
    private FilterConfig filterConfig;
+
 
    static class PageEntry {
       String pattern;
@@ -336,7 +339,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
             if (verbose) {
                String pageTypeStr = (initial ? "Page" : (reset ? "Sync: reset session" : "Sync"));
-               System.out.println(pageTypeStr + " start: " + uri + getTraceInfo(session) + " " + getTimeString());
+               System.out.println(pageTypeStr + " start: " + uri + getTraceInfo(session));
             }
 
             if (pageEnt.doSync)
@@ -380,7 +383,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             if (!lock.tryLock()) {
                releaseLocks(locks, 0, i);
                if (verbose || trace || traceLocks)
-                  System.out.println("Waiting for locks held: " + uri + " thread: " + getCurrentThreadString() + ": " + getTimeString());
+                  System.out.println("Waiting for locks held: " + uri + " thread: " + getCurrentThreadString() + " at " + getTimeString());
                // Wait now to get the contended lock to avoid a busy loop but we'll just immediately release it just to make the code simpler
                lock.lock();
 
@@ -408,7 +411,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
    }
 
    static String getTraceInfo(HttpSession session) {
-      return getSessionTraceInfo(session) + " thread: " + getCurrentThreadString();
+      return getSessionTraceInfo(session) + " thread: " + getCurrentThreadString() + " at " + getTimeString();
    }
 
    /** Don't put the ugly thread ids into the logs - normalize them with an incremending integer */
@@ -416,9 +419,39 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       return DynUtil.getTraceObjId(Thread.currentThread());
    }
 
+   // Here we print the time since the PageDispatcher started since that's perhaps the easiest basic way to follow "elapsed time" in the context of a server process.
+   // I could imagine having an option to show this relative to start-session or start-thread time or even displaying multiple time spaces in the same log to diagnose different scenarios
    static String getTimeString() {
-      Calendar cal = Calendar.getInstance();
-      return cal.get(Calendar.HOUR_OF_DAY) + ":" + cal.get(Calendar.MINUTE) + ":" + cal.get(Calendar.SECOND) + "." + cal.get(Calendar.MILLISECOND);
+      if (serverStartTime == 0)
+         return "<server not yet started!>";
+      long now = System.currentTimeMillis();
+      StringBuilder sb = new StringBuilder();
+      long elapsed = now - serverStartTime;
+      sb.append("+");
+      boolean remainder = false;
+      if (elapsed > 60*60*1000) {
+         long hrs = elapsed / 60*60*1000;
+         elapsed -= hrs * 60*60*1000;
+         sb.append(hrs);
+         sb.append(".");
+         remainder = true;
+      }
+      if (elapsed > 60*1000 || remainder) {
+         long mins = elapsed / 60*1000;
+         elapsed -= mins * 60*1000;
+         sb.append(mins);
+         sb.append(".");
+      }
+      if (elapsed > 1000 || remainder) {
+         long secs = elapsed / 1000;
+         elapsed -= secs * 1000;
+         sb.append(secs);
+         sb.append(".");
+      }
+      if (elapsed > 1000)
+         System.err.println("*** bad algorithm!");
+      sb.append(elapsed);
+      return sb.toString();
    }
 
    static void releaseLocks(List<Lock> locks, HttpSession session) {
@@ -666,7 +699,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                }
 
                if (verbose)
-                  System.out.println("Page complete: session: " + getTraceInfo(session) + traceBuffer + ": " + getRuntimeString(startTime));
+                  System.out.println("Page complete: session: " + getTraceInfo(session) + traceBuffer + " for " + getRuntimeString(startTime));
             }
             finally {
                try {

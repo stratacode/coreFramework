@@ -90,4 +90,9 @@ public class FileUtil {
       }
       return result;
    }
+
+   public static void saveStringAsFile(String fileName, String data, boolean mkdirs) {
+      System.err.println("*** Not saving string as file in Javascript: " + fileName);
+   }
+
 }

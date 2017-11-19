@@ -41,6 +41,7 @@ object CServer extends Server {
       }
       catch (Exception exc) {
          System.err.println("*** Failed to stop jetty server: " + exc);
+         exc.printStackTrace();
       }
    }
 }

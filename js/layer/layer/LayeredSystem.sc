@@ -45,14 +45,27 @@ public class LayeredSystem {
       public boolean dynamicLayers = false;
       public boolean allDynamic = false;       // -dynall: like -dyn but all layers included by the specified layers are also made dynamic
       /** When true, we maintain the reverse mapping from type to object so that when certain type changes are made, we can propagate those changes to all instances */
+      @Constant
       public boolean liveDynamicTypes = true;
       /** When you have multiple build layers, causes each subsequent layer to get all source/class files from the previous. */
+      @Constant
       public boolean useCommonBuildDir = false;
+      @Constant
       public String buildDir;
+      @Constant
       public String buildSrcDir;
+      @Constant
       public String recordFile; // File used to record script by default
+      @Constant
       public String restartArgsFile;
+      @Constant
       public boolean compileOnly = false;  // Enabled with the -c option - only compile, do not run either main methods or runCommands.
+      @Constant
+      public String testScriptName = null; 
+      @Constant
+      public String testResultsDir = null;  
+      @Constant
+      public boolean headless = false;  
    }
 
    public Layer getLayerByDirName(String dirName) {
@@ -84,6 +97,10 @@ public class LayeredSystem {
    }
 
    public boolean serverEnabled;
+
+   public static String getURLForPath(String name) {
+      return null;
+   }
 
    public boolean testPatternMatches(String pattern) {
       return true;
