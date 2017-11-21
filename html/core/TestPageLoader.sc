@@ -61,11 +61,11 @@ public class TestPageLoader {
       return res;
    }
 
-   public void savePage(String name, int ix) {
+   public void savePage(String name, int ix, String pageContents) {
       boolean found = false;
       for (URLPath urlPath:urlPaths) {
          if (urlPath.name.equals(name)) {
-            saveURL(urlPath, getPageResultsFile(urlPath, ix));
+            saveURL(urlPath, getPageResultsFile(urlPath, ix), pageContents);
             found = true;
          }
       }
@@ -93,7 +93,9 @@ public class TestPageLoader {
       System.out.println("- Done waiting for client to connect");
 
       if (sys.serverEnabled) {
-         saveURL(urlPath, pageResultsFile);
+         ScopeEnvironment.setAppId(URLPath.getAppNameFromURL(urlPath.url));
+         // for the inital page load, we just use the innerHTML which I think should be accurate? 
+         saveURL(urlPath, pageResultsFile, getRemoteBodyHTML());
       }
       return processRes;
    }
@@ -103,13 +105,17 @@ public class TestPageLoader {
           processRes.endProcess();
    }
 
-   void saveURL(URLPath urlPath, String pageResultsFile) {
+   // NOTE: using this for tests is not very robust because any changes made to the elements of the DOM are not reflected.  Instead, we'll
+   // use the tag objects to generate the HTML output that reflects the page's current state. 
+   public String getRemoteBodyHTML() {
+      return (String) DynUtil.evalRemoteScript(AppGlobalScopeDefinition.getAppGlobalScope(), "document.body.innerHTML;");
+   }
+
+   void saveURL(URLPath urlPath, String pageResultsFile, String pageContents) {
       System.out.println("Getting DOM: " + urlPath.name);
       // Set the app-id so we restrict the contexts we search to just this application - theoretically, we could iterate over the sessions here too to target a specific browser instance to make it more robust
-      ScopeEnvironment.setAppId(URLPath.getAppNameFromURL(urlPath.url));
-      String res = (String) DynUtil.evalRemoteScript(AppGlobalScopeDefinition.getAppGlobalScope(), "document.body.innerHTML;");
-      FileUtil.saveStringAsFile(pageResultsFile, res, true);
-      System.out.println("- DOM results: " + urlPath.name + " length: " + res.length() + " path: " + pageResultsFile);
+      FileUtil.saveStringAsFile(pageResultsFile, pageContents, true);
+      System.out.println("- DOM results: " + urlPath.name + " length: " + pageContents.length() + (sys.options.testVerifyMode ? "" : " path: " + pageResultsFile));
    }
 
    public void loadAllPages() {
