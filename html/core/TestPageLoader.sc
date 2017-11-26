@@ -25,7 +25,9 @@ public class TestPageLoader {
       this.headless = sys.options.headless;
 
       System.out.println("Waiting for server to start...");
-      cmd.sleep(5000);
+      //cmd.sleep(5000);
+      if (sys.serverEnabled && !sys.waitForRuntime(5000))
+         throw new IllegalArgumentException("Server failed to start in 5 seconds");
    }
 
    AsyncResult openBrowser(String url, String pageResultsFile) {
@@ -46,12 +48,12 @@ public class TestPageLoader {
       return processRes;
    }
 
-   public AsyncResult loadPage(String name) {
+   public AsyncResult loadPage(String name, String scopeAlias) {
       boolean found = false;
       AsyncResult res = null;
       for (URLPath urlPath:urlPaths) {
          if (urlPath.name.equals(name)) {
-            res = loadURL(urlPath);
+            res = loadURL(urlPath, scopeAlias);
             found = true;
             break;
          }
@@ -77,23 +79,34 @@ public class TestPageLoader {
       return FileUtil.concat(sys.options.testResultsDir, "pages", urlPath.name + (ix == -1 ? "" : "." + ix));
    }
 
-   public AsyncResult loadURL(URLPath urlPath) {
+   public AsyncResult loadURL(URLPath urlPath, String scopeAlias) {
       String pageResultsFile = getPageResultsFile(urlPath, -1);
       System.out.println("Opening page: " + urlPath.name + " at: " + urlPath.url);
 
       // Returns file:// or http:// depending on whether the server is enabled.  Also finds the files in the first buildDir where it exists
-      String loadUrl = sys.getURLForPath(urlPath.cleanURL(!sys.serverEnabled));
+      String url = sys.getURLForPath(urlPath.cleanURL(!sys.serverEnabled));
 
-      System.out.println("Loading url: " + loadUrl);
+      if (scopeAlias != null) {
+         url = URLPath.addQueryParam(url, "scopeAlias", scopeAlias);
+      }
 
-      AsyncResult processRes = openBrowser(loadUrl, pageResultsFile);
+      System.out.println("Loading url: " + url);
 
-      System.out.println("--- Waiting for client to connect...");
-      cmd.sleep(1500);
-      System.out.println("- Done waiting for client to connect");
+      AsyncResult processRes = openBrowser(url, pageResultsFile);
+
+      if (!sys.serverEnabled || scopeAlias == null) {
+         System.out.println("--- Waiting for client to connect...");
+         cmd.sleep(1500);
+         System.out.println("- Done waiting for client to connect");
+      }
 
       if (sys.serverEnabled) {
          ScopeEnvironment.setAppId(URLPath.getAppNameFromURL(urlPath.url));
+
+         if (scopeAlias != null) {
+            if (sc.obj.CurrentScopeContext.waitForIdle(scopeAlias, 3000) == null)
+               throw new IllegalArgumentException("Timeout waiting for url to wait on server: " + url);
+         }
          // for the inital page load, we just use the innerHTML which I think should be accurate? 
          saveURL(urlPath, pageResultsFile, getRemoteBodyHTML());
       }
@@ -124,7 +137,7 @@ public class TestPageLoader {
          // Simple applications have only a single URL - the root.  Others have an index page and the application pages so we only skip when there's more than one
          if (skipIndexPage && urlPath.name.equals("index") && urlPaths.size() > 1)
             continue;
-         AsyncResult processRes = loadURL(urlPath);
+         AsyncResult processRes = loadURL(urlPath, null);
          endSession(processRes);
          numLoaded++;
       }

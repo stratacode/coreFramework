@@ -1239,7 +1239,7 @@ js_HTMLElement_c.updateChildDOMs = function() {
    }
 }
 
-js_HTMLElement_c.output = function() {
+js_HTMLElement_c.output = js_HTMLElement_c.output_c = function() {
    var sb = new jv_StringBuilder();
    this.outputTag(sb);
    return sb;
@@ -1545,6 +1545,7 @@ function js_Input() {
    this.type = "text";
    this.clickCount = 0;
    this.checked = false;
+   this.tagName = "input";
 }
 js_Input_c = sc_newClass("js_Input", js_Input, js_HTMLElement, null);
 

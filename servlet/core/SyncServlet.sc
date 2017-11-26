@@ -24,11 +24,12 @@ import javax.servlet.ServletResponse;
 
 import sc.obj.ScopeEnvironment;
 import sc.obj.ScopeContext;
+import sc.obj.CurrentScopeContext;
+import sc.obj.IScopeChangeListener;
+
 import sc.sync.SyncManager;
 import sc.sync.RuntimeIOException;
 import sc.sync.SyncResult;
-
-import sc.obj.IScopeChangeListener;
 
 import sc.js.URLPath;
 
@@ -199,6 +200,8 @@ class SyncServlet extends HttpServlet {
                windowCtx.waitingListener = listener;
                windowCtx.addChangeListener(listener);
 
+               String scopeAlias = (String) windowCtx.getValue("scopeAlias");
+
                if (locksAcquired) {
                   PageDispatcher.releaseLocks(locks, session);
                   locksAcquired = false;
@@ -223,8 +226,19 @@ class SyncServlet extends HttpServlet {
                      if (!Context.shuttingDown) { // Don't wait if the server is in the midst of shutting down
                         if (verbosePage) {
                            sleepStartTime = System.currentTimeMillis();
-                           System.out.println("Sync wait: " + url + " time: " + waitTime + PageDispatcher.getTraceInfo(session));
+                           System.out.println("Sync wait: " + url + (scopeAlias == null ? "" : " (scopeAlias: " + scopeAlias + ")") + " time: " + waitTime + PageDispatcher.getTraceInfo(session));
                         }
+
+                        if (scopeAlias != null) {
+                           // Currently we mark the context as 'ready', i.e. that it's fully initialized the first
+                           // time the client receives no more changes from the server - i.e. right before we wait for
+                           // the first time.  Maybe there's a need for a more explicit way to control this?  Test
+                           // scripts will wait for the context to be ready before they start.  You could imagine that
+                           // once the app initializes, it will send some changes to the server which receive replies,
+                           // and that can go back and forth for a while before it's really finished initializing.
+                           CurrentScopeContext.markReady(scopeAlias, true);
+                        }
+
                         try {
                            listener.waiting = true;
                            listener.wait(waitTime);
@@ -264,7 +278,7 @@ class SyncServlet extends HttpServlet {
                }
                if (!repeatSync) {
                   if (SyncManager.trace || PageDispatcher.trace)
-                     System.out.println("Sync woke: " + url +  PageDispatcher.getTraceInfo(session) + " after " + (System.currentTimeMillis() - sleepStartTime) + " millis (interrupted: " + interrupted + ")" + " replaced - returning empty sync: ");
+                     System.out.println("Sync woke: " + url +  PageDispatcher.getTraceInfo(session) + " after " + (System.currentTimeMillis() - sleepStartTime) + " millis"  + (interrupted ? " *** interrupted and" : "") + " replaced - returning empty sync: ");
                }
             }
          } while (repeatSync);
@@ -272,7 +286,7 @@ class SyncServlet extends HttpServlet {
          syncSession.lastSyncTime = System.currentTimeMillis();
 
          if (verbosePage)
-            System.out.println("Sync end:" + url + PageDispatcher.getTraceInfo(session) + (traceBuffer.length() > 0 ? (": " + traceBuffer) : "") + " for " + PageDispatcher.getRuntimeString(startTime));
+            System.out.println("Sync end: " + url + PageDispatcher.getTraceInfo(session) + (traceBuffer.length() > 0 ? (": " + traceBuffer) : "") + " for " + PageDispatcher.getRuntimeString(startTime));
       }
       catch (RuntimeIOException exc) {
          // For the case where the client side just is closed while we are waiting to write.  Only log this as a verbose message for now because it messages up autotests

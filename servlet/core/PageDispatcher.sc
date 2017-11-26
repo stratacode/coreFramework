@@ -30,6 +30,7 @@ import sc.obj.ScopeContext;
 import sc.obj.ScopeDefinition;
 import sc.obj.ScopeEnvironment;
 import sc.obj.RequestScopeDefinition;
+import sc.obj.CurrentScopeContext;
 
 import sc.js.URLPath;
 
@@ -700,6 +701,15 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
                if (verbose)
                   System.out.println("Page complete: session: " + getTraceInfo(session) + traceBuffer + " for " + getRuntimeString(startTime));
+
+               if (sys != null && sys.options.testMode) {
+                  String scopeAlias = request.getParameter("scopeAlias");
+                  if (scopeAlias != null) {
+                     CurrentScopeContext currentCtx = CurrentScopeContext.getCurrentScopeContext();
+                     CurrentScopeContext.register(scopeAlias, currentCtx);
+                     ctx.windowCtx.setValue("scopeAlias", scopeAlias);
+                  }
+               }
             }
             finally {
                try {

@@ -101,12 +101,12 @@ sc_DynUtil_c.getTypeOfObj = function(o) {
        return sc_DynUtil_c.getType(o);
 }
 
-sc_DynUtil_c.resolveMethod = function(vartype, methName, sig) {
-   return {type:sc_clInit(vartype), name:methName, paramSig:sig};
+sc_DynUtil_c.resolveMethod = function(vartype, methName, returnType, sig) {
+   return {type:sc_clInit(vartype), name:methName, returnType:returnType, paramSig:sig};
 }
 
-sc_DynUtil_c.resolveRemoteMethod = function(vartype, methName, sig) {
-   var res = sc_DynUtil_c.resolveMethod(vartype, methName, sig);
+sc_DynUtil_c.resolveRemoteMethod = function(vartype, methName, returnType, sig) {
+   var res = sc_DynUtil_c.resolveMethod(vartype, methName, returnType, sig);
    res.remote = true;
    return res;
 }
@@ -115,8 +115,8 @@ sc_DynUtil_c.isRemoteMethod = function(meth) {
    return meth.remote == true;
 }
 
-sc_DynUtil_c.resolveStaticMethod = function(vartype, methName) {
-   return {type:sc_clInit(vartype), name:methName, methStatic:true};
+sc_DynUtil_c.resolveStaticMethod = function(vartype, methName, returnType, sig) {
+   return {type:sc_clInit(vartype), name:methName, methStatic:true, returnType:returnType, paramSig:sig};
 }
 
 sc_DynUtil_c.resolveStaticRemoteMethod = function(vartype, methName) {
@@ -132,8 +132,9 @@ sc_DynUtil_c.getMethodName = function(method) {
 sc_DynUtil_c.getParameterTypes = function() { return null; }
 
 sc_DynUtil_c.invokeMethod = function(obj, method, paramValues) {
+   var res;
    if (method.methStatic)
-      return method.type[method.name].apply(null, paramValues);
+      res = method.type[method.name].apply(null, paramValues);
    else {
       if (obj[method.name] == null) {
          console.log("Error no method: " + method.name + " defined for obj: " + sc_DynUtil_c.getInstanceName(obj));
@@ -142,15 +143,16 @@ sc_DynUtil_c.invokeMethod = function(obj, method, paramValues) {
       else {
          var meth = obj[method.name];
          if (meth.apply != null)
-            return obj[method.name].apply(obj, paramValues);
+            res = obj[method.name].apply(obj, paramValues);
          else
-            console.log("Error - attempt to invoke non-method: " + method.name);
+            throw new jv_IllegalArgumentException("Error - attempt to invoke non-method: " + method.name);
       }
    }
+   return res === undefined ? null : res;
 }
 
 sc_DynUtil_c.invokeRemote = function(def, ctx, obj, method, paramValues) {
-   return sc_SyncManager_c.invokeRemote(def, ctx, obj, null, method.name, method.paramSig, paramValues);
+   return sc_SyncManager_c.invokeRemote(def, ctx, obj, null, method.name, method.returnType, method.paramSig, paramValues);
 }
 
 sc_DynUtil_c.evalArithmeticExpression = function(operator, expectedType, lhsVal, rhsVal) {
@@ -627,7 +629,8 @@ sc_DynUtil_c.findType = function(name) {
    return null;
 }
 
-sc_DynUtil_c.resolveName = function(name, create) {
+// NOTE: returnTypes is optional here - may be undefined
+sc_DynUtil_c.resolveName = function(name, create, returnTypes) {
    // Here we get the last type for 'name' since inner classes are not properties
    var rootName = sc_DynUtil_c.getRootTypeName(name, true);
    if (rootName != null && name != rootName) {
@@ -671,7 +674,7 @@ sc_DynUtil_c.resolveName = function(name, create) {
       var res = sc_DynUtil_c.getStaticProperty(type, sc_CTypeUtil_c.getClassName(name));
       if (res != null)
          return res;
-      return type;
+      return returnTypes ? type : null;
    }
    return null;
 }

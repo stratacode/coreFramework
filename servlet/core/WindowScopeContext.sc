@@ -26,8 +26,7 @@ public class WindowScopeContext extends BaseScopeContext {
    }
 
    public String getId() {
-      // TODO: should this include the session id?
-      return String.valueOf(windowId);
+      return "window:" + String.valueOf(windowId);
    }
 
    public Window getWindow() {

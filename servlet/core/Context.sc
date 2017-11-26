@@ -6,6 +6,7 @@ import sc.dyn.ScheduledJob;
 import sc.obj.ScopeDefinition;
 import sc.obj.ScopeContext;
 import sc.obj.RequestScopeDefinition;
+import sc.obj.CurrentScopeContext;
 
 import sc.type.PTypeUtil;
 import sc.lang.html.Window;
@@ -187,6 +188,11 @@ class Context {
       if (ctxList != null) {
          for (WindowScopeContext winScope:ctxList) {
             winScope.scopeDestroyed();
+            String scopeAlias = (String) winScope.getValue("scopeAlias");
+            if (scopeAlias != null) {
+               if (!CurrentScopeContext.remove(scopeAlias))
+                  System.err.println("*** Failed to remove CurrentScopeContext for alias: " + scopeAlias);
+            }
          }
          ctxList.clear();
          session.removeAttribute("_windowContexts");

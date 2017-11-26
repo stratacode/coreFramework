@@ -66,6 +66,8 @@ public class LayeredSystem {
       public String testResultsDir = null;  
       @Constant
       public boolean headless = false;  
+      @Constant
+      public boolean testVerifyMode = false;  
    }
 
    public Layer getLayerByDirName(String dirName) {
@@ -131,8 +133,12 @@ public class LayeredSystem {
    public void fetchRemoteTypeDeclaration(String typeName, IResponseListener resp) {
       // We cache null if there's no src type declaration to avoid trying this over and over again
       if (!typesByNameIndex.containsKey(typeName)) {
-         sc.dyn.RemoteResult res = DynUtil.invokeRemote(null, null, this, DynUtil.resolveRemoteMethod(this, "getSrcTypeDeclaration", "Ljava/lang/String;"), typeName);
+         sc.dyn.RemoteResult res = DynUtil.invokeRemote(null, null, this, DynUtil.resolveRemoteMethod(this, "getSrcTypeDeclaration", Object.class, "Ljava/lang/String;"), typeName);
          res.listener = new FetchTypeResponseListener(typeName, resp);
       }
+   }
+
+   public boolean waitForRuntime(long timeout) {
+      return true;
    }
 }

@@ -67,7 +67,7 @@ public class SwingUtil {
       }
       // Because we do not compile stubs with the IChildContainer interface, we need to do this dynamically
       else if (DynUtil.instanceOf(child, IChildContainer.class)) {
-         DynUtil.invokeMethod(child, DynUtil.resolveMethod(DynUtil.getType(child), "setParentComponent", "Ljava/awt/Component;"), parent);
+         DynUtil.invokeMethod(child, DynUtil.resolveMethod(DynUtil.getType(child), "setParentComponent", null, "Ljava/awt/Component;"), parent);
          Object[] children = DynUtil.getObjChildren(child, null, true);
          if (children != null) {
             for (Object subChild:children) {
@@ -95,7 +95,7 @@ public class SwingUtil {
          }
       }
       else if (DynUtil.instanceOf(child, IChildContainer.class)) {
-         DynUtil.invokeMethod(child, DynUtil.resolveMethod(DynUtil.getType(child), "setParentComponent", "Ljava/awt/Component;"), parent);
+         DynUtil.invokeMethod(child, DynUtil.resolveMethod(DynUtil.getType(child), "setParentComponent", null, "Ljava/awt/Component;"), parent);
          Object[] children = DynUtil.getObjChildren(child, null, true);
          if (children != null) {
             for (Object subChild:children) {

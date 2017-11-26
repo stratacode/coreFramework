@@ -29,8 +29,8 @@ class AppSessionScopeContext extends ScopeContext implements HttpSessionBindingL
 
    public void setValue(String key, Object value) {
       if (ScopeDefinition.trace)
-         System.out.println("appSession - set " + key + " = " + value + " for: " + toString());
-      // Stored in the session so we can use session persistence
+         System.out.println("Scope: appSession - set value " + key + " = " + value + " for: " + toString());
+      // Stored in the session so we can use the session persistence of the app server
       session.setAttribute(appId + "__" + key, value);
       if (valuesMap == null) {
          valuesMap = new LinkedHashMap<String,Object>();
@@ -56,7 +56,7 @@ class AppSessionScopeContext extends ScopeContext implements HttpSessionBindingL
    }
 
    public String getId() {
-      return appId + "__" + session.getId();
+      return "appSession:" + appId + "__" + DynUtil.getTraceObjId(session.getId());
    }
 
    public boolean isCurrent() {
