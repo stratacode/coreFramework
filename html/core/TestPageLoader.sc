@@ -14,6 +14,7 @@ public class TestPageLoader {
    sc.layer.LayeredSystem sys; 
    List<URLPath> urlPaths; 
    boolean headless;
+   boolean clientSync;
 
    boolean skipIndexPage = true;
    String chromeCmd = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
@@ -28,12 +29,15 @@ public class TestPageLoader {
       //cmd.sleep(5000);
       if (sys.serverEnabled && !sys.waitForRuntime(5000))
          throw new IllegalArgumentException("Server failed to start in 5 seconds");
+
+      // To do testing via sync we need the server and the JS runtime at least. 
+      clientSync = sys.serverEnabled && sys.getPeerLayeredSystem("js") != null;
    }
 
    AsyncResult openBrowser(String url, String pageResultsFile) {
       AsyncResult processRes = null;
       if (headless) {
-         if (sys.serverEnabled)
+         if (clientSync)
             processRes = cmd.execAsync('"' + chromeCmd + '"' + " --headless --auto-open-devtools-for-tabs --disable-gpu --repl --user-profile=/tmp/chrome-test-profile-dir " + url + " > /tmp/chromeHeadless.out");
          // client only hopefully we can just rely on chrome to save the dom with --dump-dom
          else {
@@ -94,21 +98,32 @@ public class TestPageLoader {
 
       AsyncResult processRes = openBrowser(url, pageResultsFile);
 
-      if (!sys.serverEnabled || scopeAlias == null) {
-         System.out.println("--- Waiting for client to connect...");
-         cmd.sleep(1500);
-         System.out.println("- Done waiting for client to connect");
-      }
-
-      if (sys.serverEnabled) {
-         ScopeEnvironment.setAppId(URLPath.getAppNameFromURL(urlPath.url));
-
-         if (scopeAlias != null) {
-            if (sc.obj.CurrentScopeContext.waitForIdle(scopeAlias, 3000) == null)
-               throw new IllegalArgumentException("Timeout waiting for url to wait on server: " + url);
+      try {
+         if (!sys.serverEnabled || scopeAlias == null) {
+            System.out.println("--- Waiting for client to connect...");
+            cmd.sleep(1500);
+            System.out.println("- Done waiting for client to connect");
          }
-         // for the inital page load, we just use the innerHTML which I think should be accurate? 
-         saveURL(urlPath, pageResultsFile, getRemoteBodyHTML());
+
+         if (clientSync) {
+            ScopeEnvironment.setAppId(URLPath.getAppNameFromURL(urlPath.url));
+
+            if (scopeAlias != null) {
+               if (sc.obj.CurrentScopeContext.waitForIdle(scopeAlias, 3000) == null) {
+                  endSession(processRes);
+                  throw new IllegalArgumentException("Timeout waiting for url to wait on server: " + url);
+               }
+            }
+            // for the inital page load, we just use the innerHTML which I think should be accurate? 
+            saveURL(urlPath, pageResultsFile, getRemoteBodyHTML());
+         }
+      }
+      catch (RuntimeException exc) {
+         endSession(processRes);
+         processRes = null;
+         System.err.println("*** Caught exception in loadURL: " + urlPath.url + ": " + exc);
+         exc.printStackTrace();
+         throw exc;
       }
       return processRes;
    }

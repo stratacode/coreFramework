@@ -141,4 +141,8 @@ public class LayeredSystem {
    public boolean waitForRuntime(long timeout) {
       return true;
    }
+
+   public LayeredSystem getPeerLayeredSystem(String processIdent) {
+      return null;
+   }
 }

@@ -102,7 +102,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
    }
 
    /** 
-    * This method is called from generated code, attached to an annotation via a mixin-template. It register 
+    * This method is usually called from generated code, attached to an annotation via a mixin-template. It register 
     * a pattern with a page type of an object to handle the request or a class to be created to handle the
     * request.  The priority will typically be provided as the layer position, in case one type overrides another.
     * We are not guaranteed these get called in any order so need to use the priority to decide who gets to listen on that
@@ -431,21 +431,27 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       sb.append("+");
       boolean remainder = false;
       if (elapsed > 60*60*1000) {
-         long hrs = elapsed / 60*60*1000;
+         long hrs = elapsed / (60*60*1000);
          elapsed -= hrs * 60*60*1000;
+         if (hrs < 10)
+            sb.append("0");
          sb.append(hrs);
-         sb.append(".");
+         sb.append(":");
          remainder = true;
       }
       if (elapsed > 60*1000 || remainder) {
-         long mins = elapsed / 60*1000;
+         long mins = elapsed / (60*1000);
          elapsed -= mins * 60*1000;
+         if (mins < 10)
+            sb.append("0");
          sb.append(mins);
-         sb.append(".");
+         sb.append(":");
       }
       if (elapsed > 1000 || remainder) {
          long secs = elapsed / 1000;
          elapsed -= secs * 1000;
+         if (secs < 10)
+            sb.append("0");
          sb.append(secs);
          sb.append(".");
       }
