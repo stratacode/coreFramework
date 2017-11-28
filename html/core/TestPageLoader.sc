@@ -43,6 +43,8 @@ public class TestPageLoader {
          else {
             new File(pageResultsFile).getParentFile().mkdirs();
             processRes = cmd.execAsync('"' + chromeCmd + '"' + " --headless --disable-gpu --dump-dom --user-profile=/tmp/chrome-test-profile-dir " + url + " > " + pageResultsFile);
+            cmd.sleep(1000);
+            //System.out.println("*** chrome saved: " + pageResultsFile + " size: " + FileUtil.getFileAsString(pageResultsFile).length());
          }
       }
       else {
