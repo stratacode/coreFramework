@@ -1,3 +1,4 @@
 System.out.println("*** In default testScript - loading pages");
+cmd.noPrompt = true;
 new sc.html.TestPageLoader(cmd).loadAllPages();
 System.out.println("*** In default testScript - done loading pages");

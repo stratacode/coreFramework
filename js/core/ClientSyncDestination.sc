@@ -77,7 +77,7 @@ object ClientSyncDestination extends SyncDestination {
       SyncManager.addSyncDestination(this);
    }
 
-   // The server returns a javascript encoded result to the layer sync operation.  Just apply these changes by evaluating them in the JS runtime.
+   // Apply changes from the server, either by evaluating JS or use the super method which uses the deserializer to apply it
    public void applySyncLayer(String toApply, String receiveLanguage, boolean isReset) {
       if (receiveLanguage == null && toApply != null && !toApply.startsWith("sync:"))
          receiveLanguage = "js";

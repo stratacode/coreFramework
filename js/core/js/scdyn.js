@@ -635,7 +635,7 @@ sc_DynUtil_c.resolveName = function(name, create, returnTypes) {
    var rootName = sc_DynUtil_c.getRootTypeName(name, true);
    if (rootName != null && name != rootName) {
       var tailName = name.substring(rootName.length + 1);
-      var root = sc_DynUtil_c.resolveName(rootName);
+      var root = sc_DynUtil_c.resolveName(rootName, create, true);
       if (root == null)
          return null;
 
