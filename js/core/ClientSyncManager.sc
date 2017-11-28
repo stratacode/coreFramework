@@ -31,7 +31,7 @@ class ClientSyncManager extends SyncManager {
       PTypeUtil.addScheduledJob(new Runnable() {
          void run() {
             // Once we do an initial sync, the response handler will start the next one
-            if (numSendsInProgress == 0) {
+            if (syncDestination.numSendsInProgress == 0 && syncDestination.numWaitsInProgress == 0) {
                long now = System.currentTimeMillis();
                if (!sc.dyn.DynUtil.hasPendingJobs() && (lastSentTime == -1 || lastSentTime - now > syncMinDelay)) {
                   autoSync();

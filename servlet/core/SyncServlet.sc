@@ -129,6 +129,21 @@ class SyncServlet extends HttpServlet {
          pageDispatcher.initPageContext(ctx, url, pageEnts, session, scopeIds, scopeNames, scopeCtxs, locks, lockScopeNames, sys);
 
          String syncGroup = request.getParameter("syncGroup");
+         WindowScopeContext windowCtx = ctx.windowCtx;
+
+         SyncWaitListener oldListener = windowCtx.waitingListener;
+         // Wake up the previous listener - if any, so there's only one thread per window that's waiting at any given time.
+         if (oldListener != null && oldListener.waiting) {
+            if (verbosePage) 
+                System.out.println("Sync - waking up old listener for same window: " + oldListener);
+            synchronized (oldListener) {
+               if (oldListener.waiting) {
+                  oldListener.replaced = true;
+                  oldListener.notify();
+               }
+            }
+         }
+
          if (reset == null) {
             // Reads the POST data as a layer, applies that layer to the current context, and execs any jobs spawned
             // by the layer.
@@ -183,7 +198,6 @@ class SyncServlet extends HttpServlet {
          boolean repeatSync;
          do {
             repeatSync = false;
-            WindowScopeContext windowCtx = ctx.windowCtx;
 
             CharSequence codeUpdates = null;
             // TODO: add "code update" as a feature of the sync manager using the 'js' language - move this code into ServletSyncDestination.
@@ -196,7 +210,6 @@ class SyncServlet extends HttpServlet {
 
             // If there is nothing to send back to the client now and we have a waitTime supplied, we can wait for changes for "real time" response to the client
             if ((codeUpdates == null || codeUpdates.length() == 0) && waitTime != -1 && !syncRes.anyChanges && syncRes.errorMessage == null) {
-               SyncWaitListener oldListener = windowCtx.waitingListener;
                windowCtx.waitingListener = listener;
                windowCtx.addChangeListener(listener);
 
@@ -212,16 +225,6 @@ class SyncServlet extends HttpServlet {
                boolean interrupted = false;
                long sleepStartTime = 0;
                try {
-
-                  // Wake up the previous listener - if any, so there's only one thread per window that's waiting at any given time.
-                  if (oldListener != null && oldListener.waiting) {
-                     if (verbosePage) 
-                         System.out.println("Sync - replacing previous listener: " + listener);
-                     synchronized (oldListener) {
-                        oldListener.notify();
-                     }
-                  }
-
                   synchronized (listener) {
                      if (!Context.shuttingDown) { // Don't wait if the server is in the midst of shutting down
                         if (verbosePage) {
@@ -265,12 +268,12 @@ class SyncServlet extends HttpServlet {
                }
 
                // Make sure we're still the first SyncServlet request waiting...
-               if (windowCtx.waitingListener == listener) {
+               if (windowCtx.waitingListener == listener && !listener.replaced) {
                   PageDispatcher.acquireLocks(locks, lockScopeNames, session, url);
                   locksAcquired = true;
 
                   // checking again now that we have the locks
-                  if (windowCtx.waitingListener == listener) {
+                  if (windowCtx.waitingListener == listener && !listener.replaced) {
                      repeatSync = true;
                      if (SyncManager.trace || PageDispatcher.trace)
                         System.out.println("Sync woke: " + url + PageDispatcher.getTraceInfo(session) + " after " + (System.currentTimeMillis() - sleepStartTime) + " millis" + (interrupted ? " *** interrupted" : ""));

@@ -65,7 +65,8 @@ object ClientSyncDestination extends SyncDestination {
       else
          useParams += "&";
       useParams += "lang=" + sendLanguage;
-      if (waitTime != -1)
+      // Never wait when we are posting data - aka a 'send' versus a 'sync'
+      if (waitTime != -1 && layerDef.length() == 0)
          useParams += "&waitTime=" + waitTime;
       PTypeUtil.postHttpRequest("/sync" + useParams, layerDef, "text/plain", listener);
    }
@@ -119,10 +120,10 @@ object ClientSyncDestination extends SyncDestination {
 
    /** After we've received the response from one sync, unless we've already scheduled another, set up a job to resync if we are doing realtime */
    public void postCompleteSync() {
-      if (pollTime != -1 && numSendsInProgress == 0 && connected) {
+      if (pollTime != -1 && numSendsInProgress == 0 && numWaitsInProgress == 0 && connected) {
          DynUtil.invokeLater(new Runnable() {
             public void run() {
-               if (numSendsInProgress == 0) {
+               if (numSendsInProgress == 0 && numWaitsInProgress == 0) {
                   syncManager.autoSync();
                }
             }

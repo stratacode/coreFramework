@@ -5,6 +5,7 @@ class SyncWaitListener implements IScopeChangeListener, ICodeUpdateListener {
    Context ctx;
    String threadName; // debug only
    boolean waiting = false;
+   boolean replaced = false;
    SyncWaitListener(Context ctx) {
       this.ctx = ctx;
       threadName = PageDispatcher.getCurrentThreadString();
