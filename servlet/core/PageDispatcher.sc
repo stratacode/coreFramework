@@ -651,7 +651,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
             List<Object> insts = null;
 
-            isPage = pageEnts.get(0).page || isPage;
+            PageEntry pageEnt = pageEnts.get(0);
+
+            isPage = pageEnt.page;
 
             // Run any jobs that came in not in a request (e.g. through the command line or scheduled jobs)
             // Do this before we set up the session and the context
@@ -708,8 +710,12 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                if (verbose)
                   System.out.println("Page complete: session: " + getTraceInfo(session) + traceBuffer + " for " + getRuntimeString(startTime));
 
-               if (sys != null && sys.options.testMode) {
-                  String scopeAlias = request.getParameter("scopeAlias");
+               if (sys != null && pageEnt.doSync) {
+                  // In test mode only we accept the scopeAlias parameter, so we can attach to a specific request's scope context from the test script
+                  String scopeAlias = !sys.options.testMode ? null : request.getParameter("scopeAlias");
+                  // If the command line interpreter is enabled, use a scope alias so the command line is sync'd up to the scope of the page page we rendered
+                  if (scopeAlias == null && sys.commandLineEnabled())
+                     scopeAlias = "defaultCmdContext";
                   if (scopeAlias != null) {
                      CurrentScopeContext currentCtx = CurrentScopeContext.getCurrentScopeContext();
                      CurrentScopeContext.register(scopeAlias, currentCtx);
