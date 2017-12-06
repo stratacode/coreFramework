@@ -23,7 +23,7 @@ function js_HTMLElement() {
 }
 
 
-js_Element_c = js_HTMLElement_c = sc_newClass("js_HTMLElement", js_HTMLElement, null, [sc_ISyncInit, sc_IStoppable]);
+js_Element_c = js_HTMLElement_c = sc_newClass("js_HTMLElement", js_HTMLElement, null, [sc_IChildInit, sc_IStoppable]);
 
 // This is part of the SemanticNode class on the server and so the component code gen uses it even for client code
 // involving component types which extend Element.  Just noop it here.
@@ -678,7 +678,7 @@ js_HTMLElement_c.repeatElementIndexOf = function(repeat, startIx, repeatVal) {
    return -1;
 }
 
-js_HTMLElement_c.initSync = function() {
+js_HTMLElement_c.initChildren = function() {
    if (this.repeat !== null) {
       this.syncRepeatTags(false);
    }
