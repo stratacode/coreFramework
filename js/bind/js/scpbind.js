@@ -69,7 +69,7 @@ sc_PBindUtil_c.addListener = function(obj, prop, listener, eventMask, priority) 
    }
       
    var bls = sc_getBindListeners(obj);
-   var newEntry = {listener: listener, eventMask: eventMask, priority: priority};
+   var newEntry = {listener: listener, eventMask: eventMask, priority: priority, flags: (listener.getVerbose() ? sc_Bind_c.VERBOSE : 0) | (listener.getTrace() ? sc_Bind_c.TRACE : 0)};
    if (bls == null) {
       obj._bindingListeners = bls = new Object();
       if (sc_PBindUtil_c.trackAllObjects)
@@ -101,6 +101,9 @@ sc_PBindUtil_c.addListener = function(obj, prop, listener, eventMask, priority) 
          plist[lastFreeIx] = newEntry;
       else
          plist.splice(i, 0, newEntry);
+
+      // TODO: performance - add this to the Listener as a method?
+      plist.flags |= (listener.getVerbose() ? sc_Bind_c.VERBOSE : 0) | (listener.getTrace() ? sc_Bind_c.TRACE : 0);
    }
    plist = bls[null]; // "null" key represents listeners on the object itself - ok since null is a keyword and not a valid property name.
 
@@ -178,7 +181,7 @@ sc_PBindUtil_c.sendEvent = function(event, obj, prop, detail) {
       // When the event is "value changed", we want to first invalidate all of the listeners, then validated them all
       // Otherwise, we will validate more bindings overall and some of those validations occur using stale values (because we did not
       // notify other bindings).  Maybe there's a way to avoid the two pass by better sorting of bindings (i.e. do other bindings as higher priority than
-      // the final assignment?)
+      // the final assignment?) but I think the two-pass way is the most efficient ultimately.
       if ((event & sc_IListener_c.VALUE_CHANGED) == sc_IListener_c.VALUE_CHANGED) {
          sc_PBindUtil_c.dispatchListeners(listeners, sc_IListener_c.VALUE_INVALIDATED, obj, prop, detail);
          sc_PBindUtil_c.dispatchListeners(listeners, sc_IListener_c.VALUE_VALIDATED, obj, prop, detail);

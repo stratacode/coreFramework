@@ -11,86 +11,89 @@ public class Bind {
    public static boolean traceAll = false;
    public static boolean info = true;
 
+   /** These are option flags you can combine in the flags argument to various calls to create bindings.  Settable via @Bindable using code-generation */
+   public static int INACTIVE = 1, TRACE = 2, VERBOSE = 4, QUEUED = 8, IMMEDIATE = 16, CROSS_SCOPE = 32, DO_LATER = 64, HISTORY = 128, ORIGIN= 256;
+
    // Need to pull in the dependency on this class
    private static final MethodBindSettings dummy = null;
 
-   public static Object bind(Object dstObj, String dstProp, Object srcObj, IBinding[] boundProps, BindingDirection dir) {
-      VariableBinding binding = new VariableBinding(dstObj, dstProp, srcObj, boundProps, dir);
+   public static Object bind(Object dstObj, String dstProp, Object srcObj, IBinding[] boundProps, BindingDirection dir, int flags, BindOptions opts) {
+      VariableBinding binding = new VariableBinding(dstObj, dstProp, srcObj, boundProps, dir, flags, opts);
       return bindInternal(dstObj, binding);
    }
 
-   public static int bindInt(Object dstObj, String dstProp, Object srcObj, IBinding[] boundProps, BindingDirection dir) {
-      VariableBinding binding = new VariableBinding(dstObj, dstProp, srcObj, boundProps, dir);
+   public static int bindInt(Object dstObj, String dstProp, Object srcObj, IBinding[] boundProps, BindingDirection dir, int flags, BindOptions opts) {
+      VariableBinding binding = new VariableBinding(dstObj, dstProp, srcObj, boundProps, dir, flags, opts);
       Object val = bindInternal(dstObj, binding);
       if (val == null)
          return 0;
       return ((Number) val).intValue();
    }
 
-   public static Object method(Object dstObj, String dstProp, Object method, IBinding[] args, BindingDirection dir) {
-      MethodBinding binding = new MethodBinding(dstObj, dstProp, dstObj, method, args, dir);
+   public static Object method(Object dstObj, String dstProp, Object method, IBinding[] args, BindingDirection dir, int flags, BindOptions opts) {
+      MethodBinding binding = new MethodBinding(dstObj, dstProp, dstObj, method, args, dir, flags, opts);
       return bindInternal(dstObj, binding);
    }
 
-   public static Object method(Object dstObj, String dstProp, Object methObj, Object method, IBinding[] args, BindingDirection dir) {
-      MethodBinding binding = new MethodBinding(dstObj, dstProp, methObj, method, args, dir);
+   public static Object method(Object dstObj, String dstProp, Object methObj, Object method, IBinding[] args, BindingDirection dir, int flags, BindOptions opts) {
+      MethodBinding binding = new MethodBinding(dstObj, dstProp, methObj, method, args, dir, flags, opts);
       return bindInternal(dstObj, binding);
    }
 
-   public static Object arith(Object dstObj, String dstProp, String operator, IBinding[] args, BindingDirection dir) {
-      ArithmeticBinding binding = new ArithmeticBinding(dstObj, dstProp, operator, args, dir);
+   public static Object arith(Object dstObj, String dstProp, String operator, IBinding[] args, BindingDirection dir, int flags, BindOptions opts) {
+      ArithmeticBinding binding = new ArithmeticBinding(dstObj, dstProp, operator, args, dir, flags, opts);
       return bindInternal(dstObj, binding);
    }
 
-   public static Object condition(Object dstObj, String dstProp, String operator, IBinding[] args, BindingDirection dir) {
-      ConditionalBinding binding = new ConditionalBinding(dstObj, dstProp, operator, args, dir);
+   public static Object condition(Object dstObj, String dstProp, String operator, IBinding[] args, BindingDirection dir, int flags, BindOptions opts) {
+      ConditionalBinding binding = new ConditionalBinding(dstObj, dstProp, operator, args, dir, flags, opts);
       return bindInternal(dstObj, binding);
    }
 
-   public static Object unary(Object dstObj, String dstProp, String operator, IBinding[] args, BindingDirection dir) {
-      UnaryBinding binding = new UnaryBinding(dstObj, dstProp, operator, args, dir);
+   public static Object unary(Object dstObj, String dstProp, String operator, IBinding[] args, BindingDirection dir, int flags, BindOptions opts) {
+      UnaryBinding binding = new UnaryBinding(dstObj, dstProp, operator, args, dir, flags, opts);
       return bindInternal(dstObj, binding);
    }
 
-   public static Object ternary(Object dstObj, String dstProp, IBinding[] args, BindingDirection dir) {
-      TernaryBinding binding = new TernaryBinding(dstObj, dstProp, args, dir);
+   public static Object ternary(Object dstObj, String dstProp, IBinding[] args, BindingDirection dir, int flags, BindOptions opts) {
+      TernaryBinding binding = new TernaryBinding(dstObj, dstProp, args, dir, flags, opts);
       return bindInternal(dstObj, binding);
    }
 
-   public static Object arrayElement(Object dstObj, String dstProp, Object srcObj, Object[] args, IBinding[] arrayDims, BindingDirection dir) {
-      ArrayElementBinding binding = new ArrayElementBinding(dstObj, dstProp, srcObj, args, arrayDims, dir);
+   public static Object arrayElement(Object dstObj, String dstProp, Object srcObj, Object[] args, IBinding[] arrayDims, BindingDirection dir, int flags, BindOptions opts) {
+      ArrayElementBinding binding = new ArrayElementBinding(dstObj, dstProp, srcObj, args, arrayDims, dir, flags, opts);
       return bindInternal(dstObj, binding);
    }
 
-   public static Object cast(Object dstObj, String dstProp, Object theClass, IBinding arg, BindingDirection dir) {
-      CastBinding binding = new CastBinding(dstObj, dstProp, theClass, arg, dir);
+   public static Object cast(Object dstObj, String dstProp, Object theClass, IBinding arg, BindingDirection dir, int flags, BindOptions opts) {
+      CastBinding binding = new CastBinding(dstObj, dstProp, theClass, arg, dir, flags, opts);
       return bindInternal(dstObj, binding);
    }
 
-   public static Object selector(Object dstObj, String dstProp, Object[] boundProps, BindingDirection dir) {
-      SelectorBinding binding = new SelectorBinding(dstObj, dstProp, boundProps, dir);
+   public static Object selector(Object dstObj, String dstProp, Object[] boundProps, BindingDirection dir, int flags, BindOptions opts) {
+      SelectorBinding binding = new SelectorBinding(dstObj, dstProp, boundProps, dir, flags, opts);
       return bindInternal(dstObj, binding);
    }
 
-   public static Object bindNew(Object dstObj, String dstProp, Object newType, String paramSig, IBinding[] args, BindingDirection dir) {
-      NewBinding binding = new NewBinding(dstObj, dstProp, newType, paramSig, args, dir);
+   public static Object bindNew(Object dstObj, String dstProp, Object newType, String paramSig, IBinding[] args, BindingDirection dir, int flags, BindOptions opts) {
+      NewBinding binding = new NewBinding(dstObj, dstProp, newType, paramSig, args, dir, flags, opts);
       return bindInternal(dstObj, binding);
    }
 
-   public static Object newArray(Object dstObj, String dstProp, Object compType, IBinding[] args, BindingDirection dir) {
-      NewArrayBinding binding = new NewArrayBinding(dstObj, dstProp, compType, args, dir);
+   public static Object newArray(Object dstObj, String dstProp, Object compType, IBinding[] args, BindingDirection dir, int flags, BindOptions opts) {
+      NewArrayBinding binding = new NewArrayBinding(dstObj, dstProp, compType, args, dir, flags, opts);
       return bindInternal(dstObj, binding);
    }
 
-   public static Object assign(Object dstObj, String dstProp, Object srcObj, IBinding lhsBinding, Object rhs, BindingDirection dir) {
+   public static Object assign(Object dstObj, String dstProp, Object srcObj, IBinding lhsBinding, Object rhs, BindingDirection dir, int flags, BindOptions opts) {
      AssignmentBinding binding = rhs instanceof IBinding ? 
           new AssignmentBinding(dstObj, dstProp, srcObj, (VariableBinding) lhsBinding, 
-                                (IBinding) rhs, dir) :
-          new AssignmentBinding(dstObj, dstProp, srcObj, (VariableBinding) lhsBinding, rhs, dir);
+                                (IBinding) rhs, dir, flags, opts) :
+          new AssignmentBinding(dstObj, dstProp, srcObj, (VariableBinding) lhsBinding, rhs, dir, flags, opts);
       return bindInternal(dstObj, binding);
    }
 
-   public static Object constant(Object dstObj, String dstProp, Object value, BindingDirection dir) {
+   public static Object constant(Object dstObj, String dstProp, Object value, BindingDirection dir, int flags, BindOptions opts) {
       if (dir.doForward())
          removePropertyBindings(dstObj, dstProp, true, false);  // Only remove the existing forward binding
       return value;

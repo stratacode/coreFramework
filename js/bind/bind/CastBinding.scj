@@ -11,8 +11,8 @@ public class CastBinding extends AbstractMethodBinding {
       super(new IBinding[] {parameterBindings});
       castToClass = theClass;
    }
-   public CastBinding(Object dstObject, String dstBinding, Object theClass, IBinding parameterBindings, BindingDirection dir) {
-      super(dstObject, dstBinding, dstObject, new IBinding[] {parameterBindings}, dir);
+   public CastBinding(Object dstObject, String dstBinding, Object theClass, IBinding parameterBindings, BindingDirection dir, int flags, BindOptions opts) {
+      super(dstObject, dstBinding, dstObject, new IBinding[] {parameterBindings}, dir, flags, opts);
       castToClass = theClass;
    }
 

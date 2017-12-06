@@ -10,8 +10,8 @@ public class ConditionalBinding extends AbstractMethodBinding {
       super(parameterBindings);
       operator = op;
    }
-   public ConditionalBinding(Object dstObject, String dstBinding, String op, IBinding[] parameterBindings, BindingDirection dir) {
-      super(dstObject, dstBinding, dstObject, parameterBindings, dir);
+   public ConditionalBinding(Object dstObject, String dstBinding, String op, IBinding[] parameterBindings, BindingDirection dir, int flags, BindOptions opts) {
+      super(dstObject, dstBinding, dstObject, parameterBindings, dir, flags, opts);
       operator = op;
    }
 

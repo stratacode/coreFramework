@@ -73,4 +73,12 @@ public abstract class AbstractListener implements IListener {
    public void activate(boolean state, Object obj, boolean chained) {
       activated = state;
    }
+
+   public boolean getTrace() {
+      return false;
+   }
+
+   public boolean getVerbose() {
+      return false;
+   }
 }

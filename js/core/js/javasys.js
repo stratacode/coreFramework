@@ -169,7 +169,7 @@ jv_Object_c.getClass = function() {
 jv_Object_c.getName = function() {
    if (this.hasOwnProperty("$protoName"))
       return this.$protoName;
-   throw new UnsupportedOperationException();
+   throw new jv_UnsupportedOperationException();
 }
 
 var Boolean_c = sc_newClass("java.lang.Boolean", Boolean, null, null);

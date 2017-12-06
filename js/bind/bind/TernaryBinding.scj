@@ -8,8 +8,8 @@ public class TernaryBinding extends AbstractMethodBinding {
    public TernaryBinding(IBinding[] parameterBindings) {
       super(parameterBindings);
    }
-   public TernaryBinding(Object dstObject, String dstBinding, IBinding[] parameterBindings, BindingDirection dir) {
-      super(dstObject, dstBinding, dstObject, parameterBindings, dir);
+   public TernaryBinding(Object dstObject, String dstBinding, IBinding[] parameterBindings, BindingDirection dir, int flags, BindOptions opts) {
+      super(dstObject, dstBinding, dstObject, parameterBindings, dir, flags, opts);
    }
 
    protected void initParams() {

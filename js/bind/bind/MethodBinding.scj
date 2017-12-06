@@ -33,8 +33,8 @@ public class MethodBinding extends AbstractMethodBinding implements IResponseLis
    }
 
    /** A top level method binding */
-   public MethodBinding(Object dstObject, String dstProp, Object methObj, Object meth, IBinding[] parameterBindings, BindingDirection dir) {
-      super(dstObject, dstProp, methObj, parameterBindings, dir);
+   public MethodBinding(Object dstObject, String dstProp, Object methObj, Object meth, IBinding[] parameterBindings, BindingDirection dir, int flags, BindOptions opts) {
+      super(dstObject, dstProp, methObj, parameterBindings, dir, flags, opts);
       setMethod(meth);
    }
 

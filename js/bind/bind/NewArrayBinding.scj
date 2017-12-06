@@ -11,8 +11,8 @@ public class NewArrayBinding extends AbstractMethodBinding {
       super(parameterBindings);
       this.compClass = compClass;
    }
-   public NewArrayBinding(Object dstObject, String dstBinding, Object compClass, IBinding[] parameterBindings, BindingDirection dir) {
-      super(dstObject, dstBinding, dstObject, parameterBindings, dir);
+   public NewArrayBinding(Object dstObject, String dstBinding, Object compClass, IBinding[] parameterBindings, BindingDirection dir, int flags, BindOptions opts) {
+      super(dstObject, dstBinding, dstObject, parameterBindings, dir, flags, opts);
       this.compClass = compClass;
    }
 
