@@ -840,6 +840,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
          if (trace || SyncManager.trace)
             verbose = true;
 
+         if (sys.options.verboseLocks)
+            traceLocks = true;
+
          // This enables us to keep track of changes to types that might be registered with this servlet
          sys.registerTypeChangeListener(this);
       }
