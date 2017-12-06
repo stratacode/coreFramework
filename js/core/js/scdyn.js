@@ -152,7 +152,7 @@ sc_DynUtil_c.invokeMethod = function(obj, method, paramValues) {
 }
 
 sc_DynUtil_c.invokeRemote = function(def, ctx, obj, method, paramValues) {
-   if (!sc_SyncManager_c)
+   if (typeof sc_SyncManager_c == "undefined")
        throw new jv_UnsupportedOperationException("invokeRemote - no implementation loaded for invokeRemote");
    return sc_SyncManager_c.invokeRemote(def, ctx, obj, null, method.name, method.returnType, method.paramSig, paramValues);
 }
@@ -749,7 +749,7 @@ sc_DynUtil_c.dispose = function(obj, disposeChildren) {
       for (var i = 0; i < sc$dynListeners.length; i++)
          sc$dynListeners[i].instanceRemoved(obj);
    }
-   if (sc_SyncManager_c)
+   if (typeof sc_SyncManager_c != "undefined")
       sc_SyncManager_c.removeSyncInst(obj);
    sc_Bind_c.removeBindings(obj, false);
 

@@ -1247,7 +1247,8 @@ js_HTMLElement_c.output = js_HTMLElement_c.output_c = function() {
 
 js_HTMLElement_c.createRepeatElement = function(rv, ix, oldTag) {
    var elem;
-   var flush = sc_SyncManager_c.beginSyncQueue();
+   var sync = typeof sc_SyncManager_c != "undefined";
+   var flush = sync && sc_SyncManager_c.beginSyncQueue();
    if (sc_instanceOf(this, js_IRepeatWrapper)) {
       elem = this.createElement(rv, ix, oldTag);
    }
@@ -1261,7 +1262,7 @@ js_HTMLElement_c.createRepeatElement = function(rv, ix, oldTag) {
       elem.repeat = null;
    }
    elem.parentNode = this;
-   if (elem != null)
+   if (elem != null && sync)
       js_HTMLElement_c.registerSyncInstAndChildren(elem);
    if (flush)
        sc_SyncManager_c.flushSyncQueue();
