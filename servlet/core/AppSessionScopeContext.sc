@@ -64,6 +64,6 @@ class AppSessionScopeContext extends ScopeContext implements HttpSessionBindingL
    }
 
    public String toString() {
-      return "appSession: " + getId();
+      return getId();
    }
 }
