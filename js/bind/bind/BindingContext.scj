@@ -46,7 +46,7 @@ public class BindingContext  {
       return (BindingContext) PTypeUtil.getThreadLocal("bindingContext");
    }
 
-   private IListener.SyncType defaultSyncType;
+   private IListener.SyncType defaultSyncType = IListener.SyncType.QUEUED;
    public IListener.SyncType getDefaultSyncType() {
       return defaultSyncType;
    }
@@ -54,18 +54,20 @@ public class BindingContext  {
       defaultSyncType = t;
    }
 
+/*
    public static IListener.SyncType getCurrentDefaultSyncType() {
       BindingContext ctx = getBindingContext();
       // TODO: This should be set to IMMEDIATE by default so we can avoid the extra queuing step
       // at least for frameworks that don't need the queued behavior.  One option: BindSettings on the
       // base class.  Any bindings src'd on that class will pick up the default listener.  Add a new
       // option or flags arg to the bind call and propagate that through to make it easy to add new
-      // flags.
+      // flags. 
       if (ctx == null)
-         return IListener.SyncType.IMMEDIATE;
+         return IListener.SyncType.IMMEDIATE; 
       else
          return ctx.getDefaultSyncType();
    }
+*/
 
    public void queueEvent(int eventFlag, Object obj, Object prop, IListener listener, Object eventDetail) {
       BindingEvent newEvent = new BindingEvent(eventFlag, obj, prop, listener, eventDetail);

@@ -69,7 +69,7 @@ object ServletSyncDestination extends SyncDestination {
    }
 
    public StringBuilder translateSyncLayer(String layerDef) {
-      ModelStream stream = ModelStream.convertToModelStream(layerDef);
+      ModelStream stream = ModelStream.convertToModelStream(layerDef, null);
 
       if (stream == null)
          return new StringBuilder();

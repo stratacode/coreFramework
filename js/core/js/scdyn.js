@@ -1140,7 +1140,7 @@ sc_DynUtil_c.updateInstances = function(typeName) {
    }
 }
 
-sc_DynUtil_c.applySyncLayer = function(lang, dest, scope, layerDef, isReset, allowCodeEval) {
+sc_DynUtil_c.applySyncLayer = function(lang, dest, scope, layerDef, isReset, allowCodeEval, bindCtx) {
    if (lang.equals("js") && allowCodeEval)
       sc_DynUtil_c.evalScript(layerDef);
    else

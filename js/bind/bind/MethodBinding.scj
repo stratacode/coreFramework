@@ -158,7 +158,7 @@ public class MethodBinding extends AbstractMethodBinding implements IResponseLis
                return PENDING_VALUE_SENTINEL;
             RemoteResult remRes = DynUtil.invokeRemote(null, null, obj, method, paramValues);
             // When this listener fires, we call applyChangedValue(remRes.value)
-            remRes.listener = this;
+            remRes.responseListener = this;
             return PENDING_VALUE_SENTINEL;
          }
          else {

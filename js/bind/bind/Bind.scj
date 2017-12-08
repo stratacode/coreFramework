@@ -566,7 +566,7 @@ public class Bind {
       // binding context.
 
       BindingContext ctx = BindingContext.getBindingContext();
-      if (ctx != null) {
+      if (ctx != null && ctx.getDefaultSyncType() != IListener.SyncType.IMMEDIATE) {
          ctx.queueEvent(event, obj, prop, listener, eventDetail); 
          return;
       }
