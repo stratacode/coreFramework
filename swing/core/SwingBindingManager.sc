@@ -12,7 +12,7 @@ public class SwingBindingManager extends BindingManager {
       Bind.bindingManager = this;
    }
 
-   public static BindingContext bindingContext = new BindingContext(IListener.SyncMode.IMMEDIATE);
+   public static BindingContext bindingContext = new BindingContext(IListener.SyncType.IMMEDIATE);
 
    private static volatile boolean handlerRegistered = false;
 
