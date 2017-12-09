@@ -54,12 +54,12 @@ public class TestPageLoader {
       return processRes;
    }
 
-   public AsyncResult loadPage(String name, String scopeAlias) {
+   public AsyncResult loadPage(String name, String scopeContextName) {
       boolean found = false;
       AsyncResult res = null;
       for (URLPath urlPath:urlPaths) {
          if (urlPath.name.equals(name)) {
-            res = loadURL(urlPath, scopeAlias);
+            res = loadURL(urlPath, scopeContextName);
             found = true;
             break;
          }
@@ -85,15 +85,15 @@ public class TestPageLoader {
       return FileUtil.concat(sys.options.testResultsDir, "pages", urlPath.name + (ix == -1 ? "" : "." + ix));
    }
 
-   public AsyncResult loadURL(URLPath urlPath, String scopeAlias) {
+   public AsyncResult loadURL(URLPath urlPath, String scopeContextName) {
       String pageResultsFile = getPageResultsFile(urlPath, -1);
       System.out.println("Opening page: " + urlPath.name + " at: " + urlPath.url);
 
       // Returns file:// or http:// depending on whether the server is enabled.  Also finds the files in the first buildDir where it exists
       String url = sys.getURLForPath(urlPath.cleanURL(!sys.serverEnabled));
 
-      if (scopeAlias != null) {
-         url = URLPath.addQueryParam(url, "scopeAlias", scopeAlias);
+      if (scopeContextName != null) {
+         url = URLPath.addQueryParam(url, "scopeContextName", scopeContextName);
       }
 
       System.out.println("Loading url: " + url);
@@ -101,7 +101,7 @@ public class TestPageLoader {
       AsyncResult processRes = openBrowser(url, pageResultsFile);
 
       try {
-         if (!sys.serverEnabled || scopeAlias == null) {
+         if (!sys.serverEnabled || scopeContextName == null) {
             System.out.println("--- Waiting for client to connect...");
             cmd.sleep(1500);
             System.out.println("- Done waiting for client to connect");
@@ -110,8 +110,8 @@ public class TestPageLoader {
          if (clientSync) {
             ScopeEnvironment.setAppId(URLPath.getAppNameFromURL(urlPath.url));
 
-            if (scopeAlias != null) {
-               if (sc.obj.CurrentScopeContext.waitForIdle(scopeAlias, 3000) == null) {
+            if (scopeContextName != null) {
+               if (sc.obj.CurrentScopeContext.waitForReady(scopeContextName, 3000) == null) {
                   endSession(processRes);
                   throw new IllegalArgumentException("Timeout waiting for url to wait on server: " + url);
                }

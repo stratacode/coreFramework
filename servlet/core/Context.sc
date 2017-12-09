@@ -37,9 +37,12 @@ class Context {
    WindowScopeContext windowCtx = null;
   
    /** Set to true when the server is in the midst of a shutdown */
-   public static boolean shuttingDown = false;
+   static boolean shuttingDown = false;
    /** Set this to true when the server will restart */
-   public static boolean restarting = false;
+   static boolean restarting = false;
+
+   static boolean verbose = false;
+   static boolean trace = false;
 
    Context(HttpServletRequest req, HttpServletResponse res) {
       request = req;
@@ -188,10 +191,10 @@ class Context {
       if (ctxList != null) {
          for (WindowScopeContext winScope:ctxList) {
             winScope.scopeDestroyed();
-            String scopeAlias = (String) winScope.getValue("scopeAlias");
-            if (scopeAlias != null) {
-               if (!CurrentScopeContext.remove(scopeAlias))
-                  System.err.println("*** Failed to remove CurrentScopeContext for alias: " + scopeAlias);
+            String scopeContextName = (String) winScope.getValue("scopeContextName");
+            if (scopeContextName != null) {
+               if (!CurrentScopeContext.remove(scopeContextName))
+                  System.err.println("*** Failed to remove CurrentScopeContext for scopeContextName: " + scopeContextName);
             }
          }
          ctxList.clear();
@@ -291,5 +294,11 @@ class Context {
 
    boolean hasDoLaterJobs() {
       return toInvokeLater != null && toInvokeLater.size() > 0;
+   }
+
+   String getTraceInfo() {
+      if (verbose || trace)
+          return " session: " + DynUtil.getTraceObjId(session.getId()) + " thread: " + DynUtil.getCurrentThreadString();
+      return null;
    }
 }

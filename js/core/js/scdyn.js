@@ -1154,3 +1154,5 @@ sc_DynUtil_c.isAssignableFrom = function(s, d) {
 sc_DynUtil_c.hasPendingJobs = function() {
    return sc_hasPendingJobs();
 }
+
+sc_DynUtil_c.getCurrentThreadString = function() { return ""; }

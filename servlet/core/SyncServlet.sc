@@ -122,11 +122,10 @@ class SyncServlet extends HttpServlet {
 
          int sz = pageEnts.size();
          List<Integer> scopeIds = new ArrayList<Integer>(sz);
-         List<String> scopeNames = new ArrayList<String>(sz);
          List<ScopeContext> scopeCtxs = new ArrayList<ScopeContext>(sz);
 
          // Acquires the locks for the context of this page
-         pageDispatcher.initPageContext(ctx, url, pageEnts, session, scopeIds, scopeNames, scopeCtxs, locks, lockScopeNames, sys);
+         pageDispatcher.initPageContext(ctx, url, pageEnts, session, scopeIds, scopeCtxs, locks, lockScopeNames, sys);
 
          String syncGroup = request.getParameter("syncGroup");
          WindowScopeContext windowCtx = ctx.windowCtx;
@@ -156,7 +155,7 @@ class SyncServlet extends HttpServlet {
 
             // Setting initial = isReset here and resetSync = false. - when we are resetting it's the initial sync though we toss this page output.  It just sets up the page to be like the client's state when it's first page was shipped out.
             // TODO: setting traceBuffer = null here since we never see this output but are there any cases where it might help to debug things?
-            pageOutput = pageDispatcher.getPageOutput(ctx, url, pageEnts, scopeIds, scopeNames, scopeCtxs, isReset, false, sys, null);
+            pageOutput = pageDispatcher.getPageOutput(ctx, url, pageEnts, scopeIds, scopeCtxs, isReset, false, sys, null);
             if (pageOutput == null)
                return true;
             locksAcquired = true;
@@ -169,7 +168,7 @@ class SyncServlet extends HttpServlet {
 
             // Also render the page after we do the reset so that we lazily init any objects that need synchronizing in this output
             // This time we render with initial = false and resetSync = true - so we do not record any changed made during this page rendering.  We're just resyncing the state of the application to be where the client is already.
-            pageOutput = pageDispatcher.getPageOutput(ctx, url, pageEnts, scopeIds, scopeNames, scopeCtxs, false, false, sys, traceBuffer);
+            pageOutput = pageDispatcher.getPageOutput(ctx, url, pageEnts, scopeIds, scopeCtxs, false, false, sys, traceBuffer);
             if (pageOutput == null)
                return true;
          }
@@ -213,7 +212,7 @@ class SyncServlet extends HttpServlet {
                windowCtx.waitingListener = listener;
                windowCtx.addChangeListener(listener);
 
-               String scopeAlias = (String) windowCtx.getValue("scopeAlias");
+               String scopeContextName = (String) windowCtx.getValue("scopeContextName");
 
                if (locksAcquired) {
                   PageDispatcher.releaseLocks(locks, session);
@@ -229,17 +228,17 @@ class SyncServlet extends HttpServlet {
                      if (!Context.shuttingDown) { // Don't wait if the server is in the midst of shutting down
                         if (verbosePage) {
                            sleepStartTime = System.currentTimeMillis();
-                           System.out.println("Sync wait: " + url + (scopeAlias == null ? "" : " (scopeAlias: " + scopeAlias + ")") + " time: " + waitTime + PageDispatcher.getTraceInfo(session));
+                           System.out.println("Sync wait: " + url + (scopeContextName == null ? "" : " (scopeContextName: " + scopeContextName + ")") + " time: " + waitTime + PageDispatcher.getTraceInfo(session));
                         }
 
-                        if (scopeAlias != null) {
+                        if (scopeContextName != null) {
                            // Currently we mark the context as 'ready', i.e. that it's fully initialized the first
                            // time the client receives no more changes from the server - i.e. right before we wait for
                            // the first time.  Maybe there's a need for a more explicit way to control this?  Test
                            // scripts will wait for the context to be ready before they start.  You could imagine that
                            // once the app initializes, it will send some changes to the server which receive replies,
                            // and that can go back and forth for a while before it's really finished initializing.
-                           CurrentScopeContext.markReady(scopeAlias, true);
+                           CurrentScopeContext.markReady(scopeContextName, true);
                         }
 
                         try {

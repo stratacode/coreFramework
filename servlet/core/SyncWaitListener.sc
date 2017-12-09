@@ -1,5 +1,6 @@
 import sc.obj.IScopeChangeListener;
 import sc.obj.ICodeUpdateListener;
+import sc.dyn.DynUtil;
 
 class SyncWaitListener implements IScopeChangeListener, ICodeUpdateListener {
    Context ctx;
@@ -8,7 +9,7 @@ class SyncWaitListener implements IScopeChangeListener, ICodeUpdateListener {
    boolean replaced = false;
    SyncWaitListener(Context ctx) {
       this.ctx = ctx;
-      threadName = PageDispatcher.getCurrentThreadString();
+      threadName = DynUtil.getCurrentThreadString();
    }
 
    synchronized void scopeChanged() {
