@@ -5,6 +5,7 @@ import sc.obj.GlobalScopeDefinition;
 @CompilerSettings(createOnStartup=true,startPriority=95)
 object WindowScopeDefinition extends ScopeDefinition {
    name = "window";
+   eventListenerCtx = true;
 
    {
       addParentScope(AppSessionScopeDefinition);

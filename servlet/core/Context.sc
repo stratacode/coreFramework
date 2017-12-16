@@ -152,14 +152,19 @@ class Context {
             // While running any callbacks, we are in the recording state, even if invoking these as part of the
             // initialization phase.  This is really like Initializing but where there's a nested binding count.
             SyncManager.setSyncState(SyncManager.SyncState.RecordingChanges);
-            ArrayList<ScheduledJob> toRun = (ArrayList<ScheduledJob>)toInvokeLater.clone();
-            for (ScheduledJob sj:toRun) {
-               sj.toInvoke.run();
+
+            while (toInvokeLater != null) {
+               ArrayList<ScheduledJob> toRun = (ArrayList<ScheduledJob>)toInvokeLater.clone();
+               // Zero this out here so we start accumulating a new list and keep processing this list until
+               // we have no more work to do later.
+               toInvokeLater = null;
+               for (ScheduledJob sj:toRun) {
+                  sj.run();
+               }
             }
          }
          finally {
             SyncManager.setSyncState(origState);
-            toInvokeLater = null;
          }
       }
    }

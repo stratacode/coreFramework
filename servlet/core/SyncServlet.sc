@@ -99,6 +99,8 @@ class SyncServlet extends HttpServlet {
       LayeredSystem sys = LayeredSystem.getCurrent();
       PageDispatcher pageDispatcher = PageDispatcher.getPageDispatcher();
 
+      CurrentScopeContext curScopeCtx = null;
+
       boolean locksAcquired = false;
 
       SyncWaitListener waitListener = null;
@@ -121,11 +123,9 @@ class SyncServlet extends HttpServlet {
             System.out.println("Sync request: " + url + PageDispatcher.getTraceInfo(session));
 
          int sz = pageEnts.size();
-         List<Integer> scopeIds = new ArrayList<Integer>(sz);
-         List<ScopeContext> scopeCtxs = new ArrayList<ScopeContext>(sz);
 
          // Acquires the locks for the context of this page
-         pageDispatcher.initPageContext(ctx, url, pageEnts, session, scopeIds, scopeCtxs, locks, lockScopeNames, sys);
+         curScopeCtx = pageDispatcher.initPageContext(ctx, url, pageEnts, session, sys);
 
          String syncGroup = request.getParameter("syncGroup");
          WindowScopeContext windowCtx = ctx.windowCtx;
@@ -155,7 +155,7 @@ class SyncServlet extends HttpServlet {
 
             // Setting initial = isReset here and resetSync = false. - when we are resetting it's the initial sync though we toss this page output.  It just sets up the page to be like the client's state when it's first page was shipped out.
             // TODO: setting traceBuffer = null here since we never see this output but are there any cases where it might help to debug things?
-            pageOutput = pageDispatcher.getPageOutput(ctx, url, pageEnts, scopeIds, scopeCtxs, isReset, false, sys, null);
+            pageOutput = pageDispatcher.getPageOutput(ctx, url, pageEnts, curScopeCtx, isReset, false, sys, null);
             if (pageOutput == null)
                return true;
             locksAcquired = true;
@@ -168,7 +168,7 @@ class SyncServlet extends HttpServlet {
 
             // Also render the page after we do the reset so that we lazily init any objects that need synchronizing in this output
             // This time we render with initial = false and resetSync = true - so we do not record any changed made during this page rendering.  We're just resyncing the state of the application to be where the client is already.
-            pageOutput = pageDispatcher.getPageOutput(ctx, url, pageEnts, scopeIds, scopeCtxs, false, false, sys, traceBuffer);
+            pageOutput = pageDispatcher.getPageOutput(ctx, url, pageEnts, curScopeCtx, false, false, sys, traceBuffer);
             if (pageOutput == null)
                return true;
          }
@@ -215,7 +215,7 @@ class SyncServlet extends HttpServlet {
                String scopeContextName = (String) windowCtx.getValue("scopeContextName");
 
                if (locksAcquired) {
-                  PageDispatcher.releaseLocks(locks, session);
+                  curScopeCtx.releaseLocks();
                   locksAcquired = false;
                }
                else // TODO: this should not happen right?
@@ -244,10 +244,12 @@ class SyncServlet extends HttpServlet {
                         try {
                            listener.waiting = true;
                            listener.wait(waitTime);
-                           listener.waiting = false;
                         }
                         catch (InterruptedException exc) {
                            interrupted = true;
+                        }
+                        finally {
+                           listener.waiting = false;
                         }
                      }
                   }
@@ -268,7 +270,12 @@ class SyncServlet extends HttpServlet {
 
                // Make sure we're still the first SyncServlet request waiting...
                if (windowCtx.waitingListener == listener && !listener.replaced) {
-                  PageDispatcher.acquireLocks(locks, lockScopeNames, session, url);
+                  curScopeCtx.startScopeContext(true);
+
+                  // This curScopeCtx may have received data binding events from objects it created before we called 'wait'.  When we validate those bindings in startScopeContext, it might have queued additional jobs
+                  // that we should perform before we try to do the next sync context.
+                  DynUtil.execLaterJobs();
+
                   locksAcquired = true;
 
                   // checking again now that we have the locks
@@ -314,7 +321,7 @@ class SyncServlet extends HttpServlet {
                if (!locksAcquired && ctx.hasDoLaterJobs()) {
                   if (verbosePage)
                      System.out.println("Reacquiring locks for post-page processing: " + PageDispatcher.getTraceInfo(session));
-                  PageDispatcher.acquireLocks(locks, lockScopeNames, session, url);
+                  curScopeCtx.acquireLocks();
                   locksAcquired = true;
                }
                ctx.execLaterJobs();
@@ -327,8 +334,8 @@ class SyncServlet extends HttpServlet {
             exc.printStackTrace();
          }
          finally {
-            if (locksAcquired)
-               PageDispatcher.releaseLocks(locks, session);
+            if (curScopeCtx != null)
+               CurrentScopeContext.popCurrentScopeContext(locksAcquired);
          }
       }
       return true;

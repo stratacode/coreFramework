@@ -3,6 +3,8 @@ import sc.type.PTypeUtil;
 import java.util.ArrayList;
 import java.util.List;
 
+import sc.obj.IScopeEventListener;
+
 /**
  * The BindingContext maintains event queues and dispatches events.  It could be stored in thread local
  * or not depending upon the binding manager.
@@ -23,7 +25,7 @@ import java.util.List;
  * efficient to access this through thread local state... it should be a member off of some context object
  * we pass as a hidden first parameter to "enhanced" methods.
  */
-public class BindingContext  {
+public class BindingContext implements IScopeEventListener {
    BindingEvent queuedEvents;
 
    public static void setBindingContext(BindingContext ctx) {
@@ -117,13 +119,14 @@ public class BindingContext  {
     *
     * @param sync
     */
-   public void dispatchEvents(Object sync) {
+   public boolean dispatchEvents(Object sync) {
       BindingEvent oldEvent;
       BindingEvent toExecute = null, lastToExecute = null;
       float priority = UNSET_PRIORITY;
       BindingEvent prevEvent = null, nextEvent;
       List<BindingEvent> runList = null;
       boolean queuedLastEvent = false;
+      boolean any = false;
 
       synchronized (this) {
          /**
@@ -174,14 +177,19 @@ public class BindingContext  {
       // If we have more than one priority, the list stores the lists that need to be run first
       if (runList != null) {
          int sz = runList.size();
+         any = true;
          for (int i = 0; i < sz; i++) {
             BindingEvent be = runList.get(i);
             // Dispatch all of the events with the same priority.
             doDispatch(be);
          }
       }
-      if (toExecute != null)
+      if (toExecute != null) {
          doDispatch(toExecute);
+         any = true;
+      }
+
+      return any;
    }
 
    /**
@@ -239,4 +247,7 @@ public class BindingContext  {
       }
    }
 
+   public void startContext() {
+      dispatchEvents(null);
+  }
 }

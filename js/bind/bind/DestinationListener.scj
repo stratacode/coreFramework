@@ -19,7 +19,7 @@ public abstract class DestinationListener extends AbstractListener implements IB
       if ((flags & Bind.QUEUED) != 0)
          sync = SyncType.QUEUED;
       else if ((flags & Bind.IMMEDIATE) != 0)
-         sync = SyncType.QUEUED;
+         sync = SyncType.IMMEDIATE;
       else {
          // Depending on the BindingManager, this might be a thread-local lookup to determine whether the framework managing this object requires
          // queuing or not.  We do this to avoid thread-local lookups in each sendEvent method under the

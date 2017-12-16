@@ -177,15 +177,18 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       return matchedEnts;
    }
 
-   public void initPageContext(Context ctx, String uri, List<PageEntry> pageEnts, HttpSession session, List<Integer> scopeIds, List<ScopeContext> scopeCtxs,
-                               ArrayList<Lock> locks, ArrayList<String> lockScopeNames, LayeredSystem sys) {
+   public CurrentScopeContext initPageContext(Context ctx, String uri, List<PageEntry> pageEnts, HttpSession session, LayeredSystem sys) {
       String scopeName;
       int scopeId = -1;
       ScopeContext scopeCtx = null;
-      List<String> scopeNames = new ArrayList<String>(pageEnts.size());
+      int sz = pageEnts.size();
+      List<String> scopeNames = new ArrayList<String>(sz);
+      List<ScopeContext> scopeCtxs = new ArrayList<ScopeContext>(sz);
+      List<Object> locks = new ArrayList<Object>(); // These are right now always Lock objects but not putting that into the api so it's more portable to other platforms like JS
+      String sysLockInfo = null;
 
-   // first we'll loop through all page objects and figure out which scopes and locks are needed for this request
-   // that way we can acquire locks "all or none" to avoid deadlocks.
+// first we'll loop through all page objects and figure out which scopes and locks are needed for this request
+// that way we can acquire locks "all or none" to avoid deadlocks.
       for (PageEntry pageEnt:pageEnts) {
          if (pageEnt.page) {
             Object pageType = pageEnt.pageType;
@@ -214,7 +217,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                   Lock dynLock = sys.getDynWriteLock();
                   if (!locks.contains(dynLock)) {
                      locks.add(dynLock);
-                     lockScopeNames.add("<dyn global lock>");
+                     sysLockInfo = appendLogStr(sysLockInfo, "system dyn lock");
                   }
                }
                if (lockScope == null) {
@@ -222,6 +225,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                   if (lockScope == null) {
                      System.err.println("Warning: no lock scope defined for: " + uri + " defaulting to global.");
                      lockScope = "global";
+                     sysLockInfo = appendLogStr(sysLockInfo, "global");
                   }
                }
 
@@ -244,27 +248,38 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                      }
                   }
 
-                  // TODO: provide some way to specify this request is a read-only request so we only acquire a read lock
-                  Lock lock = rwLock.writeLock();
+                  sysLockInfo = appendLogStr(sysLockInfo, lockScope);
 
+                  // TODO: provide some way to specify this request is a read-only request so we only acquire a read lock
+                  // Build this into the scope definitions - so there's a default of read only for how we are using teh scope and override it per page?
+                  Lock lock = rwLock.writeLock();
                   locks.add(lock);
-                  lockScopeNames.add(lockScope);
                }
             }
 
             scopeNames.add(scopeName);
-            scopeIds.add(scopeId);
             scopeCtxs.add(scopeCtx);
          }
       }
 
-      if (locks != null) {
-         acquireLocks(locks, lockScopeNames, session, uri);
+      if (scopeCtxs.size() > 0) {
+         CurrentScopeContext curScopeCtx = new CurrentScopeContext(scopeCtxs, locks);
+         if (verbose)
+            curScopeCtx.traceInfo = sysLockInfo + ": for" + getCtxTraceInfo(session);
+         // Associates this set of locks and scopes with this thread so binding operation know how to get back here if there's a cross-scope binding.
+         CurrentScopeContext.pushCurrentScopeContext(curScopeCtx, true);
+         return curScopeCtx;
       }
+      // Static page request or something which doesn't need the scope system or it's locking mechanism
+      return null;
+   }
+
+   private static String appendLogStr(String orig, String opt) {
+      return orig == null || orig.length() == 0 ? " " + opt : orig + ", " + opt;
    }
 
    public List<Object> initPageObjects(Context ctx, String uri, List<PageEntry> pageEnts, HttpSession session, 
-                                       List<Integer> scopeIds, List<ScopeContext> scopeCtxs, boolean reset, boolean initial,
+                                       CurrentScopeContext curScopeCtx, boolean reset, boolean initial,
                                        boolean resetSync, LayeredSystem sys) {
       if (pageEnts == null)
          return null;
@@ -280,8 +295,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       int i = 0;
       for (PageEntry pageEnt:pageEnts) {
          if (pageEnt.page) {
-            scopeId = scopeIds.get(i);
-            scopeCtx = scopeCtxs.get(i);
+            scopeCtx = curScopeCtx == null ? null : curScopeCtx.scopeContexts.get(i);
+            scopeId = scopeCtx == null ? -1 : scopeCtx.getScopeDefinition().scopeId;
 
             Object pageType = pageEnt.pageType;
             boolean isObject = ModelUtil.isObjectType(pageType);
@@ -364,45 +379,6 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       return insts;
    }
 
-   static void acquireLocks(List<Lock> locks, List<String> lockScopeNames, HttpSession session, String uri) {
-      if (locks.size() == 0)
-         return;
-      if (traceLocks)
-         System.out.println("Page " + uri + " - acquiring locks: " + lockScopeNames + " session: " + DynUtil.getTraceObjId(session.getId()) + " thread: " + DynUtil.getCurrentThreadString());
-
-      // Wait as normal to get the first lock
-      locks.get(0).lock();
-      int fetchFrom = 1;
-      int fetchTo = locks.size();
-      int repeatTo = -1;
-      boolean repeat;
-      do {
-         repeat = false;
-         for (int i = fetchFrom; i < fetchTo; i++) {
-            Lock lock = locks.get(i);
-            // If we can't immediately get the next lock
-            if (!lock.tryLock()) {
-               releaseLocks(locks, 0, i);
-               if (verbose || trace || traceLocks)
-                  System.out.println("Waiting for locks held: " + uri + " thread: " + DynUtil.getCurrentThreadString() + " at " + getTimeString());
-               // Wait now to get the contended lock to avoid a busy loop but we'll just immediately release it just to make the code simpler
-               lock.lock();
-
-               // We're going to finish this iteration of the loop to acquire
-               repeat = true;
-               fetchFrom = 0;
-               repeatTo = i;
-            }
-         }
-         // We'll either exit this loop with all of the locks (repeat=false) or repeat=true, from repeatTo=>size locks.  In the latter case we need to acquire then 0-repeatTo locks and repeat the loop once.
-         if (repeat)
-            fetchTo = repeatTo;
-      } while (repeat);
-
-      if (traceLocks)
-         System.out.println("Page - locks acquired: " + lockScopeNames + getTraceInfo(session));
-   }
-
    static String getRuntimeString(long startTime) {
       return TextUtil.format("#.##", (((System.currentTimeMillis() - startTime))/1000.0)) + " secs.";
    }
@@ -411,8 +387,12 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       return " session: " + (session == null ? "<none>" : DynUtil.getTraceObjId(session.getId())); 
    }
 
+   static String getCtxTraceInfo(HttpSession session) {
+      return getSessionTraceInfo(session) + " thread: " + DynUtil.getCurrentThreadString();
+   }
+
    static String getTraceInfo(HttpSession session) {
-      return getSessionTraceInfo(session) + " thread: " + DynUtil.getCurrentThreadString() + " at " + getTimeString();
+      return getCtxTraceInfo(session) + " at " + getTimeString();
    }
 
    // Here we print the time since the PageDispatcher started since that's perhaps the easiest basic way to follow "elapsed time" in the context of a server process.
@@ -454,25 +434,6 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
          System.err.println("*** bad algorithm!");
       sb.append(elapsed);
       return sb.toString();
-   }
-
-   static void releaseLocks(List<Lock> locks, HttpSession session) {
-      if (locks.size() == 0)
-         return;
-
-      if (traceLocks)
-         System.out.println("Page - releasing " + locks.size() + " locks" + getTraceInfo(session));
-      releaseLocks(locks, 0, locks.size());
-      /*
-      if (traceLocks)
-         System.out.println("Page - released locks: " + getTraceInfo(session));
-      */
-   }
-
-   static void releaseLocks(List<Lock> locks, int from, int to) {
-      for (int i = from; i < to; i++) {
-         locks.get(i).unlock();
-      }
    }
 
    public StringBuilder getInitialSync(List<Object> insts, Context ctx, String uri, List<PageEntry> pageEnts, StringBuilder traceBuffer) {
@@ -630,9 +591,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                            throws IOException, ServletException {
       Context ctx = null;  
       String uri = request.getRequestURI();
-      ArrayList<Lock> locks = new ArrayList<Lock>();
-      ArrayList<String> lockScopeNames = new ArrayList<String>();
       HttpSession session = null;
+
+      CurrentScopeContext curScopeCtx = null;
 
       ScopeEnvironment.setAppId(URLPath.getAppNameFromURL(uri));
       try {
@@ -667,17 +628,14 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                startTime = System.currentTimeMillis();
 
             try {
-               List<Integer> scopeIds = new ArrayList<Integer>(sz);
-               List<ScopeContext> scopeCtxs = new ArrayList<ScopeContext>(sz);
-
                // TODO: check if we need a session for this request before creating it
                session = request.getSession(true);
 
                // Acquires the locks for the page and gets info
-               initPageContext(ctx, uri, pageEnts, session, scopeIds, scopeCtxs, locks, lockScopeNames, sys);
+               curScopeCtx = initPageContext(ctx, uri, pageEnts, session, sys);
 
                // Make sure the page object is initialized for this request
-               insts = initPageObjects(ctx, uri, pageEnts, session, scopeIds, scopeCtxs, true, true, false, sys);
+               insts = initPageObjects(ctx, uri, pageEnts, session, curScopeCtx, true, true, false, sys);
 
                // Something in creating the object rejected, redirected or whatever
                if (ctx.requestComplete) {
@@ -742,7 +700,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             exc.printStackTrace();
          }
          finally {
-            releaseLocks(locks, session);
+            if (curScopeCtx != null)
+               CurrentScopeContext.popCurrentScopeContext(true);
             ScopeEnvironment.setAppId(null);
          }
       }
@@ -862,11 +821,11 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       return pageEnts;
    }
 
-   public StringBuilder getPageOutput(Context ctx, String url, List<PageDispatcher.PageEntry> pageEnts, List<Integer> scopeIds, List<ScopeContext> scopeCtxs,
+   public StringBuilder getPageOutput(Context ctx, String url, List<PageDispatcher.PageEntry> pageEnts, CurrentScopeContext curScopeCtx,
                                       boolean initSync, boolean resetSync, LayeredSystem sys, StringBuilder traceBuffer) {
       StringBuilder pageOutput = null;
       try {
-         List<Object> insts = pageDispatcher.initPageObjects(ctx, url, pageEnts, ctx.session, scopeIds, scopeCtxs, false, initSync, resetSync, sys);
+         List<Object> insts = pageDispatcher.initPageObjects(ctx, url, pageEnts, ctx.session, curScopeCtx, false, initSync, resetSync, sys);
 
          if (insts != null) {
          /*

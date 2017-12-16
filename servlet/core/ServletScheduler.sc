@@ -1,5 +1,6 @@
 import sc.dyn.DynUtil;
 import sc.dyn.ScheduledJob;
+import sc.obj.CurrentScopeContext;
 
 class ServletScheduler implements sc.dyn.IScheduler {
    static Object invokeNextRequestLock = new Object();
@@ -9,6 +10,7 @@ class ServletScheduler implements sc.dyn.IScheduler {
       ScheduledJob sj = new ScheduledJob();
       sj.toInvoke = runnable;
       sj.priority = priority;
+      sj.curScopeCtx = CurrentScopeContext.getEnvScopeContextState();
       Context ctx = Context.getCurrentContext();
 
       // No current request - schedule this job to run before the next one

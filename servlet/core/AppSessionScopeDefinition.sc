@@ -8,6 +8,7 @@ import sc.obj.AppGlobalScopeDefinition;
 @CompilerSettings(createOnStartup=true, startPriority=105)
 object AppSessionScopeDefinition extends ScopeDefinition {
    name = "appSession";
+   eventListenerCtx = true;
    {
       addParentScope(AppGlobalScopeDefinition);
       addParentScope(SessionScopeDefinition);
