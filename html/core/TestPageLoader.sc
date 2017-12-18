@@ -1,18 +1,24 @@
 import sc.js.URLPath;
 import java.util.List;
+import java.util.ArrayList;
 import sc.util.FileUtil;
 import sc.obj.ScopeEnvironment;
+import sc.obj.CurrentScopeContext;
 import sc.obj.AppGlobalScopeDefinition;
 import java.io.File;
 import sc.dyn.DynUtil;
 import sc.lang.AbstractInterpreter;
 
-import sc.layer.AsyncResult;
+import sc.layer.AsyncProcessHandle;
 
-public class TestPageLoader {
+public class TestPageLoader implements sc.obj.ISystemExitListener {
    AbstractInterpreter cmd;
    sc.layer.LayeredSystem sys; 
    List<URLPath> urlPaths; 
+
+   // Holds any started processes
+   List<AsyncProcessHandle> processes = new ArrayList<AsyncProcessHandle>();
+
    boolean headless;
    boolean clientSync;
 
@@ -26,6 +32,7 @@ public class TestPageLoader {
       this.headless = sys.options.headless;
 
       System.out.println("Waiting for server to start...");
+      sys.addSystemExitListener(this);
       //cmd.sleep(5000);
       if (sys.serverEnabled && !sys.waitForRuntime(5000))
          throw new IllegalArgumentException("Server failed to start in 5 seconds");
@@ -34,29 +41,36 @@ public class TestPageLoader {
       clientSync = sys.serverEnabled && sys.getPeerLayeredSystem("js") != null;
    }
 
-   AsyncResult openBrowser(String url, String pageResultsFile) {
-      AsyncResult processRes = null;
+   AsyncProcessHandle openBrowser(String url, String pageResultsFile) {
+      AsyncProcessHandle processRes = null;
       if (headless) {
-         if (clientSync)
+         if (clientSync) {
+            System.out.println("Opening headless sync url: " + url);
+
             processRes = cmd.execAsync('"' + chromeCmd + '"' + " --headless --auto-open-devtools-for-tabs --disable-gpu --repl --user-profile=/tmp/chrome-test-profile-dir " + url + " > /tmp/chromeHeadless.out");
+         }
          // client only hopefully we can just rely on chrome to save the dom with --dump-dom
          else {
+            System.out.println("Opening headless client-only url: " + url);
             new File(pageResultsFile).getParentFile().mkdirs();
             processRes = cmd.execAsync('"' + chromeCmd + '"' + " --headless --disable-gpu --dump-dom --user-profile=/tmp/chrome-test-profile-dir " + url + " > " + pageResultsFile);
             cmd.sleep(1000);
             //System.out.println("*** chrome saved: " + pageResultsFile + " size: " + FileUtil.getFileAsString(pageResultsFile).length());
          }
+         if (processRes != null)
+            processes.add(processRes);
       }
       else {
+         System.out.println("Opening browser with: " + url);
          cmd.exec("open " + url);
          cmd.sleep(2000); // give user time for opening devtools before starting any script
       }
       return processRes;
    }
 
-   public AsyncResult loadPage(String name, String scopeContextName) {
+   public AsyncProcessHandle loadPage(String name, String scopeContextName) {
       boolean found = false;
-      AsyncResult res = null;
+      AsyncProcessHandle res = null;
       for (URLPath urlPath:urlPaths) {
          if (urlPath.name.equals(name)) {
             res = loadURL(urlPath, scopeContextName);
@@ -67,6 +81,14 @@ public class TestPageLoader {
       if (!found)
          throw new IllegalArgumentException("TestPageLoader.loadPage - " + name + " not found");
       return res;
+   }
+
+   public CurrentScopeContext loadPageAndWait(String pageName, String scopeContextName) {
+       loadPage(pageName, scopeContextName);
+       CurrentScopeContext ctx = cmd.waitForReady(scopeContextName, 3000);
+       if (ctx == null)
+          throw new AssertionError("TestPageLoader.loadPageAndWait(" + pageName + ", " + scopeContextName + ") - timed out waiting for connect");
+       return ctx;
    }
 
    public void savePage(String name, int ix, String pageContents) {
@@ -85,9 +107,9 @@ public class TestPageLoader {
       return FileUtil.concat(sys.options.testResultsDir, "pages", urlPath.name + (ix == -1 ? "" : "." + ix));
    }
 
-   public AsyncResult loadURL(URLPath urlPath, String scopeContextName) {
+   public AsyncProcessHandle loadURL(URLPath urlPath, String scopeContextName) {
       String pageResultsFile = getPageResultsFile(urlPath, -1);
-      System.out.println("Opening page: " + urlPath.name + " at: " + urlPath.url);
+      System.out.println("loadURL: " + urlPath.name + " at: " + urlPath.url);
 
       // Returns file:// or http:// depending on whether the server is enabled.  Also finds the files in the first buildDir where it exists
       String url = sys.getURLForPath(urlPath.cleanURL(!sys.serverEnabled));
@@ -96,9 +118,7 @@ public class TestPageLoader {
          url = URLPath.addQueryParam(url, "scopeContextName", scopeContextName);
       }
 
-      System.out.println("Loading url: " + url);
-
-      AsyncResult processRes = openBrowser(url, pageResultsFile);
+      AsyncProcessHandle processRes = openBrowser(url, pageResultsFile);
 
       try {
          if (!sys.serverEnabled || scopeContextName == null) {
@@ -130,7 +150,7 @@ public class TestPageLoader {
       return processRes;
    }
 
-   public void endSession(AsyncResult processRes) {
+   public void endSession(AsyncProcessHandle processRes) {
       if (processRes != null)
           processRes.endProcess();
    }
@@ -154,10 +174,17 @@ public class TestPageLoader {
          // Simple applications have only a single URL - the root.  Others have an index page and the application pages so we only skip when there's more than one
          if (skipIndexPage && urlPath.name.equals("index") && urlPaths.size() > 1)
             continue;
-         AsyncResult processRes = loadURL(urlPath, null);
+         AsyncProcessHandle processRes = loadURL(urlPath, null);
          endSession(processRes);
          numLoaded++;
       }
       System.out.println("Done loading: " + numLoaded + " pages...");
+   }
+
+   public void systemExiting() {
+      for (AsyncProcessHandle process:processes) {
+         process.endProcess();
+      }
+      processes.clear();
    }
 }
