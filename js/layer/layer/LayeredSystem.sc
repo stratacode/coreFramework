@@ -145,4 +145,6 @@ public class LayeredSystem {
    public LayeredSystem getPeerLayeredSystem(String processIdent) {
       return null;
    }
+
+   public void addSystemExitListener(sc.obj.ISystemExitListener l) {}
 }
