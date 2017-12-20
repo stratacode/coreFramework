@@ -93,8 +93,6 @@ class SyncServlet extends HttpServlet {
       // two (compute upper and lower bounds for both skew and latency on each for each request.  Refine the upper and lower guestimates and always use the mid-point?)
       PageDispatcher.SyncSession syncSession = PageDispatcher.getSyncSession(session, url, true);
 
-      ArrayList<Lock> locks = new ArrayList<Lock>();
-      ArrayList<String> lockScopeNames = new ArrayList<String>();
       StringBuilder traceBuffer = new StringBuilder();
       LayeredSystem sys = LayeredSystem.getCurrent();
       PageDispatcher pageDispatcher = PageDispatcher.getPageDispatcher();

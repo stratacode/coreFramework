@@ -133,7 +133,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
             if (scopeContextName != null) {
                if (sc.obj.CurrentScopeContext.waitForReady(scopeContextName, 3000) == null) {
                   endSession(processRes);
-                  throw new IllegalArgumentException("Timeout waiting for url to wait on server: " + url);
+                  throw new IllegalArgumentException("Timeout opening url: " + url + " - client never requested scope context: " + scopeContextName); 
                }
             }
             // for the inital page load, we just use the innerHTML which I think should be accurate? 
