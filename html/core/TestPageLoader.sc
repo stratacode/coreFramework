@@ -15,6 +15,8 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
    AbstractInterpreter cmd;
    sc.layer.LayeredSystem sys; 
    List<URLPath> urlPaths; 
+   int waitForPageTime = 5000;
+   int waitForRuntimeTime = 5000;
 
    // Holds any started processes
    List<AsyncProcessHandle> processes = new ArrayList<AsyncProcessHandle>();
@@ -34,7 +36,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
       System.out.println("Waiting for server to start...");
       sys.addSystemExitListener(this);
       //cmd.sleep(5000);
-      if (sys.serverEnabled && !sys.waitForRuntime(5000))
+      if (sys.serverEnabled && !sys.waitForRuntime(waitForRuntimeTime))
          throw new IllegalArgumentException("Server failed to start in 5 seconds");
 
       // To do testing via sync we need the server and the JS runtime at least. 
@@ -85,7 +87,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
 
    public CurrentScopeContext loadPageAndWait(String pageName, String scopeContextName) {
        loadPage(pageName, scopeContextName);
-       CurrentScopeContext ctx = cmd.waitForReady(scopeContextName, 3000);
+       CurrentScopeContext ctx = cmd.waitForReady(scopeContextName, waitForPageTime);
        if (ctx == null)
           throw new AssertionError("TestPageLoader.loadPageAndWait(" + pageName + ", " + scopeContextName + ") - timed out waiting for connect");
        return ctx;
@@ -131,7 +133,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
             ScopeEnvironment.setAppId(URLPath.getAppNameFromURL(urlPath.url));
 
             if (scopeContextName != null) {
-               if (sc.obj.CurrentScopeContext.waitForReady(scopeContextName, 3000) == null) {
+               if (sc.obj.CurrentScopeContext.waitForReady(scopeContextName, waitForPageTime) == null) {
                   endSession(processRes);
                   throw new IllegalArgumentException("Timeout opening url: " + url + " - client never requested scope context: " + scopeContextName); 
                }
