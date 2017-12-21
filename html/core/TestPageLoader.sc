@@ -15,18 +15,20 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
    AbstractInterpreter cmd;
    sc.layer.LayeredSystem sys; 
    List<URLPath> urlPaths; 
-   int waitForPageTime = 5000;
-   int waitForRuntimeTime = 5000;
 
-   boolean loadAllPages = true;
+   public int waitForPageTime = 5000;
+   public int waitForRuntimeTime = 5000;
+
+   public boolean loadAllPages = true;
 
    // Holds any started processes
    List<AsyncProcessHandle> processes = new ArrayList<AsyncProcessHandle>();
 
-   boolean headless;
-   boolean clientSync;
+   public boolean headless;
+   public boolean clientSync;
 
-   boolean skipIndexPage = true;
+   public boolean skipIndexPage = true;
+
    String chromeCmd = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
    public TestPageLoader(AbstractInterpreter cmd) {
