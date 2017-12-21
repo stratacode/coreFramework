@@ -18,6 +18,8 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
    int waitForPageTime = 5000;
    int waitForRuntimeTime = 5000;
 
+   boolean loadAllPages = true;
+
    // Holds any started processes
    List<AsyncProcessHandle> processes = new ArrayList<AsyncProcessHandle>();
 

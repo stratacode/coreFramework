@@ -1,3 +1,6 @@
-System.out.println("*** In default testScript - loading pages");
-new sc.html.TestPageLoader(cmd).loadAllPages();
-System.out.println("*** In default testScript - done loading pages");
+cmd.include("testInit.scr");
+if (pageLoader.loadAllPages) {
+   System.out.println("*** In default testScript - loading all pages");
+   pageLoader.loadAllPages();
+   System.out.println("*** In default testScript - done loading all pages");
+}
