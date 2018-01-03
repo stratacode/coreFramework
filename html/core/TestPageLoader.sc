@@ -174,6 +174,13 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
       System.out.println("- DOM results: " + urlPath.name + " length: " + pageContents.length() + (sys.options.testVerifyMode ? "" : " path: " + pageResultsFile));
    }
 
+   void runPageTest(URLPath urlPath) {
+      String testScriptName = "test" + sc.type.CTypeUtil.capitalizePropertyName(urlPath.name) + ".scr";
+      if (cmd.exists(testScriptName)) {
+         cmd.include(testScriptName);
+      }
+   }
+
    public void loadAllPages() {
       int numLoaded = 0;
       for (URLPath urlPath:urlPaths) {
@@ -181,6 +188,9 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
          if (skipIndexPage && urlPath.name.equals("index") && urlPaths.size() > 1)
             continue;
          AsyncProcessHandle processRes = loadURL(urlPath, null);
+
+         runPageTest(urlPath);
+
          endSession(processRes);
          numLoaded++;
       }
