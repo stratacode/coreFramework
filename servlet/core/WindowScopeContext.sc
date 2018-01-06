@@ -19,6 +19,8 @@ public class WindowScopeContext extends BaseScopeContext {
    public WindowScopeContext(int windowId, Window window) {
       this.windowId = windowId;
       this.window = window;
+
+      this.supportsChangeEvents = true;
    }
 
    public ScopeDefinition getScopeDefinition() {

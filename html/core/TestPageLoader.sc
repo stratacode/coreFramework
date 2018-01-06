@@ -157,8 +157,10 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
    }
 
    public void endSession(AsyncProcessHandle processRes) {
-      if (processRes != null)
+      if (processRes != null) {
+          //System.out.println("Ending browser process");
           processRes.endProcess();
+      }
    }
 
    // NOTE: using this for tests is not very robust because any changes made to the elements of the DOM are not reflected.  Instead, we'll
@@ -177,7 +179,10 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
    void runPageTest(URLPath urlPath) {
       String testScriptName = "test" + sc.type.CTypeUtil.capitalizePropertyName(urlPath.name) + ".scr";
       if (cmd.exists(testScriptName)) {
-         cmd.include(testScriptName);
+         if (!clientSync) // Ideally in this case, we'd have a way to convert the testApp.scr file into a program to download when we run in testMode
+             System.out.println("Skipping testScript: " + testScriptName + " for client-only application");
+         else
+             cmd.include(testScriptName);
       }
    }
 
@@ -199,6 +204,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
 
    public void systemExiting() {
       for (AsyncProcessHandle process:processes) {
+         //System.out.println("System exiting - ending process");
          process.endProcess();
       }
       processes.clear();

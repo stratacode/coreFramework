@@ -765,9 +765,10 @@ js_HTMLElement_c.syncRepeatTags = function(updateDOM) {
          // Incrementally update the tags while keeping the DOM synchronized with the object tree
          else {
             if (js_Element_c.verboseRepeat) {
-               console.log("syncRepeatTags - update new size: " + sz + " old size: " + repeatTags.length + " for: " + this.id);
+               console.log("syncRepeatTags - updating with new size: " + sz + " and old size: " + repeatTags.length + " for: " + this.id);
                this.dumpRepeatTags();
             }
+            var renumberIx = -1;
             // Walking through the current value of the repeat list
             for (var i = 0; i < sz; i++) {
                var arrayVal = sc_DynUtil_c.getArrayElement(repeat, i); // the value at spot i now
@@ -812,6 +813,7 @@ js_HTMLElement_c.syncRepeatTags = function(updateDOM) {
                            var curNewIx = this.repeatElementIndexOf(repeat, i, delArrayVal);
                            if (curNewIx == -1) {
                               needsRefresh = this.removeElement(delElem, i, updateDOM) || needsRefresh;
+                              renumberIx = delIx;
                            }
                            else
                               needsMove = true;
@@ -820,6 +822,7 @@ js_HTMLElement_c.syncRepeatTags = function(updateDOM) {
                         if (needsMove) {
                            elemToMove.setRepeatIndex(i);
                            needsRefresh = this.moveElement(elemToMove, curIx, i, updateDOM) || needsRefresh;
+                           renumberIx = i;
                         }
                      }
                   }
@@ -850,6 +853,17 @@ js_HTMLElement_c.syncRepeatTags = function(updateDOM) {
                var ix = repeatTags.length - 1;
                var toRem = repeatTags[ix];
                needsRefresh = this.removeElement(toRem, ix, updateDOM) || needsRefresh;
+            }
+            if (renumberIx != -1) {
+               var tagSz = repeatTags.length;
+               for (var r = renumberIx; r < tagSz; r++) {
+                  var tagElem = repeatTags[r];
+                  if (tagElem.getRepeatIndex() != r)
+                     tagElem.setRepeatIndex(r);
+               }
+               if (sc_instanceOf(this, js_IRepeatWrapper)) {
+                  this.updateElementIndexes(renumberIx);
+               }
             }
          }
 
@@ -1275,6 +1289,9 @@ js_HTMLElement_c.createRepeatElement = function(rv, ix, oldTag) {
       this.dumpRepeatTag(elem);
    }
    return elem;
+}
+
+js_HTMLElement_c.updateElementIndexes = function(ix) {
 }
 
 js_HTMLElement_c.registerSyncInstAndChildren = function(obj) {
