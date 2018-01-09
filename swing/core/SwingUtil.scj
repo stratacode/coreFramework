@@ -244,6 +244,16 @@ public class SwingUtil {
          return (java.awt.Component) component;
       else if (component instanceof IChildContainer) 
          return ((IChildContainer) component).getLastComponent();
+      else { // We need this generic case for when the list component is a dynamic type, since the ListItem scope can't add the IChildContainer interface... need to merge in the object template and include the scope interfaces in the list of returned 'getCompiledImplJavaTypes'
+         Object[] children = DynUtil.getObjChildren(component, null, true);
+         if (children != null) {
+            for (int i = children.length - 1; i >= 0; i--) {
+               java.awt.Component last = getLastComponent(children[i]);
+               if (last != null)
+                  return last;
+            }
+         }
+      }
       return null;
    }
 
