@@ -9,6 +9,7 @@
    <head serverContent="true">
       <script type="text/javascript" noCache="true">
          var sc_windowId = <%= sc.type.PTypeUtil.getWindowId() %>;
+         var sc_testMode = <%= sc.type.PTypeUtil.testMode %>;
       </script>
    </head>
    <body>

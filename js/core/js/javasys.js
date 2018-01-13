@@ -238,10 +238,13 @@ jv_PrintStream_c.println = function() {
    var str = ((buf == null ? "" : buf) + res);
    if (this.err && console.error) {
       console.error(str);
-      sc_countError();
+      sc_logError(str);
    }
-   else if (console.log) 
+   else if (console.log) {
+      if (sc_PTypeUtil_c.testMode)
+         sc_logConsole(str);
       console.log(str);
+   }
    this.buf = null;
 }
 

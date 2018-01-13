@@ -1139,6 +1139,8 @@ js_HTMLElement_c.makeRoot = function() {
    if (sc$rootTags[id] == null) {
       sc$rootTags[id] = this;
       sc$rootTagsArray.push(this);
+      if (sc_PTypeUtil_c.testMode || js_Element_c.verbose)
+         sc_logConsole("New root tag element: " + this.$protoName);
    }
    else
       console.log("Making second root tag");

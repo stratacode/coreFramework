@@ -796,6 +796,8 @@ sc_PTypeUtil_c.isPrimitive = function(type) {
    return false; // TODO: some way to reprent int.class etc.
 }
 
+sc_PTypeUtil_c.testMode = window.sc_testMode;
+
 sc_PTypeUtil_c.isANumber = function(type) {
    var tot = typeof type;
    return tot == "number" || (tot == "object" && type.constructor === Number);
@@ -822,7 +824,7 @@ sc_PTypeUtil_c.postHttpRequest = function(url, postData, contentType, listener) 
          listener.response(httpReq.responseText);
       else {
          if (stat != 205) // This is the sync reset response
-            sc_countError();
+            sc_logError("server session lost");
          // This may be the 'reset' request which is not an error
          //console.error("Non status='200' response to POST: status=" + httpReq.status + ": " + httpReq.statusText + " response: " + httpReq.responseText);
          // Called below in onreadystatechange
@@ -834,14 +836,14 @@ sc_PTypeUtil_c.postHttpRequest = function(url, postData, contentType, listener) 
       if (httpReq.readyState == 4) {
          var stat = httpReq.status;
          if(stat != 200 && stat != 205) {
-            sc_countError();
+            sc_logError("Return status: " + stat + " for: " + url);
             listener.error(httpReq.status, httpReq.statusText);
          }
       }
    }
    /*
    httpReq.onabort = httpReq.onError = function(evt) {
-      sc_countError();
+      sc_logError("aborted response: " + httpReq.status);
       console.error("Aborted response to POST: " + httpReq.status + ": " + httpReq.statusText);
       listener.error(httpReq.status, httpReq.statusText);
    }

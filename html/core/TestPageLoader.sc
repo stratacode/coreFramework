@@ -20,6 +20,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
    public int waitForRuntimeTime = 5000;
 
    public boolean loadAllPages = true;
+   public boolean recordClientOutput = true;
 
    // Holds any started processes
    List<AsyncProcessHandle> processes = new ArrayList<AsyncProcessHandle>();
@@ -77,16 +78,11 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
    public AsyncProcessHandle loadPage(String name, String scopeContextName) {
       boolean found = false;
       AsyncProcessHandle res = null;
-      for (URLPath urlPath:urlPaths) {
-         if (urlPath.name.equals(name)) {
-            res = loadURL(urlPath, scopeContextName);
-            found = true;
-            break;
-         }
-      }
-      if (!found)
+      URLPath urlPath = findUrlPath(name);
+      if (urlPath != null)
+         return loadURL(urlPath, scopeContextName);
+      else
          throw new IllegalArgumentException("TestPageLoader.loadPage - " + name + " not found");
-      return res;
    }
 
    public CurrentScopeContext loadPageAndWait(String pageName, String scopeContextName) {
@@ -97,24 +93,31 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
        return ctx;
    }
 
-   public void savePage(String name, int ix, String pageContents) {
+   public URLPath findUrlPath(String name) {
       boolean found = false;
       for (URLPath urlPath:urlPaths) {
          if (urlPath.name.equals(name)) {
-            saveURL(urlPath, getPageResultsFile(urlPath, ix), pageContents);
-            found = true;
+            return urlPath;
          }
       }
-      if (!found)
+      return null;
+   }
+
+   public void savePage(String name, int ix, String pageContents) {
+      URLPath urlPath = findUrlPath(name);
+      if (urlPath != null) {
+         saveURL(urlPath, getPageResultsFile(urlPath, "." + ix), pageContents);
+      }
+      else
          throw new IllegalArgumentException("TestPageLoader.savePage - " + name + " not found");
    }
 
-   String getPageResultsFile(URLPath urlPath, int ix) {
-      return FileUtil.concat(sys.options.testResultsDir, "pages", urlPath.name + (ix == -1 ? "" : "." + ix));
+   String getPageResultsFile(URLPath urlPath, String suffix) {
+      return FileUtil.concat(sys.options.testResultsDir, "pages", urlPath.name + suffix);
    }
 
    public AsyncProcessHandle loadURL(URLPath urlPath, String scopeContextName) {
-      String pageResultsFile = getPageResultsFile(urlPath, -1);
+      String pageResultsFile = getPageResultsFile(urlPath, "");
       System.out.println("loadURL: " + urlPath.name + " at: " + urlPath.url);
 
       // Returns file:// or http:// depending on whether the server is enabled.  Also finds the files in the first buildDir where it exists
@@ -142,8 +145,8 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
                   throw new IllegalArgumentException("Timeout opening url: " + url + " - client never requested scope context: " + scopeContextName); 
                }
             }
-            // for the inital page load, we just use the innerHTML which I think should be accurate? 
-            saveURL(urlPath, pageResultsFile, getRemoteBodyHTML());
+            // for the inital page load, we just use the innerHTML which seems accurate and represents the rendered content from the initial page load
+            saveURL(urlPath, pageResultsFile, getClientBodyHTML());
          }
       }
       catch (RuntimeException exc) {
@@ -158,15 +161,19 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
 
    public void endSession(AsyncProcessHandle processRes) {
       if (processRes != null) {
-          //System.out.println("Ending browser process");
-          processRes.endProcess();
+         //System.out.println("Ending browser process");
+         processRes.endProcess();
       }
    }
 
    // NOTE: using this for tests is not very robust because any changes made to the elements of the DOM are not reflected.  Instead, we'll
    // use the tag objects to generate the HTML output that reflects the page's current state. 
-   public String getRemoteBodyHTML() {
+   public String getClientBodyHTML() {
       return (String) DynUtil.evalRemoteScript(AppGlobalScopeDefinition.getAppGlobalScope(), "document.body.innerHTML;");
+   }
+
+   public String getClientConsoleLog() {
+      return (String) DynUtil.evalRemoteScript(AppGlobalScopeDefinition.getAppGlobalScope(), "sc_getConsoleLog();");
    }
 
    void saveURL(URLPath urlPath, String pageResultsFile, String pageContents) {
@@ -196,10 +203,21 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
 
          runPageTest(urlPath);
 
+         saveClientConsole(urlPath);
+
          endSession(processRes);
          numLoaded++;
       }
       System.out.println("Done loading: " + numLoaded + " pages...");
+   }
+
+   public void saveClientConsole(URLPath urlPath) {
+      if (clientSync && recordClientOutput) {
+         String consoleLog = getClientConsoleLog();
+         String consoleResultsFile = getPageResultsFile(urlPath, ".jsConsole");
+         FileUtil.saveStringAsFile(consoleResultsFile, consoleLog, true);
+      }
+
    }
 
    public void systemExiting() {

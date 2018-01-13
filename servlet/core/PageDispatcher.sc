@@ -77,7 +77,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
    static public String indexPattern = "/index.html";
 
-   static public boolean verbose = false, trace = false, traceLocks = false;
+   static public boolean verbose = false, trace = false, traceLocks = false, testMode = false;
 
    public static long serverStartTime = System.currentTimeMillis();
 
@@ -562,6 +562,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
          if (trace || Element.trace) {
             sb.append("js_Element_c.trace = true;\n");
          }
+         // TODO: do we need this here anymore?  It's also in the HtmlPage template at the top of the page
          sb.append("   var sc_windowId = " + ctx.getWindowId() + ";\n");
          if (initSync != null && (initSyncSize = initSync.length()) > 0) {
             sb.append(JSRuntimeProcessor.SyncBeginCode);
@@ -783,6 +784,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
          // If we've included the js.layer layer, we'll need to sync the layered system
          if (sys.getLayerByDirName("sys.layeredSystem") != null)
             sys.initSync();
+
+         if (sys.options.testMode)
+            testMode = true;
 
          if (Element.trace) {
             Context.trace = trace = true;

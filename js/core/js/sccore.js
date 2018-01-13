@@ -1,14 +1,37 @@
-function sc_countError() {
+function sc_logError(str) {
    if (window.sc_errorCount === undefined)
       window.sc_errorCount = 0;
    window.sc_errorCount++;
    if (window.sc_errorCountListener != undefined)
       window.sc_errorCountListener();
+   console.error(str);
+   sc_log(str);
+}
+
+function sc_log(str) {
+   if (sc_PTypeUtil_c && sc_PTypeUtil_c.testMode) {
+      var log = window.sc_consoleLog;
+      if (log === undefined)
+         window.sc_consoleLog = log = [str];
+      else
+         log.push(str);
+   }
+}
+
+function sc_logConsole(str) {
+   sc_log(str);
+   console.log(str);
+}
+
+function sc_getConsoleLog() {
+    if (window.sc_consoleLog)
+       return window.sc_consoleLog.join("\n");
+   return "<empty js console>";
 }
 
 // So we can track javascript system errors using the same status symbol
 window.onerror = function (errorMsg, url, lineNumber) {
-   sc_countError();
+   sc_logError(errorMsg);
 }
 
 var sc$classTable = {};
@@ -43,7 +66,7 @@ function sc_newClass(typeName, newConstr, extendsClass, implements) {
 
 function sc_newInnerClass(typeName, newConstr, outerClass, extendsClass, implements) {
    if (sc$classTable[typeName])
-      console.log("redefining class with type name: " + typeName);  
+      sc_logConsole("redefining class with type name: " + typeName);
 
    function $clProto() {}; 
 
