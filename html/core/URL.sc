@@ -14,6 +14,9 @@ import java.lang.annotation.Target;
   * <p>
   * With page=true, the object for that page is used to generate the output for the request.  The first URL which matches a page completes the request
   * and you are finished.  When page=false, each component that matches the URL is populated with data values extracted from the URL.
+  * <p>
+  * Use the @QueryParam annotation on properties of the type with the URL to have those values auto-populated when the page is rendered, and
+  * for the URL to be updated on the client when the properties are changed.
   (TODO: each component?  right now the code is only doing the first component to match the URL)
   */
 @Target({ElementType.TYPE})
@@ -24,8 +27,8 @@ public @interface URL {
     * Either a simple string like "/index.html" that defines the URL, or it can be a pattern string to match URLs with data in them.
     * The pattern string is defined using the sc.lang.PatternLanguage (as used from the sc.lang.pattern.Pattern class). This lets you produce a string
     * with embedded values parsed from other languages.  In this case, PageDispatcher lets you use any public parselet in the SCLanguage as variable types.
-    * For example the pattern:   @URL(pattern="/bookTitle/{integerLiteral}") would match: /bookTitle/12345.   You can also set properties in your object by specifying
-    * variable names like: @URL(pattern="/bookTitle/{bookId=integerLiteral}")   When your page is called, it's bookId property will always be set to a valid integer.
+    * For example the pattern:   @URL(pattern="/bookTitle/{integer}") would match: /bookTitle/12345.   You can also set properties in your object by specifying
+    * variable names like: @URL(pattern="/bookTitle/{bookId=integer}")   When your page is called, it's bookId property will always be set to a valid integer.
     */
    String pattern() default "";
    /** When page is true, the URL matches a top-level page object which handle the request.  When it is false, the first component */

@@ -60,7 +60,7 @@ class SyncServlet extends HttpServlet {
       String reset = request.getParameter("reset");
       HttpSession session = request.getSession(false);
       String url = request.getParameter("url");
-      String receiveLanguage = request.getParameter("lang");
+      String receiveLanguage = request.getParameter("lang"); // Protocol might be a better name here, though I suppose it's still a language?
       if (receiveLanguage == null)
          receiveLanguage = SyncManager.defaultLanguage;
       /** Refresh of true says to do a code-refresh before the sync.  This defaults based on the server default but you can override whether you want to check for code changes on each sync or not. */
@@ -110,7 +110,7 @@ class SyncServlet extends HttpServlet {
             ScopeEnvironment.setAppId(URLPath.getAppNameFromURL(url));
          }
 
-         ctx = Context.initContext(request, response);
+         ctx = Context.initContext(request, response, null);
 
          // Did not locate this page
          List<PageDispatcher.PageEntry> pageEnts = pageDispatcher.getPageEntriesOrError(ctx, url);

@@ -129,6 +129,10 @@ sc_DynUtil_c.getMethodName = function(method) {
    return method.name;
 }
 
+sc_DynUtil_c.getPropertyName = function(prop) {
+   return prop;
+}
+
 sc_DynUtil_c.getParameterTypes = function() { return null; }
 
 sc_DynUtil_c.invokeMethod = function(obj, method, paramValues) {

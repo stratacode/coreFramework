@@ -6,15 +6,18 @@ import java.util.HashMap;
 import java.util.Date;
 import java.util.Calendar;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.Iterator;
 
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.Lock;
 
+import sc.type.IBeanMapper;
 
 import sc.util.StringUtil;
 import sc.util.TextUtil;
 import sc.util.PerfMon;
+import sc.type.PTypeUtil;
 import sc.dyn.DynUtil;
 import sc.dyn.ITypeChangeListener;
 
@@ -31,6 +34,8 @@ import sc.obj.ScopeDefinition;
 import sc.obj.ScopeEnvironment;
 import sc.obj.RequestScopeDefinition;
 import sc.obj.CurrentScopeContext;
+
+import sc.lang.html.QueryParamProperty;
 
 import sc.js.URLPath;
 
@@ -88,11 +93,14 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       String pattern;
       Parselet patternParselet;
       Object pageType;
-      boolean page;
+      boolean page; // TODO: rename this to dynamic page or something?
       int priority;
       String lockScope; // The scope name to use for locking.  if null, use the type's scope as the scope for the lock.
       String mimeType;
       boolean doSync;
+
+      // Stores the list of query parameters (if any) for the given page - created with @QueryParam
+      List<QueryParamProperty> queryParamProps;
 
       public String toString() {
          if (pattern == null)
@@ -108,7 +116,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
     * We are not guaranteed these get called in any order so need to use the priority to decide who gets to listen on that
     * pattern.
     */
-   public static void addPage(String keyName, String pattern, Object pageType, boolean page, int priority, String lockScope) {
+   public static void addPage(String keyName, String pattern, Object pageType, boolean page, int priority, String lockScope, List<QueryParamProperty> queryParamProps) {
       PageEntry ent = new PageEntry();
       ent.pattern = pattern;
       Object patternRes = Pattern.initPattern(language, pageType, pattern);
@@ -124,7 +132,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       }
       else
          ent.doSync = page;
-      // Used to use the keyName here as the key but really can only have one per pattern anyway and need a precednce so sc.foo.index can override sc.bar.index.
+      ent.queryParamProps = queryParamProps;
+      // Used to use the keyName here as the key but really can only have one per pattern anyway and need a precedence so sc.foo.index can override sc.bar.index.
       // TODO: now that we have multiple PageEntry's supporting each URL, should we have an option to support multiple handlers for the same pattern?  patternFilter=true?
       PageEntry oldEnt = pages.get(pattern);
       if (oldEnt == null || oldEnt.priority < priority)
@@ -136,7 +145,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       if (pattern.equals(indexPattern)) {
          if (verbose)
             System.out.println("PageDispatcher: adding index page");
-         addPage("_index_", "/", pageType, page, priority, lockScope);
+         addPage("_index_", "/", pageType, page, priority, lockScope, queryParamProps);
       }
    }
 
@@ -148,13 +157,29 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
        }
    }
 
-   public List<PageEntry> getPageEntries(String uri) {
+   public List<PageEntry> getPageEntries(String uri, TreeMap<String,String> queryParams) {
       ArrayList<PageEntry> matchedEnts = null;
       for (PageEntry pageEnt:pages.values()) {
-         // TODO: optimization where we compute the prefix of each pattern, use that as an index to retrive the list of
+         // TODO: performance optimization where we compute the prefix of each pattern, use that as an index to retrieve the list of
          // patterns, similar to how IndexedChoice works for parselets.  Maybe we should build an IndexedChoice of the
-         // page parselets and use that logic?
+         // page parselets and use that logic?  This could be part of the URLPatternLanguage.  It could start out as just an orderedChoice of
+         // the registered URL pattern to pageEntry mappings.
          if (language.matchString(uri, pageEnt.patternParselet)) {
+            if (pageEnt.queryParamProps != null) {
+               boolean allReqFound = true;
+               for (QueryParamProperty prop:pageEnt.queryParamProps) {
+                  if (prop.required) {
+                     if (queryParams.get(prop.paramName) == null) {
+                        if (verbose)
+                           System.out.println("Page - URL pattern: " + pageEnt.pattern + " matches type: " + pageEnt + " - but missing required query parameter:" + prop.paramName);
+                        allReqFound = false;
+                        break;
+                     }
+                  }
+               }
+               if (!allReqFound)
+                  continue;
+            }
             if (matchedEnts != null) {
                int i;
                for (i = 0; i < matchedEnts.size(); i++) {
@@ -368,6 +393,35 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                Object svClass = sc.dyn.DynUtil.findType(svClassName);
                if (svClass != null && ModelUtil.isInstance(svClass, inst))
                   language.parseIntoInstance(uri, pageEnt.patternParselet, inst);
+
+               if (pageEnt.queryParamProps != null) {
+                  for (QueryParamProperty qpp:pageEnt.queryParamProps) {
+                     Object paramValue = ctx.queryParams == null ? null : ctx.queryParams.get(qpp.paramName);
+                     try {
+                        IBeanMapper mapper = qpp.mapper;
+                        if (mapper == null) {
+                           throw new IllegalArgumentException("*** No mapping for query parameter: " + qpp);
+                        }
+                        else {
+                           if (paramValue == null) {
+                              Object propType = mapper.getPropertyType();
+                              if (propType instanceof Class && PTypeUtil.isPrimitive((Class) propType))
+                                 continue;
+                           }
+                           mapper.setPropertyValue(inst, paramValue);
+                        }
+                     }
+                     catch (RuntimeException exc) {
+                        System.err.println("*** Error setting property: " +  qpp.propName + " for: " + inst);
+                        try {
+                           ctx.response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid parameter: " + qpp.paramName);
+                        }
+                        catch (IOException ioexc) {
+                        }
+                        ctx.requestComplete = true;
+                     }
+                  }
+               }
             }
 
             // This runs any code triggered by 'do later' jobs during the page-init phase.  It makes sure the page content is in sync before we start rendering.
@@ -592,6 +646,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                            throws IOException, ServletException {
       Context ctx = null;  
       String uri = request.getRequestURI();
+      TreeMap<String,String> queryParams = Context.initQueryParams(request);
       HttpSession session = null;
 
       CurrentScopeContext curScopeCtx = null;
@@ -599,7 +654,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       ScopeEnvironment.setAppId(URLPath.getAppNameFromURL(uri));
       try {
          boolean isPage = false;
-         List<PageEntry> pageEnts = getPageEntries(uri);
+         List<PageEntry> pageEnts = getPageEntries(uri, queryParams);
 
          if (pageEnts != null && pageEnts.size() > 0) {
             int sz = pageEnts.size();
@@ -617,7 +672,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             ServletScheduler.execBeforeRequestJobs();
 
             if (isPage && ctx == null)
-               ctx = Context.initContext(request, response);
+               ctx = Context.initContext(request, response, queryParams);
 
             LayeredSystem sys = LayeredSystem.getCurrent();
             if (sys != null && sys.options.autoRefresh) {
@@ -814,7 +869,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
    }
 
    public List<PageDispatcher.PageEntry> getPageEntriesOrError(Context ctx, String url) {
-      List<PageDispatcher.PageEntry> pageEnts = getPageEntries(url);
+      List<PageDispatcher.PageEntry> pageEnts = getPageEntries(url, ctx.queryParams);
       if (pageEnts == null) {
          try {
             ctx.response.sendError(HttpServletResponse.SC_NOT_FOUND, "No page found for url: " + url);
@@ -880,7 +935,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
              pattern = "/" + sc.type.CTypeUtil.getClassName(newTypeName) + (resultSuffix == null ? "" : "." + resultSuffix);
           }
           System.out.println("*** Adding page type: " + newType);
-          addPage(newTypeName, pattern, newType, isPage, DynUtil.getLayerPosition(newType), lockScope);
+          addPage(newTypeName, pattern, newType, isPage, DynUtil.getLayerPosition(newType), lockScope, QueryParamProperty.getQueryParamProperties(newType));
       }
    }
 

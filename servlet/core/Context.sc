@@ -12,6 +12,7 @@ import sc.type.PTypeUtil;
 import sc.lang.html.Window;
 
 import java.util.Enumeration;
+import java.util.TreeMap;
 
 import sc.sync.RuntimeIOException;
 
@@ -32,6 +33,8 @@ class Context {
    boolean requestComplete;
    boolean windowRequest = true; // When processing a session invalidate event, we are not from a window
 
+   TreeMap<String,String> queryParams;
+
    ArrayList<ScheduledJob> toInvokeLater = null;
 
    WindowScopeContext windowCtx = null;
@@ -44,9 +47,10 @@ class Context {
    static boolean verbose = false;
    static boolean trace = false;
 
-   Context(HttpServletRequest req, HttpServletResponse res) {
+   Context(HttpServletRequest req, HttpServletResponse res, TreeMap<String,String> queryParams) {
       request = req;
       response = res;
+      this.queryParams = queryParams;
    }
 
    /** Use this in session destruction hook, when request/response is not available */
@@ -113,9 +117,9 @@ class Context {
       return ctx;
    }
 
-   static Context initContext(HttpServletRequest request, HttpServletResponse response) {
+   static Context initContext(HttpServletRequest request, HttpServletResponse response, TreeMap<String,String> queryParams) {
       Context ctx;
-      currentContextStore.set(ctx = new Context(request, response));
+      currentContextStore.set(ctx = new Context(request, response, queryParams));
 
       String windowIdStr = request.getParameter("windowId");
       if (windowIdStr != null) {
@@ -305,5 +309,34 @@ class Context {
       if (verbose || trace)
           return " session: " + DynUtil.getTraceObjId(session.getId()) + " thread: " + DynUtil.getCurrentThreadString();
       return null;
+   }
+
+   static TreeMap<String,String> initQueryParams(HttpServletRequest request) {
+      TreeMap<String,String> queryParams = null;
+      String queryString = request.getQueryString();
+      if (queryString == null)
+         return null;
+      String[] paramStrs = queryString.split("&");
+      queryParams = new TreeMap<String,String>();
+      for (String paramStr:paramStrs) {
+         int ix = paramStr.indexOf("=");
+         if (ix == -1) {
+            queryParams.put(paramStr, "");
+         }
+         else
+            queryParams.put(paramStr.substring(0,ix), paramStr.substring(ix+1));
+      }
+      return queryParams;
+   }
+
+   String getQueryParam(String queryParam) {
+      if (queryParams == null) {
+         if (request != null) {
+            queryParams = initQueryParams(request);
+         }
+         else
+            return null; // Should we have grabbed the query params before now?
+      }
+      return queryParams.get(queryParam);
    }
 }

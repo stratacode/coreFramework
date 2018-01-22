@@ -1,4 +1,4 @@
-<% 
+<%@ import sc.lang.html.QueryParamProperty; %><%
    if (!isAbstract) {
       Boolean isPageObj = (Boolean) getAnnotationValue("sc.html.URL", "page");
       boolean isPage = isPageObj == null || isPageObj;
@@ -11,10 +11,11 @@
          else
             url = "/" + typeBaseName;
       }
+
 %>
         
 static {
-   sc.servlet.PageDispatcher.addPage("<%= typeName %>", "<%= url %>", <%= typeIsDynamic ? "sc.dyn.DynUtil.findType(\"" + typeName + "\")" : typeBaseName + ".class" %>, <%= isPage %>, <%= layer.layerPosition %>, <%= lockScope == null ? "null" : '"' + lockScope + '"' %>);
+   sc.servlet.PageDispatcher.addPage("<%= typeName %>", "<%= url %>", <%= typeIsDynamic ? "sc.dyn.DynUtil.findType(\"" + typeName + "\")" : typeBaseName + ".class" %>, <%= isPage %>, <%= layer.layerPosition %>, <%= lockScope == null ? "null" : '"' + lockScope + '"' %>, <%= QueryParamProperty.toValueString(objType) %>);
 }
 
 <% } %>
