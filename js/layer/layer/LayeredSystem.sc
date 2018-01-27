@@ -14,7 +14,7 @@ import sc.type.IResponseListener;
 /** The client view of the LayeredSystem which is a subset of the real LayeredSystem
  * TODO: should be using layers to keep this class in sync with the original but that will require building SC with SC which has some downsides
  */
-@Sync(onDemand=true)
+//@Sync(onDemand=true)
 public class LayeredSystem {
    public List<Layer> layers;
 
@@ -100,6 +100,10 @@ public class LayeredSystem {
 
    public boolean serverEnabled;
 
+   public boolean getServerEnabled() {
+      return serverEnabled;
+   }
+
    public static String getURLForPath(String name) {
       return null;
    }
@@ -133,7 +137,7 @@ public class LayeredSystem {
    public void fetchRemoteTypeDeclaration(String typeName, IResponseListener resp) {
       // We cache null if there's no src type declaration to avoid trying this over and over again
       if (!typesByNameIndex.containsKey(typeName)) {
-         sc.dyn.RemoteResult res = DynUtil.invokeRemote(null, null, this, DynUtil.resolveRemoteMethod(this, "getSrcTypeDeclaration", Object.class, "Ljava/lang/String;"), typeName);
+         sc.dyn.RemoteResult res = DynUtil.invokeRemote(null, null, null, this, DynUtil.resolveRemoteMethod(this, "getSrcTypeDeclaration", Object.class, "Ljava/lang/String;"), typeName);
          res.responseListener = new FetchTypeResponseListener(typeName, resp);
       }
    }

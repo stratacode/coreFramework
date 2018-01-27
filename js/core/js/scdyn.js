@@ -155,7 +155,7 @@ sc_DynUtil_c.invokeMethod = function(obj, method, paramValues) {
    return res === undefined ? null : res;
 }
 
-sc_DynUtil_c.invokeRemote = function(def, ctx, obj, method, paramValues) {
+sc_DynUtil_c.invokeRemote = function(def, ctx, destName, obj, method, paramValues) {
    if (typeof sc_SyncManager_c == "undefined")
        throw new jv_UnsupportedOperationException("invokeRemote - no implementation loaded for invokeRemote");
    return sc_SyncManager_c.invokeRemote(def, ctx, obj, null, method.name, method.returnType, method.paramSig, paramValues);

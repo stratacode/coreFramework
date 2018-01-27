@@ -1,6 +1,5 @@
 import sc.js.JSSettings;
 
-@JSSettings(prefixAlias="sc_")
 public enum BindingDirection
 {
    FORWARD, REVERSE, BIDIRECTIONAL, NONE;

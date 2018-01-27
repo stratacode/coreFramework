@@ -1,6 +1,7 @@
 import sc.sync.SyncManager;
 import sc.sync.SyncDestination;
 import sc.type.PTypeUtil;
+import sc.obj.GlobalScopeDefinition;
 
 @sc.js.JSSettings(jsModuleFile="js/sync.js", prefixAlias="sc_", requiredModule=true)
 class ClientSyncManager extends SyncManager {
@@ -16,6 +17,8 @@ class ClientSyncManager extends SyncManager {
 
    ClientSyncManager(SyncDestination dest) {
       super(dest);
+
+      GlobalScopeDefinition.getGlobalScopeDefinition().supportsChangeEvents = true;
 
       if (dest.realTime) {
          // Once the client has fully initialized itself, we'll schedule the first sync to get us connected when in real time mode.

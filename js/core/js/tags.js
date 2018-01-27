@@ -6,6 +6,7 @@
 // Subclasses include js_Page, js_Html, js_Body, etc. which can add data binding or other behavior for
 // specific attributes.  
 function js_HTMLElement() {
+   this.refreshScheduled = false;
    this.bodyValid = true;
    this.startValid = true;
    this.repeatTagsValid = true;
@@ -31,10 +32,8 @@ js_Element_c.init = js_Element_c.start = function() {};
 js_Element_c.stop = function() {
     this.visible = false;
 }
-js_Element_c.refreshStartTags = [];
-js_Element_c.refreshBodyTags = [];
-js_Element_c.refreshRepeatTags = [];
-js_Element_c.refreshScheduled = false;
+js_Element_c.tagsToRefresh = [];
+js_Element_c.anyRefreshScheduled = false;
 js_Element_c.globalRefreshScheduled = false;
 js_Element_c.trace = false;
 js_Element_c.verbose = false;
@@ -46,19 +45,27 @@ js_Element_c.getURLPaths = function() {
 }
 js_Element_c.getName = function() { return this.$protoName; }
 
-js_Element_c.doRefreshTags = function(tagList, refName, validName, tree) {
+js_Element_c.doRefreshTags = function(tagList) {
    for (var i = 0; i < tagList.length; i++) {
       var tag = tagList[i];
-      if (!tag[validName]) {
-         if (tree) {
-            var encl = tag.getEnclosingTag();
-            if (encl != null && !encl[validName]) {
-               if (js_Element_c.trace)
-                  console.log("skipping: " + refName + " for: " + tag.getId() + " waiting for parent to refresh: " + encl.getId());
-               continue;
-            }
-         }
-         tag[refName]();
+      tag.refreshScheduled = false;
+      var encl = tag.getEnclosingTag();
+      if (encl != null && !encl.bodyValid) {
+         if (js_Element_c.trace)
+            console.log("skipping: " + refName + " for: " + tag.getId() + " waiting for parent to refresh: " + encl.getId());
+         continue;
+      }
+      if (!tag.repeatTagsValid) {
+         tag.refreshRepeat();
+      }
+      if (!tag.startValid) {
+         if (!tag.bodyValid)
+            tag.refresh();
+         else
+            tag.refreshStart();
+      }
+      else if (!tag.bodyValid) {
+         tag.refreshBody();
       }
    }
 }
@@ -71,20 +78,12 @@ js_Element_c._updateInst = function() {
 js_Element_c.refreshCount = 0;
 js_Element_c.refreshTags = function() {
    try {
-      var toRefresh = js_Element_c.refreshBodyTags;
-      js_Element_c.refreshBodyTags = [];
+      var toRefresh = js_Element_c.tagsToRefresh;
+      js_Element_c.tagsToRefresh = [];
       // TODO: could optimize this by sorting or removing child nodes whose parents are in the refresh list.  If we do refresh a higher level item before a lower level one, the child validate call at least should not happpen since we validate it already.
-      js_Element_c.doRefreshTags(toRefresh, "refreshBody", "bodyValid", true);
-      toRefresh = js_Element_c.refreshStartTags;
-      js_Element_c.refreshStartTags = [];
-      js_Element_c.doRefreshTags(toRefresh, "refreshStart", "startValid", false);
-      toRefresh = js_Element_c.refreshRepeatTags;
-      js_Element_c.refreshRepeatTags = [];
-      js_Element_c.doRefreshTags(toRefresh, "refreshRepeat", "repeatTagsValid", false);
+      js_Element_c.doRefreshTags(toRefresh);
 
-      if (js_Element_c.refreshBodyTags.length > 0 ||
-          js_Element_c.refreshStartTags.length > 0 ||
-          js_Element_c.refreshRepeatTags.length > 0) {
+      if (js_Element_c.tagsToRefresh.length > 0) {
          if (js_Element_c.refreshCount == 15)
             console.error("Skipping recursive refreshes after 15 levels of processing - elements may not be rendered");
          else {
@@ -99,7 +98,7 @@ js_Element_c.refreshTags = function() {
       }
    }
    finally {
-      js_Element_c.refreshScheduled = false;
+      js_Element_c.anyRefreshScheduled = false;
    }
 }
 
@@ -176,11 +175,8 @@ js_HTMLElement_c.getPreviousElementSibling = function() {
 js_HTMLElement_c.setVisible = function(vis) {
    if (vis != this.visible) {
       this.visible = vis;
-      var domElem = this.element != null;
-      if (domElem != vis)
-         this.invalidate();
-      else
-         console.log("***");
+      // TODO: we used to have code in here to try and avoid an extra invalidate call if we were already invisible and making the element invisible.  But not sure if that really is a worthwhile optimization
+      //var domElem = this.element != null;
       this.invalidate();
       sc_Bind_c.sendEvent(sc_IListener_c.VALUE_CHANGED, this, "visible" , vis);
    }
@@ -264,7 +260,7 @@ js_HTMLElement_c.removeFromDOM = function() {
    }
    this.setDOMElement(null);
    this.startValid = true;
-   this.updateBodyValid(true);
+   this.bodyValid = true;
    return true;
 }
 
@@ -410,12 +406,8 @@ js_HTMLElement_c.updateDOM = function() {
          }
       }
    }
-   /*
-   if (setStartValid)
-      this.startValid = true;
-   if (setBodyValid)
-      this.bodyValid = true;
-   */
+   this.startValid = true;
+   this.bodyValid = true;
 }
 
 js_HTMLElement_c.setDOMElement = function(newElement) {
@@ -1123,7 +1115,7 @@ js_HTMLElement_c.refresh = function() {
    if (this.serverContent) {
       if (this.element == null) { // Attach to the dom generated by the server
          this.startValid = true;
-         this.updateBodyValid(true);
+         this.bodyValid = true;
          this.updateDOM();
          if (this.element == null)
             console.error("No element: " + this.getId() + " in the DOM for refresh of serverContent for tag object");
@@ -1156,7 +1148,7 @@ js_HTMLElement_c.refreshBody = function() {
    if (this.element === null) {
       // We were made invisible or possibly our parent is invisible
       if (!this.isVisibleInView()) {
-         this.updateBodyValid(true);
+         this.bodyValid = true;
          return;
       }
       // Go to the top level tag and start the output process up there.  It needs to attach us to the tree
@@ -1171,7 +1163,7 @@ js_HTMLElement_c.refreshBody = function() {
          create = true;
       }
    }
-   this.updateBodyValid(true);
+   this.bodyValid = true;
 
    var par = this.getEnclosingTag();
    if (par == null && this.element == null) {
@@ -1187,7 +1179,7 @@ js_HTMLElement_c.refreshBody = function() {
       if (js_Element_c.trace)
          console.log("refreshBody creating DOM for top level node: " + this.id);
       sb = this.output();
-      this.updateBodyValid(true);
+      this.bodyValid = true;
 
       // Top level object - need to replace the body?  Or should we append to it?
       var outRes = sb.toString();
@@ -1355,7 +1347,7 @@ js_HTMLElement_c.outputTag = function(sb) {
             var rtag = this.repeatTags[i];
             rtag.outputTag(sb);
             rtag.startValid = true;
-            rtag.updateBodyValid(true);
+            rtag.bodyValid = true;
          }
       }
    }
@@ -1378,48 +1370,26 @@ js_HTMLElement_c.invalidate = function() {
    this.invalidateBody();
 }
 
-js_HTMLElement_c.schedRefresh = function(tagList, validName, tree) {
-   if (this[validName]) {
+js_HTMLElement_c.schedRefresh = function() {
+   if (!this.refreshScheduled) {
       if (!js_Element_c.globalRefreshScheduled) {
-         // When we render this tag we'll validate all of the children, so we proactively invalidate all of them now
-         // so that we can avoid adding extra refresh calls and so we can avoid refreshing any children already scheduled
-         // that will be re-rendered when we refresh this node.
-         if (tree) // assert validName = 'bodyValid'
-            this.updateBodyValid(false);
-         else
-            this[validName] = false;
-         // Need to refresh the element even if it's not visible at least to set the valid flag back to true so we refresh it again to make it visible
-         if (!js_Element_c.refreshScheduled) {
-            js_Element_c.refreshScheduled = true;
+         if (!js_Element_c.anyRefreshScheduled) {
+            js_Element_c.anyRefreshScheduled = true;
             sc_addRunLaterMethod(this, js_Element_c.refreshTags, 5);
          }
-         tagList.push(this);
+         js_Element_c.tagsToRefresh.push(this);
       }
-   }
-}
-
-js_HTMLElement_c.updateBodyValid = function(val) {
-   if (this.bodyValid != val) {
-      this.bodyValid = val;
-      /*
-      var clist = this.getObjChildren(false);
-      if (clist != null) {
-         var len = clist.length;
-         for (var i = 0; i < len; i++) {
-            c = clist[i];
-            c.updateBodyValid(val);
-         }
-      }
-      */
    }
 }
 
 js_HTMLElement_c.invalidateBody = function() {
-   this.schedRefresh(js_Element_c.refreshBodyTags, "bodyValid", true);
+   this.bodyValid = false;
+   this.schedRefresh();
 }
 
 js_HTMLElement_c.invalidateStartTag = function() {
-   this.schedRefresh(js_Element_c.refreshStartTags, "startValid", false);
+   this.startValid = false;
+   this.schedRefresh(js_Element_c.refreshStartTags);
 }
 
 js_HTMLElement_c.invalidateRepeatTags = function() {
@@ -1435,8 +1405,10 @@ js_HTMLElement_c.invalidateRepeatTags = function() {
    }
    if (needsRefresh)
       this.invalidateBody();
-   else
-      this.schedRefresh(js_Element_c.refreshRepeatTags, "repeatTagsValid", false);
+   else {
+      this.repeatTagsValid = false;
+      this.schedRefresh(js_Element_c.refreshRepeatTags);
+   }
 }
 
 js_HTMLElement_c.domEvents = {clickEvent:{}, dblClickEvent:{}, mouseDownEvent:{}, mouseMoveEvent:{}, mouseOverEvent:{aliases:["hovered"], computed:true}, mouseOutEvent:{aliases:["hovered"], computed:true}, mouseUpEvent:{}, keyDownEvent:{}, keyPressEvent:{}, keyUpEvent:{}, submitEvent:{}, changeEvent:{}, blurEvent:{}, focusEvent:{}, resizeEvent:{aliases:["innerWidth","innerHeight"]}};
@@ -1835,13 +1807,13 @@ js_Select_c.outputSelectBody = function(sb) {
       else {
          var subOption = defChildren[dix % defChildren.length];
          // disable refresh by marking this invalid before we change the data
-         subOption.updateBodyValid(false);
+         subOption.bodyValid = false;
          subOption.startValid = false;
          subOption.setSelected(selected);
          subOption.setOptionData(dv);
          // TODO: right now the tag itself must render 'selected' but should we have a way to inject that attribute if it's not already specified?
          subOption.outputTag(sb);
-         subOption.updateBodyValid(true);
+         subOption.bodyValid = true;
          subOption.startValid = true;
       }
    }

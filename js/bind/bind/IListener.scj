@@ -5,7 +5,6 @@ import sc.js.JSSettings;
  * uses it to communicate change event information to the bindings.  The bindings also provide state that controls
  * how events are queued, and removed.
  */
-@JSSettings(prefixAlias="sc_")
 public interface IListener {
    public enum SyncType {
       IMMEDIATE, ON_DEMAND, QUEUED

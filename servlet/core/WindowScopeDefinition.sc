@@ -6,6 +6,7 @@ import sc.obj.GlobalScopeDefinition;
 object WindowScopeDefinition extends ScopeDefinition {
    name = "window";
    eventListenerCtx = true;
+   supportsChangeEvents = true;
 
    {
       addParentScope(AppSessionScopeDefinition);

@@ -11,6 +11,7 @@ import sc.lang.AbstractInterpreter;
 
 import sc.layer.AsyncProcessHandle;
 
+@sc.obj.Exec(serverOnly=true)
 public class TestPageLoader implements sc.obj.ISystemExitListener {
    AbstractInterpreter cmd;
    sc.layer.LayeredSystem sys; 
