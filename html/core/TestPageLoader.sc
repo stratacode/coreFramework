@@ -11,7 +11,8 @@ import sc.lang.AbstractInterpreter;
 
 import sc.layer.AsyncProcessHandle;
 
-@sc.obj.Exec(serverOnly=true)
+// Need this to run for the 'java server' only in client/server mode but also 'js only' case.
+@sc.obj.Exec(runtimes="default")
 public class TestPageLoader implements sc.obj.ISystemExitListener {
    AbstractInterpreter cmd;
    sc.layer.LayeredSystem sys; 
