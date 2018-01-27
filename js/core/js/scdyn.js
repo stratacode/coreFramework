@@ -788,6 +788,9 @@ sc_IObjChildren_c = sc_newClass("sc.dyn.IObjChildren", sc_IObjChildren, null, nu
 function sc_IStoppable() {}
 sc_IStoppable_c = sc_newClass("sc.obj.IStoppable", sc_IStoppable, null, null);
 
+function sc_IChildInit() {}
+sc_IChildInit = sc_newClass("sc.obj.IChildInit", sc_IChildInit, null, null);
+
 function sc_IComponent() {}
 
 sc_IComponent_c = sc_newClass("sc.obj.IComponent", sc_IComponent, sc_IStoppable, null);
