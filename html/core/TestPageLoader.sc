@@ -40,6 +40,12 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
       this.urlPaths = sys.getURLPaths();
       this.headless = sys.options.headless;
 
+      // Disable these timeouts when we are debugging the program
+      if (sys.options.testDebugMode) {
+         // Nice to keep debug sessions open for a long time without timing out :)
+         waitForRuntimeTime = waitForPageTime = 60*60*24*3*1000;
+      }
+
       System.out.println("Waiting for server to start...");
       sys.addSystemExitListener(this);
       //cmd.sleep(5000);
