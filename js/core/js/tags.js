@@ -19,12 +19,13 @@ function js_HTMLElement() {
    this.repeatVarName = null;
    this.HTMLClass = null;
    this.visible = true;
+   this.invisTags = null;
    this.pendingEvent = null;
    this.pendingType = null;
 }
 
 
-js_Element_c = js_HTMLElement_c = sc_newClass("js_HTMLElement", js_HTMLElement, null, [sc_IChildInit, sc_IStoppable]);
+js_Element_c = js_HTMLElement_c = sc_newClass("sc.lang.html.HTMLElement", js_HTMLElement, null, [sc_IChildInit, sc_IStoppable]);
 
 // This is part of the SemanticNode class on the server and so the component code gen uses it even for client code
 // involving component types which extend Element.  Just noop it here.
@@ -1338,8 +1339,17 @@ js_HTMLElement_c.outputBody = function(sb) {
 js_HTMLElement_c.serverContent = false;
 
 js_HTMLElement_c.outputTag = function(sb) {
-   if (!this.visible)
+   if (!this.visible) {
+      var invisTags = this.invisTags;
+      if (invisTags == null) {
+         invisTags = this.getChildrenById(this.getId() + "_alt");
+         if (invisTags == null)
+            invisTags = [];
+      }
+      for (var i = 0; i < invisTags.length; i++)
+         invisTags[i].outputTag(sb);
       return;
+   }
    if (this.repeat !== null) {
       this.syncRepeatTags(true); 
       if (this.repeatTags !== null) {
@@ -1539,7 +1549,7 @@ function js_Input() {
    this.checked = false;
    this.tagName = "input";
 }
-js_Input_c = sc_newClass("js_Input", js_Input, js_HTMLElement, null);
+js_Input_c = sc_newClass("sc.lang.html.Input", js_Input, js_HTMLElement, null);
 
 js_Input_c.refreshAttNames = js_HTMLElement_c.refreshAttNames.concat(["value", "disabled", "checked"]);
 js_Input_c.removeOnEmpty = {value:true};
@@ -1636,7 +1646,7 @@ function js_Button() {
    js_Input.call(this);
 }
 
-js_Button_c = sc_newClass("js_Button", js_Button, js_Input, null);
+js_Button_c = sc_newClass("sc.lang.html.Button", js_Button, js_Input, null);
 
 js_Button_c.domChanged = function(origElem, newElem) {
    js_HTMLElement_c.domChanged.call(this, origElem, newElem);
@@ -1663,7 +1673,7 @@ function js_A() {
    this.clickCount = 0;
 }
 
-js_A_c = sc_newClass("js_A", js_A, js_HTMLElement, null);
+js_A_c = sc_newClass("sc.lang.html.A", js_A, js_HTMLElement, null);
 js_A_c.domChanged = js_Button_c.domChanged;
 js_A_c.doClickCount = js_Button_c.doClickCount;
 js_A_c.setClickCount = js_Input_c.setClickCount;
@@ -1674,7 +1684,7 @@ function js_SelectListener(scObj) {
    this.scObj = scObj;
 }
 
-js_SelectListener_c = sc_newClass("js_SelectListener", js_SelectListener, sc_AbstractListener, null);
+js_SelectListener_c = sc_newClass("sc.lang.html.SelectListener", js_SelectListener, sc_AbstractListener, null);
 
 js_SelectListener_c.valueValidated = function(obj, prop, detail, apply) {
    var scObj = this.scObj;
@@ -1688,7 +1698,7 @@ function js_Select() {
    this.selectedIndex = -1;
    this.selectedValue = null;
 }
-js_Select_c = sc_newClass("js_Select", js_Select, js_HTMLElement, null);
+js_Select_c = sc_newClass("sc.lang.html.Select", js_Select, js_HTMLElement, null);
 
 js_Select_c.doChangeEvent = function(event) {
    var elem = event.currentTarget ? event.currentTarget : js_findCurrentTargetSimple(event.srcElement, "selectedIndex");
@@ -1830,7 +1840,7 @@ function js_Option() {
    this.selected = false;
 
 }
-js_Option_c = sc_newClass("js_Option", js_Option, js_HTMLElement, null);
+js_Option_c = sc_newClass("sc.lang.html.Option", js_Option, js_HTMLElement, null);
 
 js_Option_c.refreshAttNames = js_HTMLElement_c.refreshAttNames.concat["selected", "disabled", "value"];
 
@@ -1860,7 +1870,7 @@ function js_Form() {
    this.tagName = "form";
    this.submitCount = 0;
 }
-js_Form_c = sc_newClass("js_Form", js_Form, js_HTMLElement, null);
+js_Form_c = sc_newClass("sc.lang.html.Form", js_Form, js_HTMLElement, null);
 
 js_Form_c.submitEvent = function(event) {
    var elem = event.currentTarget ? event.currentTarget : js_findCurrentTargetSimple(event.srcElement, "submitCount");
@@ -1873,7 +1883,7 @@ js_Form_c.submitEvent = function(event) {
 
 js_Form_c.submit = function() {
    var evt = new Event('submit');
-   evt.currentTarget = evt.target = this;
+   evt["currentTarget"] = evt["target"] = this; // not using "." here because intelliJ complains these are constant - will any browsers barf on this?  If so we'll need to just create a new object and copy over any fields we need.
    this.submitEvent = evt;
    sc_Bind_c.sendEvent(sc_IListener_c.VALUE_CHANGED, this, "submitEvent", evt);
 }
@@ -1903,12 +1913,47 @@ function js_Page() {
    sc_addLoadMethodListener(this, js_Page_c.refresh);
    sc_runLaterScheduled = true;
    this.refreshedOnce = false;
+   var url = window.location.href;
+   this.pageURL = url;
+   var pi = js_PageInfo_c.pages[this.$protoName];
+   if (pi == null)
+      this.queryParamProperties = null;
+   else
+      this.queryParamProperties = pi.queryParamProperties;
+   if (this.queryParamProperties != null) {
+      var qps = this.queryParamProperties;
+      var qix = url.indexOf('?');
+      if (qix != -1 && qix < url.length - 1) {
+         var qstr = url.substring(qix+1);
+         var qarr = qstr.split('&');
+         for (var i = 0; i < qarr.length; i++) {
+            var qent = qarr[i];
+            var eix = qent.indexOf('=');
+            if (eix != -1 && eix < qent.length) {
+               var en = qent.substring(0, eix);
+               var ev = qent.substring(eix+1);
+               // TODO: URL decode ev here
+               for (var j = 0; j < qps.size(); j++) {
+                  var qp = qps.get(j);
+                  if (en.equals(qp.paramName)) {
+                     if (qp.propType == Number_c)
+                        ev = Number.parseInt(ev);
+                     else if (qp.propType != String_c) {
+                        console.error("No converter for query param property type: " + qp.propName + ": " + qa.propType);
+                     }
+                     sc_DynUtil_c.setPropertyValue(this, qp.propName, ev);
+                  }
+               }
+            }
+         }
+      }
+   }
    // Signal to others not to bother refreshing individually - avoids refreshing individual tags when we are going to do it at the page level anyway
    js_Element_c.globalRefreshScheduled = true;
    this.makeRoot();
 }
 
-js_Page_c = sc_newClass("js_Page", js_Page, js_HTMLElement, null);
+js_Page_c = sc_newClass("sc.lang.html.Page", js_Page, js_HTMLElement, null);
 
 js_Page_c.refresh = function() {
    // Do this right before we refresh.  That delays them till after the script code in the page 
@@ -1927,35 +1972,57 @@ js_Page_c.refresh = function() {
    }
 }
 
+js_Page_c.getPageURL = function() {
+   return this.pageURL;
+}
+
+js_Page_c.setPageURL = function(url) {
+   this.pageURL = url;
+}
+
+js_Page_c.getPageBaseURL = function() {
+   if (this.pageURL == null)
+      return null;
+   var ix = this.pageURL.indexOf("?");
+   if (ix == -1)
+      return this.pageURL;
+   return this.pageURL.substring(0, ix);
+}
+
+js_Page_c.getQueryParamProperties = function() {
+   return this.queryParamProperties;
+}
+
 function js_Div() {
    js_HTMLElement.call(this);
    this.tagName = "div";
 }
-js_Div_c = sc_newClass("js_Div", js_Div, js_HTMLElement, null);
+js_Div_c = sc_newClass("sc.lang.html.Div", js_Div, js_HTMLElement, null);
 
 function js_Span() {
    js_HTMLElement.call(this);
    this.tagName = "span";
 }
-js_Span_c = sc_newClass("js_Span", js_Span, js_HTMLElement, null);
+js_Span_c = sc_newClass("sc.lang.html.Span", js_Span, js_HTMLElement, null);
 
 function js_Head() {
    js_HTMLElement.call(this);
    this.tagName = "head";
 }
-js_Head_c = sc_newClass("js_Head", js_Head, js_HTMLElement, null);
+js_Head_c = sc_newClass("sc.lang.html.Head", js_Head, js_HTMLElement, null);
 
 function js_Body() {
    js_HTMLElement.call(this);
    this.tagName = "body";
 }
-js_Body_c = sc_newClass("js_Body", js_Body, js_HTMLElement, null);
+js_Body_c = sc_newClass("sc.lang.html.Body", js_Body, js_HTMLElement, null);
 
 function js_Html() {
-   js_Page.call(this);
+   js_Page.call(this); // NOTE: In Java Html extends HTMLElement, not Page because (it seems) we can have an html tag that's not a top-level page - TODO: is this right?  Should we have HtmlPage extend Page on both client and server.
    this.tagName = "html";
 }
-js_Html_c = sc_newClass("js_Html", js_Html, js_HTMLElement, null);
+
+js_Html_c = sc_newClass("sc.lang.html.Html", js_Html, js_HTMLElement, null);
 
 js_Page_c._updateInst = js_Html_c._updateInst = function() {
    // TODO: should we invalidate the body here?
@@ -1965,7 +2032,7 @@ function js_HtmlPage() {
    js_Html.call(this);
 }
 
-js_HtmlPage_c = sc_newClass("js_HtmlPage", js_HtmlPage, js_Html, null);
+js_HtmlPage_c = sc_newClass("sc.lang.html.HtmlPage", js_HtmlPage, js_Html, null);
 
 function js_Img() {
    js_HTMLElement.call(this);
@@ -1976,7 +2043,7 @@ function js_Img() {
 
 js_HtmlPage_c.isPageElement = js_Page_c.isPageElement = function() { return true; }
 
-js_Img_c = sc_newClass("js_Img", js_Img, js_HTMLElement, null);
+js_Img_c = sc_newClass("sc.lang.html.Img", js_Img, js_HTMLElement, null);
 js_Img_c.refreshAttNames = js_HTMLElement_c.refreshAttNames.concat(["src", "width", "height"]);
 
 js_Img_c.setSrc = function(newSrc) {
@@ -2003,7 +2070,7 @@ function js_Style() {
    this.tagName = "style";
 }
 
-js_Style_c = sc_newClass("js_Style", js_Style, js_HTMLElement, null);
+js_Style_c = sc_newClass("sc.lang.html.Style", js_Style, js_HTMLElement, null);
 
 function js_StyleSheet() {
    js_Style.call(this);
@@ -2014,7 +2081,7 @@ function js_StyleSheet() {
    sc_addLoadMethodListener(this, js_StyleSheet_c.refresh);
 }
 
-js_StyleSheet_c = sc_newClass("js_StyleSheet", js_StyleSheet, js_Style, null);
+js_StyleSheet_c = sc_newClass("sc.lang.html.StyleSheet", js_StyleSheet, js_Style, null);
 
 js_StyleSheet_c.initDOM = function() {
    if (!this.elementCreated) {
@@ -2068,7 +2135,7 @@ js_StyleSheet_c.setDOMElement = function(elem) {
    js_HTMLElement_c.setDOMElement.call(this, elem);
 }
 
-js_RefreshAttributeListener_c = sc_newClass("js_RefreshAttributeListener", js_RefreshAttributeListener, sc_AbstractListener, null);
+js_RefreshAttributeListener_c = sc_newClass("sc.lang.html.RefreshAttributeListener", js_RefreshAttributeListener, sc_AbstractListener, null);
 
 js_RefreshAttributeListener_c.valueValidated = function(obj, prop, detail, apply) {
    if (this.scObj.element !== null) {
@@ -2136,7 +2203,7 @@ function js_RepeatListener(scObj) {
    this.scObj = scObj;
 }
 
-js_RepeatListener_c = sc_newClass("js_RepeatListener", js_RepeatListener, sc_AbstractListener, null);
+js_RepeatListener_c = sc_newClass("sc.lang.html.RepeatListener", js_RepeatListener, sc_AbstractListener, null);
 
 js_RepeatListener_c.valueValidated = function(obj, prop, detail, apply) {
    var scObj = this.scObj;
@@ -2148,14 +2215,14 @@ js_RepeatListener_c.valueValidated = function(obj, prop, detail, apply) {
 
 function js_IRepeatWrapper() {}
 
-js_IRepeatWrapper_c = sc_newClass("js_IRepeatWrapper", js_IRepeatWrapper, null, null);
+js_IRepeatWrapper_c = sc_newClass("sc.lang.html.IRepeatWrapper", js_IRepeatWrapper, null, null);
 
 function js_Document(wrapped) {
    js_HTMLElement.call(this);
    this.setDOMElement(wrapped);
 }
 
-js_Document_c = sc_newClass("js_Document", js_Document, js_HTMLElement, null);
+js_Document_c = sc_newClass("sc.lang.html.Document", js_Document, js_HTMLElement, null);
 
 function errorCountChanged() {
    sc_Bind_c.sendChangedEvent(js_Window_c.getWindow(), "errorCount");
@@ -2169,7 +2236,7 @@ function js_Window() {
    window.sc_errorCountListener = errorCountChanged;
 }
 
-js_Window_c = sc_newClass("js_Window", js_Window, null, null);
+js_Window_c = sc_newClass("sc.lang.html.Window", js_Window, null, null);
 
 js_Window_c.getWindow = function() {
    if (js_Window_c.windowWrapper === undefined) {
@@ -2225,3 +2292,39 @@ _c.getObjChildren = function(par) {
       return par.getObjChildren();
    return null;
 }
+
+// Stores the meta-data for each page type
+function js_PageInfo() {
+   this.pageTypeName = null;
+   this.pattern = null;
+   this.pageType = null;
+   this.queryParamProperties = null;
+}
+
+js_PageInfo_c = sc_newClass("sc.lang.html.PageInfo", js_PageInfo, null, null);
+
+js_PageInfo_c.pages = {};
+
+js_PageInfo_c.addPage = function(pageTypeName, pattern, pageType, queryParamProperties) {
+   var pi = new js_PageInfo();
+   pi.pageTypeName = pageTypeName;
+   pi.pattern = pattern;
+   pi.pageType = pageType;
+   pi.queryParamProperties = queryParamProperties;
+   js_PageInfo_c.pages[pageTypeName] = pi;
+}
+
+// Stores the meta-data for each page type
+function js_QueryParamProperty(enclType, propName, paramName, propType, req) {
+   if (arguments.length == 0) {
+      enclType = propName = paramName = null;
+      req = false;
+   }
+   this.enclType = enclType;
+   this.propName = propName;
+   this.paramName = paramName;
+   this.propType = propType;
+   this.required = req;
+}
+
+js_QueryParamProperty_c = sc_newClass("sc.lang.html.QueryParamProperty", js_QueryParamProperty, null, null);

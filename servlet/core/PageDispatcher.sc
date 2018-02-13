@@ -88,12 +88,14 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
    private FilterConfig filterConfig;
 
+   public static final int PAGE_FLAG_URL = 1;
+   public static final int PAGE_FLAG_SYNC = 2;
 
    static class PageEntry {
       String pattern;
       Parselet patternParselet;
       Object pageType;
-      boolean page; // TODO: rename this to dynamic page or something?
+      boolean urlPage; // TODO: rename this to dynamic page or something?
       int priority;
       String lockScope; // The scope name to use for locking.  if null, use the type's scope as the scope for the lock.
       String mimeType;
@@ -109,14 +111,14 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       }
    }
 
-   /** 
+   /**
     * This method is usually called from generated code, attached to an annotation via a mixin-template. It register 
     * a pattern with a page type of an object to handle the request or a class to be created to handle the
     * request.  The priority will typically be provided as the layer position, in case one type overrides another.
     * We are not guaranteed these get called in any order so need to use the priority to decide who gets to listen on that
     * pattern.
     */
-   public static void addPage(String keyName, String pattern, Object pageType, boolean page, int priority, String lockScope, List<QueryParamProperty> queryParamProps) {
+   public static void addPage(String keyName, String pattern, Object pageType, boolean urlPage, boolean doSync, int priority, String lockScope, List<QueryParamProperty> queryParamProps) {
       PageEntry ent = new PageEntry();
       ent.pattern = pattern;
       Object patternRes = Pattern.initPattern(language, pageType, pattern);
@@ -125,13 +127,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       ent.patternParselet = (Parselet) patternRes;
       ent.pageType = pageType;
       ent.priority = priority;
-      ent.page = page;
-      if (pattern.endsWith(".css")) {
-         ent.doSync = false;
-         ent.mimeType = "text/css";
-      }
-      else
-         ent.doSync = page;
+      ent.urlPage = urlPage;
+      ent.doSync = doSync;
+      ent.mimeType = getMimeType(pattern);
       ent.queryParamProps = queryParamProps;
       // Used to use the keyName here as the key but really can only have one per pattern anyway and need a precedence so sc.foo.index can override sc.bar.index.
       // TODO: now that we have multiple PageEntry's supporting each URL, should we have an option to support multiple handlers for the same pattern?  patternFilter=true?
@@ -145,7 +143,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       if (pattern.equals(indexPattern)) {
          if (verbose)
             System.out.println("PageDispatcher: adding index page");
-         addPage("_index_", "/", pageType, page, priority, lockScope, queryParamProps);
+         addPage("_index_", "/", pageType, urlPage, doSync, priority, lockScope, queryParamProps);
       }
    }
 
@@ -169,7 +167,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                boolean allReqFound = true;
                for (QueryParamProperty prop:pageEnt.queryParamProps) {
                   if (prop.required) {
-                     if (queryParams.get(prop.paramName) == null) {
+                     if (queryParams == null || queryParams.get(prop.paramName) == null) {
                         if (verbose)
                            System.out.println("Page - URL pattern: " + pageEnt.pattern + " matches type: " + pageEnt + " - but missing required query parameter:" + prop.paramName);
                         allReqFound = false;
@@ -215,7 +213,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 // first we'll loop through all page objects and figure out which scopes and locks are needed for this request
 // that way we can acquire locks "all or none" to avoid deadlocks.
       for (PageEntry pageEnt:pageEnts) {
-         if (pageEnt.page) {
+         if (pageEnt.urlPage) {
             Object pageType = pageEnt.pageType;
             boolean isObject = ModelUtil.isObjectType(pageType);
 
@@ -319,7 +317,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
       int i = 0;
       for (PageEntry pageEnt:pageEnts) {
-         if (pageEnt.page) {
+         if (pageEnt.urlPage) {
+            boolean doSync = pageEnt.doSync || testMode;
             scopeCtx = curScopeCtx == null ? null : curScopeCtx.scopeContexts.get(i);
             scopeId = scopeCtx == null ? -1 : scopeCtx.getScopeDefinition().scopeId;
 
@@ -338,7 +337,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                   SyncManager.setSyncState(SyncManager.SyncState.RecordingChanges);
             }
 
-            if (pageEnt.doSync) {
+            if (doSync) {
                if (reset) { // When we are loading an initial page, the client state is gone so need to reset the window context state.
                   reset = false;
                   SyncManager.resetContext(WindowScopeDefinition.scopeId);
@@ -346,9 +345,11 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
                SyncManager.beginSyncQueue();
 
-               // Mark the session as a sync session so we know in the sync servlet we can use it without a reset.
-               markSyncSession(session, uri, reset, initial);
             }
+            // Doing this even when doSync is false because we need this to process even basic RPC requests.
+            // TODO: should we have a "pageEnt.doRPC" flag?  We could then break out just the sync code required to
+            // support RPC and put it into a separate module - js.rpc or something like that?
+            markSyncSession(session, uri, reset, initial);
 
             String typeName = ModelUtil.getTypeName(pageType);
             Object inst = null;
@@ -383,7 +384,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                System.out.println(pageTypeStr + " start: " + uri + getTraceInfo(session));
             }
 
-            if (pageEnt.doSync)
+            if (doSync)
                SyncManager.flushSyncQueue();
 
             if (inst != null) {
@@ -511,10 +512,10 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       //LinkedHashSet<String> jsFiles = new LinkedHashSet<String>();
       for (PageEntry pageEnt:pageEnts) {
          Object inst = insts.get(i);
-         if (inst instanceof Element && pageEnt.page) {
+         if (inst instanceof Element && pageEnt.urlPage) {
             needsDyn = true;
 
-            if (pageEnt.doSync)
+            if (pageEnt.doSync || testMode)
                doSync = true;
 
             if (pageEnt.mimeType != null)
@@ -580,10 +581,10 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
          mainPage.outputEndTag(sb);
       }
 
-      int pageBodySize = sb.length();
+      int pageBodySize = sb == null ? 0 : sb.length();
       int initSyncSize = 0;
 
-      if (needsDyn && needsInitialSync && !resetSync && doSync) {
+      if (needsDyn && needsInitialSync && !resetSync) {
          /*
          if (jsFiles.size() > 0) {
             sb.append("\n");
@@ -594,34 +595,35 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
          */
          // Gets the contents of the 'initial sync layer' - i.e. the data to populate the current state for this page.
          // Using the jsHttp destination but force the output to javascript
-         CharSequence initSync = SyncManager.getInitialSync("jsHttp", WindowScopeDefinition.scopeId, resetSync, "js");
          sb.append("\n\n<!-- Init SC JS -->\n");
          sb.append("<script type='text/javascript'>\n");
          if (sc.bind.Bind.trace) {
             sb.append("sc_Bind_c.trace = true;\n");
          }
-         // Here are in injecting code into the generated script for debugging - if you enable logging on the server, it's on in the client automatically
-         if (SyncManager.trace) {
-            sb.append("sc_SyncManager_c.trace = true;\n");
+         sb.append("   var sc_windowId = " + ctx.getWindowId() + ";\n");
+         if (doSync) {
+            CharSequence initSync = SyncManager.getInitialSync("jsHttp", WindowScopeDefinition.scopeId, resetSync, "js");
+               // Here are in injecting code into the generated script for debugging - if you enable logging on the server, it's on in the client automatically
+            if (SyncManager.trace) {
+               sb.append("sc_SyncManager_c.trace = true;\n");
+            }
+            if (SyncManager.verbose) {
+               sb.append("sc_SyncManager_c.verbose = true;\n");
+            }
+            if (SyncManager.traceAll) {
+               sb.append("sc_SyncManager_c.traceAll = true;\n");
+            }
+            // Propagate this option when we load up the page so the client has the same defaultLanguage that we do (if it's not the default)
+            if (!SyncManager.defaultLanguage.equals("json"))
+               sb.append("sc_SyncManager_c.defaultLanguage = \"" + SyncManager.defaultLanguage + "\";\n");
+            if (initSync != null && (initSyncSize = initSync.length()) > 0) {
+               sb.append(JSRuntimeProcessor.SyncBeginCode);
+               sb.append(initSync);
+               sb.append(JSRuntimeProcessor.SyncEndCode);
+            }
          }
-         if (SyncManager.verbose) {
-            sb.append("sc_SyncManager_c.verbose = true;\n");
-         }
-         if (SyncManager.traceAll) {
-            sb.append("sc_SyncManager_c.traceAll = true;\n");
-         }
-         // Propagate this option when we load up the page so the client has the same defaultLanguage that we do (if it's not the default)
-         if (!SyncManager.defaultLanguage.equals("json"))
-            sb.append("sc_SyncManager_c.defaultLanguage = \"" + SyncManager.defaultLanguage + "\";\n");
          if (trace || Element.trace) {
             sb.append("js_Element_c.trace = true;\n");
-         }
-         // TODO: do we need this here anymore?  It's also in the HtmlPage template at the top of the page
-         sb.append("   var sc_windowId = " + ctx.getWindowId() + ";\n");
-         if (initSync != null && (initSyncSize = initSync.length()) > 0) {
-            sb.append(JSRuntimeProcessor.SyncBeginCode);
-            sb.append(initSync);
-            sb.append(JSRuntimeProcessor.SyncEndCode);
          }
          sb.append("</script>");
       }
@@ -653,7 +655,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
       ScopeEnvironment.setAppId(URLPath.getAppNameFromURL(uri));
       try {
-         boolean isPage = false;
+         boolean isUrlPage = false;
          List<PageEntry> pageEnts = getPageEntries(uri, queryParams);
 
          if (pageEnts != null && pageEnts.size() > 0) {
@@ -665,13 +667,13 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
             PageEntry pageEnt = pageEnts.get(0);
 
-            isPage = pageEnt.page;
+            isUrlPage = pageEnt.urlPage;
 
             // Run any jobs that came in not in a request (e.g. through the command line or scheduled jobs)
             // Do this before we set up the session and the context
             ServletScheduler.execBeforeRequestJobs();
 
-            if (isPage && ctx == null)
+            if (isUrlPage && ctx == null)
                ctx = Context.initContext(request, response, queryParams);
 
             LayeredSystem sys = LayeredSystem.getCurrent();
@@ -718,7 +720,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                if (verbose)
                   System.out.println("Page complete: session: " + getTraceInfo(session) + traceBuffer + " for " + getRuntimeString(startTime));
 
-               if (sys != null && pageEnt.doSync) {
+               if (sys != null && (pageEnt.doSync || testMode)) {
                   // In test mode only we accept the scopeAlias parameter, so we can attach to a specific request's scope context from the test script
                   String scopeContextName = !sys.options.testMode ? null : request.getParameter("scopeContextName");
                   // If the command line interpreter is enabled, use a scopeContextName so the command line is sync'd up to the scope of the page page we rendered
@@ -742,7 +744,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                }
             }
          }
-         return pageEnts != null && pageEnts.size() > 0 && isPage;
+         return pageEnts != null && pageEnts.size() > 0 && isUrlPage;
       }
       finally {
          try {
@@ -925,9 +927,10 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
    public void typeCreated(Object newType) {
       Object urlAnnot = DynUtil.getAnnotation(newType, "sc.html.URL");
       if (urlAnnot != null) {
-          String newTypeName = DynUtil.getTypeName(newType, false);
-          Boolean isPageObj = (Boolean) DynUtil.getAnnotationValue(newType, "sc.html.URL", "page");
-          boolean isPage = isPageObj == null || isPageObj;
+         String newTypeName = DynUtil.getTypeName(newType, false);
+         Boolean isPageObj = (Boolean) DynUtil.getAnnotationValue(newType, "sc.html.URL", "page");
+         boolean isURLPage = isPageObj == null || isPageObj;
+         boolean needsSync = DynUtil.needsSync(newType);
           String pattern = (String) DynUtil.getAnnotationValue(newType, "sc.html.URL", "pattern");
           String lockScope = (String) DynUtil.getAnnotationValue(newType, "sc.html.URL", "lockScope");
           String resultSuffix = (String) DynUtil.getInheritedAnnotationValue(newType, "sc.obj.ResultSuffix", "value");
@@ -935,8 +938,15 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
              pattern = "/" + sc.type.CTypeUtil.getClassName(newTypeName) + (resultSuffix == null ? "" : "." + resultSuffix);
           }
           System.out.println("*** Adding page type: " + newType);
-          addPage(newTypeName, pattern, newType, isPage, DynUtil.getLayerPosition(newType), lockScope, QueryParamProperty.getQueryParamProperties(newType));
+          addPage(newTypeName, pattern, newType, isURLPage, needsSync,
+                  DynUtil.getLayerPosition(newType), lockScope, QueryParamProperty.getQueryParamProperties(newType));
       }
+   }
+
+   public static String getMimeType(String pattern) {
+      if (pattern.endsWith(".css"))
+         return "text/css";
+      return "text/html";
    }
 
    public void typeRemoved(Object oldType) {
