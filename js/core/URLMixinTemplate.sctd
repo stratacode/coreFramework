@@ -1,0 +1,19 @@
+<%@ import sc.lang.html.QueryParamProperty; %><%
+   Boolean subTypesOnly = (Boolean) getAnnotationValue("sc.html.URL", "subTypesOnly");
+   if (!isAbstract && (subTypesOnly == null || !subTypesOnly)) {
+      Boolean isPageObj = (Boolean) getAnnotationValue("sc.html.URL", "page");
+      String url = (String) getAnnotationValue("sc.html.URL", "pattern");
+      if (url == null) {
+         String suffix = getTemplateSuffix();
+         if (suffix != null)
+            url = "/" + typeBaseName + "." + suffix;
+         else
+            url = "/" + typeBaseName;
+      }
+%>
+        
+static {
+   sc.lang.html.PageInfo.addPage("<%= typeName %>", "<%= url %>", <%= typeIsDynamic ? "sc.dyn.DynUtil.findType(\"" + typeName + "\")" : typeBaseName + ".class" %>, <%= QueryParamProperty.toValueString(objType) %>);
+}
+
+<% } %>

@@ -29,5 +29,18 @@ public js.core extends html.core, js.prebuild, js.sys, js.util, sys.sccore {
       // So JS code can use these scopes which are defined in the servlet.core layer
       registerScopeAlias("session", "global");
       registerScopeAlias("appSession", "appGlobal");
+
+      // Adds a static code snippet to register the page when you annotate a class with @URL.
+      // If we happen to register an inner class the addPage still goes on the parent type
+      sc.lang.DefaultAnnotationProcessor urlProc = new sc.lang.DefaultAnnotationProcessor();
+      urlProc.staticMixinTemplate = "sc.js.URLMixinTemplate";
+      urlProc.validOnField = false;
+      urlProc.validOnClass = true;
+      urlProc.validOnObject = true;
+      urlProc.initOnStartup = true;
+      urlProc.typeGroupName = "URLTypes";
+      urlProc.inherited = true; // Include any sub-type which has URL in the type group
+      urlProc.skipAbstract = true; // Don't include any abstract classes or templates with abstract="true"
+      registerAnnotationProcessor("sc.html.URL", urlProc);
    }
 }
