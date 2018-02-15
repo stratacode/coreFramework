@@ -394,7 +394,7 @@ public class AssignmentBinding extends DestinationListener {
       rhsBinding.activate(state, obj, true);
 
       if (state) {
-         if (!valid && !chained)
+         if (!valid)
             reactivate(obj);
       }
       else // TODO: required because bindings when deactivated do not always deliver events.  Could be fixed if they invalidate the parent during the re-activation process when their value is changed.  The goal being that if you switch back and forth you do not have to recache the world.  See SelectorBinding as well

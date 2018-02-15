@@ -493,7 +493,7 @@ public class SelectorBinding extends DestinationListener {
       }
 
       if (state) {
-         if (!valid && !chained)
+         if (!valid)
             reactivate(obj);
       }
       else  // TODO: see TODO in VariableBinding - should be able to avoid this if we recode the activate process a little

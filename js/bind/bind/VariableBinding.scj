@@ -493,6 +493,8 @@ public class VariableBinding extends DestinationListener {
 
       if (activated)
          valid = true;
+      else
+         changed = true; // Need to propagate to parent when not inactivated in case we need to...
 
       if (null != dstProp) {
 
@@ -590,6 +592,8 @@ public class VariableBinding extends DestinationListener {
          applyBinding(false);
          return true;
       }
+      else if (!activated)
+         applyBinding(true);
       return false;
    }
 
@@ -695,13 +699,15 @@ public class VariableBinding extends DestinationListener {
       int i = 0;
       for (Object param:boundProps) {
          Bind.activate(param, state, bindingParent, true);
-         //if (state && (i == 0 || (bindingParent != null && bindingParent != UNSET_VALUE_SENTINEL)))
-         //   bindingParent = param.getPropertyValue(bindingParent);
+         if (state && (i == 0 || (bindingParent != null && bindingParent != UNSET_VALUE_SENTINEL)))
+            bindingParent = getBoundProperty(bindingParent, i);
+         else
+            bindingParent = null; // This is ony used for state = true - so that we can revalidate the tree
          i++;
       }
 
       if (state) {
-         if (!valid && !chained)
+         if (!valid)
             reactivate(obj);
       }
       else // TODO: required because bindings when deactivated do not always deliver events.  Could be fixed if they invalidate the parent during the re-activation process when their value is changed.  The goal being that if you switch back and forth you do not have to recache the world.  See SelectorBinding as well
