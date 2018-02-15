@@ -6,8 +6,6 @@ import sc.sync.SyncManager;
 import sc.sync.SyncDestination;
 import sc.sync.SyncPropOptions;
 
-import sc.bind.BindingContext;
-
 import java.util.Arrays;
 
 import sc.dyn.DynUtil;

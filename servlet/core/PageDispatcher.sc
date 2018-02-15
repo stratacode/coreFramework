@@ -627,7 +627,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
          }
          sb.append("</script>");
       }
-      String pageOutput = sb.toString();
+      String pageOutput = sb == null ? "" : sb.toString();
 
       if (traceBuffer != null) {
          if (SyncManager.traceAll) {
