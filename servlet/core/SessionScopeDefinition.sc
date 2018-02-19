@@ -9,6 +9,9 @@ object SessionScopeDefinition extends ScopeDefinition {
    {
       addParentScope(GlobalScopeDefinition.getGlobalScopeDefinition());
       addParentScope(AppGlobalScopeDefinition.getAppGlobalScopeDefinition());
+      // If no more specific listener is registered we'll collect
+      // binding events here.  We might not have a global definition
+      eventListenerCtx = true;
    }
 
    SessionScopeDefinition() {

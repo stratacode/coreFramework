@@ -67,7 +67,9 @@ public class LayeredSystem {
       @Constant
       public boolean headless = false;  
       @Constant
-      public boolean testVerifyMode = false;  
+      public boolean testVerifyMode = false;
+      @Constant
+      public boolean testDebugMode = false;
    }
 
    public Layer getLayerByDirName(String dirName) {
