@@ -209,6 +209,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       List<ScopeContext> scopeCtxs = new ArrayList<ScopeContext>(sz);
       List<Object> locks = new ArrayList<Object>(); // These are right now always Lock objects but not putting that into the api so it's more portable to other platforms like JS
       String sysLockInfo = null;
+      boolean windowAdded = false;
 
 // first we'll loop through all page objects and figure out which scopes and locks are needed for this request
 // that way we can acquire locks "all or none" to avoid deadlocks.
@@ -282,6 +283,13 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
             scopeNames.add(scopeName);
             scopeCtxs.add(scopeCtx);
+            if (scopeName.equals("window"))
+               windowAdded = true;
+         }
+         if (!windowAdded && ctx != null) {
+            scopeNames.add("window");
+            scopeCtxs.add(ctx.getWindowScopeContext(true));
+            // presumably we've already locked at the session, app, global, etc level so no need to lock the lower-level window
          }
       }
 
@@ -720,7 +728,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                if (verbose)
                   System.out.println("Page complete: session: " + getTraceInfo(session) + traceBuffer + " for " + getRuntimeString(startTime));
 
-               if (sys != null && (pageEnt.doSync || testMode)) {
+               if (sys != null && isUrlPage && (pageEnt.doSync || testMode)) {
                   // In test mode only we accept the scopeAlias parameter, so we can attach to a specific request's scope context from the test script
                   String scopeContextName = !sys.options.testMode ? null : request.getParameter("scopeContextName");
                   // If the command line interpreter is enabled, use a scopeContextName so the command line is sync'd up to the scope of the page page we rendered
