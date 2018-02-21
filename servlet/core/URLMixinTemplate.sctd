@@ -2,6 +2,8 @@
    if (!isAbstract) {
       Boolean isPageObj = (Boolean) getAnnotationValue("sc.html.URL", "page");
       boolean isPage = isPageObj == null || isPageObj;
+      Boolean isResourceObj = (Boolean) getAnnotationValue("sc.html.URL", "resource");
+      boolean isResource = isResourceObj != null && isResourceObj;
       boolean isSync = objType.needsSync();
       String url = (String) getAnnotationValue("sc.html.URL", "pattern");
       String lockScope = (String) getAnnotationValue("sc.html.URL", "lockScope");
@@ -16,7 +18,7 @@
 %>
         
 static {
-   sc.servlet.PageDispatcher.addPage("<%= typeName %>", "<%= url %>", <%= typeIsDynamic ? "sc.dyn.DynUtil.findType(\"" + typeName + "\")" : typeBaseName + ".class" %>, <%= isPage %>, <%= isSync %>, <%= layer.layerPosition %>, <%= lockScope == null ? "null" : '"' + lockScope + '"' %>, <%= QueryParamProperty.toValueString(objType) %>);
+   sc.servlet.PageDispatcher.addPage("<%= typeName %>", "<%= url %>", <%= typeIsDynamic ? "sc.dyn.DynUtil.findType(\"" + typeName + "\")" : typeBaseName + ".class" %>, <%= isPage %>, <%= isSync %>, <%= isResource %>, <%= layer.layerPosition %>, <%= lockScope == null ? "null" : '"' + lockScope + '"' %>, <%= QueryParamProperty.toValueString(objType) %>);
 }
 
 <% } %>

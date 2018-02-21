@@ -100,6 +100,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       String lockScope; // The scope name to use for locking.  if null, use the type's scope as the scope for the lock.
       String mimeType;
       boolean doSync;
+      boolean resource;
 
       // Stores the list of query parameters (if any) for the given page - created with @QueryParam
       List<QueryParamProperty> queryParamProps;
@@ -118,7 +119,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
     * We are not guaranteed these get called in any order so need to use the priority to decide who gets to listen on that
     * pattern.
     */
-   public static void addPage(String keyName, String pattern, Object pageType, boolean urlPage, boolean doSync, int priority, String lockScope, List<QueryParamProperty> queryParamProps) {
+   public static void addPage(String keyName, String pattern, Object pageType, boolean urlPage, boolean doSync, boolean isResource, int priority, String lockScope, List<QueryParamProperty> queryParamProps) {
       PageEntry ent = new PageEntry();
       ent.pattern = pattern;
       Object patternRes = Pattern.initPattern(language, pageType, pattern);
@@ -128,6 +129,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       ent.pageType = pageType;
       ent.priority = priority;
       ent.urlPage = urlPage;
+      ent.resource = isResource;
       ent.doSync = doSync;
       ent.mimeType = getMimeType(pattern);
       ent.queryParamProps = queryParamProps;
@@ -143,7 +145,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       if (pattern.equals(indexPattern)) {
          if (verbose)
             System.out.println("PageDispatcher: adding index page");
-         addPage("_index_", "/", pageType, urlPage, doSync, priority, lockScope, queryParamProps);
+         addPage("_index_", "/", pageType, urlPage, doSync, isResource, priority, lockScope, queryParamProps);
       }
    }
 
@@ -728,7 +730,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                if (verbose)
                   System.out.println("Page complete: session: " + getTraceInfo(session) + traceBuffer + " for " + getRuntimeString(startTime));
 
-               if (sys != null && isUrlPage && (pageEnt.doSync || testMode)) {
+               // We don't want to register a command context for the '.css' page - i.e. pageEnt.resource = true
+               if (sys != null && isUrlPage && (pageEnt.doSync || (testMode && !pageEnt.resource))) {
                   // In test mode only we accept the scopeAlias parameter, so we can attach to a specific request's scope context from the test script
                   String scopeContextName = !sys.options.testMode ? null : request.getParameter("scopeContextName");
                   // If the command line interpreter is enabled, use a scopeContextName so the command line is sync'd up to the scope of the page page we rendered
@@ -937,7 +940,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       if (urlAnnot != null) {
          String newTypeName = DynUtil.getTypeName(newType, false);
          Boolean isPageObj = (Boolean) DynUtil.getAnnotationValue(newType, "sc.html.URL", "page");
+         Boolean isResourceObj = (Boolean) DynUtil.getAnnotationValue(newType, "sc.html.URL", "resource");
          boolean isURLPage = isPageObj == null || isPageObj;
+         boolean isResource = isResourceObj != null && isResourceObj;
          boolean needsSync = DynUtil.needsSync(newType);
           String pattern = (String) DynUtil.getAnnotationValue(newType, "sc.html.URL", "pattern");
           String lockScope = (String) DynUtil.getAnnotationValue(newType, "sc.html.URL", "lockScope");
@@ -946,7 +951,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
              pattern = "/" + sc.type.CTypeUtil.getClassName(newTypeName) + (resultSuffix == null ? "" : "." + resultSuffix);
           }
           System.out.println("*** Adding page type: " + newType);
-          addPage(newTypeName, pattern, newType, isURLPage, needsSync,
+          addPage(newTypeName, pattern, newType, isURLPage, needsSync, isResource,
                   DynUtil.getLayerPosition(newType), lockScope, QueryParamProperty.getQueryParamProperties(newType));
       }
    }
