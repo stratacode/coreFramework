@@ -18,8 +18,8 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
    sc.layer.LayeredSystem sys; 
    List<URLPath> urlPaths; 
 
-   public int waitForPageTime = 5000;
-   public int waitForRuntimeTime = 5000;
+   public int waitForPageTime = 7000;
+   public int waitForRuntimeTime = 7000;
 
    public boolean loadAllPages = true;
    public boolean recordClientOutput = true;
@@ -53,7 +53,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
          throw new IllegalArgumentException("Server failed to start in 5 seconds");
 
       // To do testing via sync we need the server and the JS runtime at least. 
-      clientSync = sys.serverEnabled && sys.getPeerLayeredSystem("js") != null;
+      clientSync = sys.serverEnabled && sys.getPeerLayeredSystem("js") != null && sys.syncEnabled;
    }
 
    AsyncProcessHandle openBrowser(String url, String pageResultsFile) {
@@ -62,7 +62,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
          if (clientSync) {
             System.out.println("Opening headless sync url: " + url);
 
-            processRes = cmd.execAsync('"' + chromeCmd + '"' + " --headless --auto-open-devtools-for-tabs --disable-gpu --repl --user-profile=/tmp/chrome-test-profile-dir " + url + " > /tmp/chromeHeadless.out");
+            processRes = cmd.execAsync('"' + chromeCmd + '"' + " -headless --auto-open-devtools-for-tabs --disable-gpu --repl --user-profile=/tmp/chrome-test-profile-dir " + url + " > /tmp/chromeHeadless.out");
          }
          // client only hopefully we can just rely on chrome to save the dom with --dump-dom
          else {

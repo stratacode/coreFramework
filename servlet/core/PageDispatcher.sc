@@ -328,7 +328,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       int i = 0;
       for (PageEntry pageEnt:pageEnts) {
          if (pageEnt.urlPage) {
-            boolean doSync = pageEnt.doSync || testMode;
+            // Enable the sync if the page needsSync, or if sync is enabled and we are in test mode (so we can control the client with test scripts).  But if the client has no js.sync layer, it won't have loaded the syncManager and so we can't do the client/server/sync
+            boolean doSync = pageEnt.doSync || (testMode && sys != null && sys.syncEnabled);
             scopeCtx = curScopeCtx == null ? null : curScopeCtx.scopeContexts.get(i);
             scopeId = scopeCtx == null ? -1 : scopeCtx.getScopeDefinition().scopeId;
 
@@ -683,7 +684,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             // Do this before we set up the session and the context
             ServletScheduler.execBeforeRequestJobs();
 
-            if (isUrlPage && ctx == null)
+            if (ctx == null)
                ctx = Context.initContext(request, response, queryParams);
 
             LayeredSystem sys = LayeredSystem.getCurrent();
@@ -706,7 +707,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                insts = initPageObjects(ctx, uri, pageEnts, session, curScopeCtx, true, true, false, sys);
 
                // Something in creating the object rejected, redirected or whatever
-               if (ctx.requestComplete) {
+               if (ctx != null && ctx.requestComplete) {
                   if (trace) {
                      System.out.println("PageDispatcher request handled after page init - aborting processing: " + uri);
                   }
@@ -716,7 +717,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                StringBuilder traceBuffer = new StringBuilder();
                StringBuilder pageOutput = getInitialSync(insts, ctx, uri, pageEnts, traceBuffer);
 
-               if (ctx.requestComplete) {
+               if (ctx != null && ctx.requestComplete) {
                   if (verbose) {
                      System.out.println("PageDispatcher request handled after page init - aborting processing: " + traceBuffer);
                   }
@@ -746,8 +747,10 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             }
             finally {
                try {
-                  // This clears the initial sync flag in case we called setInitialSync(..., true) in initPageObjects.  It also clears the SyncState for the other initPageObjects cases.
-                  SyncManager.setInitialSync("jsHttp", uri, WindowScopeDefinition.scopeId, false);
+                  if (pageEnt.doSync) {
+                     // This clears the initial sync flag in case we called setInitialSync(..., true) in initPageObjects.  It also clears the SyncState for the other initPageObjects cases.
+                     SyncManager.setInitialSync("jsHttp", uri, WindowScopeDefinition.scopeId, false);
+                  }
                }
                catch (RuntimeException exc) {
                   System.err.println("*** Application error processing initial sync for request: " + uri + ": " + exc);

@@ -1972,26 +1972,6 @@ js_Page_c.refresh = function() {
    }
 }
 
-js_Page_c.getPageURL = function() {
-   return this.pageURL;
-}
-
-js_Page_c.setPageURL = function(url) {
-   this.pageURL = url;
-}
-
-js_Page_c.getPageBaseURL = function() {
-   if (this.pageURL == null)
-      return null;
-   var ix = this.pageURL.indexOf("?");
-   if (ix == -1)
-      return this.pageURL;
-   return this.pageURL.substring(0, ix);
-}
-
-js_Page_c.getQueryParamProperties = function() {
-   return this.queryParamProperties;
-}
 
 function js_Div() {
    js_HTMLElement.call(this);
@@ -2042,6 +2022,27 @@ function js_Img() {
 }
 
 js_HtmlPage_c.isPageElement = js_Page_c.isPageElement = function() { return true; }
+
+js_HtmlPage_c.getPageURL = js_Page_c.getPageURL = function() {
+   return this.pageURL;
+}
+
+js_HtmlPage_c.setPageURL = js_Page_c.setPageURL = function(url) {
+   this.pageURL = url;
+}
+
+js_HtmlPage_c.getPageBaseURL = js_Page_c.getPageBaseURL = function() {
+   if (this.pageURL == null)
+      return null;
+   var ix = this.pageURL.indexOf("?");
+   if (ix == -1)
+      return this.pageURL;
+   return this.pageURL.substring(0, ix);
+}
+
+js_HtmlPage_c.getQueryParamProperties = js_Page_c.getQueryParamProperties = function() {
+   return this.queryParamProperties;
+}
 
 js_Img_c = sc_newClass("sc.lang.html.Img", js_Img, js_HTMLElement, null);
 js_Img_c.refreshAttNames = js_HTMLElement_c.refreshAttNames.concat(["src", "width", "height"]);

@@ -106,6 +106,8 @@ public class LayeredSystem {
       return serverEnabled;
    }
 
+   public boolean syncEnabled;
+
    public static String getURLForPath(String name) {
       return null;
    }
