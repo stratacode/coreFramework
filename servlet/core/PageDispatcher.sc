@@ -122,7 +122,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
    public static void addPage(String keyName, String pattern, Object pageType, boolean urlPage, boolean doSync, boolean isResource, int priority, String lockScope, List<QueryParamProperty> queryParamProps) {
       PageEntry ent = new PageEntry();
       ent.pattern = pattern;
-      Object patternRes = Pattern.initPattern(language, pageType, pattern);
+      Object patternRes = Pattern.initPatternParselet(language, pageType, pattern);
       if (!(patternRes instanceof Parselet))
          throw new IllegalArgumentException("Invalid pattern: " + pattern + " error: " + patternRes);
       ent.patternParselet = (Parselet) patternRes;
@@ -202,6 +202,18 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       return matchedEnts;
    }
 
+   public static ScopeDefinition getScopeDefForPageType(Object pageType) {
+      String scopeName = ModelUtil.getInheritedScopeName(null, pageType);
+      if (scopeName != null && scopeName.length() > 0) {
+         ScopeDefinition scopeDef = ScopeDefinition.getScopeByName(scopeName);
+         if (scopeDef == null) {
+            System.err.println("*** Missing ScopeDefinition for scope: " + scopeName);
+         }
+         return scopeDef;
+      }
+      return null;
+   }
+
    public CurrentScopeContext initPageContext(Context ctx, String uri, List<PageEntry> pageEnts, HttpSession session, LayeredSystem sys) {
       String scopeName;
       int scopeId = -1;
@@ -220,16 +232,11 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             Object pageType = pageEnt.pageType;
             boolean isObject = ModelUtil.isObjectType(pageType);
 
-            scopeName = ModelUtil.getInheritedScopeName(null, pageType);
-            if (scopeName != null && scopeName.length() > 0) {
-               ScopeDefinition scopeDef = ScopeDefinition.getScopeByName(scopeName);
-               if (scopeDef == null) {
-                  System.err.println("*** Missing ScopeDefinition for scope: " + scopeName);
-               }
-               else {
-                  scopeId = scopeDef.scopeId;
-                  scopeCtx = scopeDef.getScopeContext(true);
-               }
+            ScopeDefinition scopeDef = getScopeDefForPageType(pageType);
+            if (scopeDef != null) {
+               scopeId = scopeDef.scopeId;
+               scopeCtx = scopeDef.getScopeContext(true);
+               scopeName = scopeDef.name;
             }
 
             if (locks != null && !scopeNames.contains(scopeName)) {
@@ -328,10 +335,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       int i = 0;
       for (PageEntry pageEnt:pageEnts) {
          if (pageEnt.urlPage) {
-            // Enable the sync if the page needsSync, or if sync is enabled and we are in test mode (so we can control the client with test scripts).  But if the client has no js.sync layer, it won't have loaded the syncManager and so we can't do the client/server/sync
+            // Enable sync for the page if it needsSync, or if sync is enabled and we are in test mode (so we can control the client with test scripts).  If the client has no js.sync layer (syncEnabled=false), it won't have loaded the syncManager and so we can't do the client/server/sync
             boolean doSync = pageEnt.doSync || (testMode && sys != null && sys.syncEnabled);
-            scopeCtx = curScopeCtx == null ? null : curScopeCtx.scopeContexts.get(i);
-            scopeId = scopeCtx == null ? -1 : scopeCtx.getScopeDefinition().scopeId;
 
             Object pageType = pageEnt.pageType;
             boolean isObject = ModelUtil.isObjectType(pageType);
@@ -366,22 +371,17 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             Object inst = null;
 
             if (!isObject) {
-               if (scopeId == SessionScopeDefinition.scopeId) {
-                  inst = session.getAttribute(typeName);
-                  if (inst == null) {
-                     inst = ModelUtil.getObjectInstance(pageType);
-                     session.setAttribute(typeName, inst);
-                     // Register this instance by name but don't initialize it.
-                     SyncManager.registerSyncInst(inst, typeName, SessionScopeDefinition.scopeId, false);
-                  }
-               }
-               else {
-                  inst = scopeCtx.getValue(typeName);
-                  if (inst == null) {
-                     inst = ModelUtil.getObjectInstance(pageType);
-                     scopeCtx.setValue(typeName, inst);
-                     // Register this instance by name but don't initialize it.
-                     SyncManager.registerSyncInst(inst, typeName, scopeId, false);
+               ScopeDefinition scopeDef = getScopeDefForPageType(pageType);
+               if (scopeDef != null) {
+                  ScopeContext scopeCtx = scopeDef.getScopeContext(true);
+                  if (scopeCtx != null) {
+                     inst = scopeCtx.getValue(typeName);
+                     if (inst == null) {
+                        inst = ModelUtil.getObjectInstance(pageType);
+                        scopeCtx.setValue(typeName, inst);
+                        // Register this instance by name but don't initialize it.
+                        SyncManager.registerSyncInst(inst, typeName, scopeId, false);
+                     }
                   }
                }
             }

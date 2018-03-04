@@ -26,7 +26,7 @@ public class TestLogFilter {
       parseletList = new Parselet[excludePatterns.length];
 
       for (int i = 0; i < excludePatterns.length; i++) {
-         Object patObj = Pattern.initPattern(language, null, excludePatterns[i]);
+         Object patObj = Pattern.initPatternParselet(language, null, excludePatterns[i]);
          if (patObj instanceof ParseError) {
             System.err.println("*** TestLogFilter - invalid pattern: " + excludePatterns[i] + ": "+ patObj);
          }
