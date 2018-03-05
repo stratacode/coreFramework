@@ -215,7 +215,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
    }
 
    public CurrentScopeContext initPageContext(Context ctx, String uri, List<PageEntry> pageEnts, HttpSession session, LayeredSystem sys) {
-      String scopeName;
+      String scopeName = null;
       int scopeId = -1;
       ScopeContext scopeCtx = null;
       int sz = pageEnts.size();
@@ -328,10 +328,6 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       List<Object> insts = new ArrayList<Object>(sz);
       boolean hasInst = false;
 
-      String scopeName;
-      int scopeId = -1;
-      ScopeContext scopeCtx = null;
-
       int i = 0;
       for (PageEntry pageEnt:pageEnts) {
          if (pageEnt.urlPage) {
@@ -380,7 +376,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                         inst = ModelUtil.getObjectInstance(pageType);
                         scopeCtx.setValue(typeName, inst);
                         // Register this instance by name but don't initialize it.
-                        SyncManager.registerSyncInst(inst, typeName, scopeId, false);
+                        SyncManager.registerSyncInst(inst, typeName, scopeDef.scopeId, false);
                      }
                   }
                }
