@@ -6,6 +6,8 @@ import java.util.HashMap;
 import java.util.Date;
 import java.util.Calendar;
 import java.util.Map;
+import java.util.Set;
+import java.util.Collection;
 import java.util.TreeMap;
 import java.util.Iterator;
 
@@ -78,7 +80,7 @@ import javax.servlet.ServletResponse;
 class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener {
    static LinkedHashMap<String,PageEntry> pages = new LinkedHashMap<String,PageEntry>();
 
-   static Language language = SCLanguage.getSCLanguage();
+   static Language language = sc.lang.pattern.URLPatternLanguage.getURLPatternLanguage();
 
    static public String indexPattern = "/index.html";
 
@@ -92,8 +94,10 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
    public static final int PAGE_FLAG_SYNC = 2;
 
    static class PageEntry {
+      String keyName;
       String pattern;
       Parselet patternParselet;
+      Pattern urlPattern;
       Object pageType;
       boolean urlPage; // TODO: rename this to dynamic page or something?
       int priority;
@@ -121,11 +125,13 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
     */
    public static void addPage(String keyName, String pattern, Object pageType, boolean urlPage, boolean doSync, boolean isResource, int priority, String lockScope, List<QueryParamProperty> queryParamProps) {
       PageEntry ent = new PageEntry();
+      ent.keyName = keyName;
       ent.pattern = pattern;
-      Object patternRes = Pattern.initPatternParselet(language, pageType, pattern);
-      if (!(patternRes instanceof Parselet))
+      Object patternRes = Pattern.initPattern(language, pageType, pattern);
+      if (!(patternRes instanceof Pattern))
          throw new IllegalArgumentException("Invalid pattern: " + pattern + " error: " + patternRes);
-      ent.patternParselet = (Parselet) patternRes;
+      ent.urlPattern = (Pattern) patternRes;
+      ent.patternParselet = (Parselet) ent.urlPattern.getParselet(language, pageType);
       ent.pageType = pageType;
       ent.priority = priority;
       ent.urlPage = urlPage;
@@ -969,6 +975,15 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             it.remove();
          }
       }
+   }
+
+   public Collection<PageEntry> getAllPageEntries() {
+      ArrayList<PageEntry> res = new ArrayList<PageEntry>();
+      for (PageEntry ent:pages.values()) {
+         if (!ent.keyName.equals("_index_"))
+           res.add(ent);
+      }
+      return res;
    }
 
 }
