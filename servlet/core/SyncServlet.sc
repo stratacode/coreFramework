@@ -1,5 +1,6 @@
 
 import java.util.LinkedHashMap;
+import java.util.TreeMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.Lock;
 
@@ -106,16 +107,24 @@ class SyncServlet extends HttpServlet {
 
       Context ctx = null;
       try {
-         if (url != null) {
-            ScopeEnvironment.setAppId(URLPath.getAppNameFromURL(url));
+         TreeMap<String,String> queryParams = Context.initQueryParams(request);
+         List<PageDispatcher.PageEntry> pageEnts = pageDispatcher.getPageEntries(url, queryParams);
+         if (pageEnts == null || pageEnts.size() == 0) {
+            try {
+               response.sendError(HttpServletResponse.SC_NOT_FOUND, "No page found for url: " + url + " in sync request");
+            }
+            catch (IOException exc) {}
+            return true;
          }
 
-         ctx = Context.initContext(request, response, null);
-
-         // Did not locate this page
-         List<PageDispatcher.PageEntry> pageEnts = pageDispatcher.getPageEntriesOrError(ctx, url);
          if (pageEnts == null)
             return true;
+
+         PageDispatcher.PageEntry pageEnt = pageEnts.get(0);
+
+         ScopeEnvironment.setAppId(pageEnt.keyName);
+
+         ctx = Context.initContext(request, response, null);
 
          if (verbosePage) 
             System.out.println("Sync request: " + url + PageDispatcher.getTraceInfo(session));

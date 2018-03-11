@@ -145,7 +145,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
          }
 
          if (clientSync) {
-            ScopeEnvironment.setAppId(URLPath.getAppNameFromURL(urlPath.url));
+            ScopeEnvironment.setAppId(urlPath.keyName);
 
             if (scopeContextName != null) {
                if (sc.obj.CurrentScopeContext.waitForReady(scopeContextName, waitForPageTime) == null) {
