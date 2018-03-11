@@ -16,7 +16,7 @@ import java.io.PrintStream;
  * Used by the test scripts to eliminate or filter lines in the log file before we do comparisons
  */
 public class TestLogFilter {
-   public String[] excludePatterns = {"\\[{integerLiteral}/{integerLiteral}.{integerLiteral}:ERROR:{escapedString}"};
+   public String[] excludePatterns = {"\\[{digits}/{digits}.{digits}:ERROR:{escapedString}"};
 
    public Parselet[] parseletList;
 
