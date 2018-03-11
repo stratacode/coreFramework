@@ -34,6 +34,7 @@ class ServletScheduler implements sc.dyn.IScheduler {
          DynUtil.frameworkScheduler = new ServletScheduler();
    }
 
+   // TODO: is this still needed?
    static void execBeforeRequestJobs() {
       Context ctx = Context.getCurrentContext();
       if (ctx != null) {

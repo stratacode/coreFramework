@@ -235,8 +235,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 // that way we can acquire locks "all or none" to avoid deadlocks.
       for (PageEntry pageEnt:pageEnts) {
          if (pageEnt.urlPage) {
+            ScopeEnvironment.setAppId(pageEnt.keyName);
+
             Object pageType = pageEnt.pageType;
-            boolean isObject = ModelUtil.isObjectType(pageType);
 
             ScopeDefinition scopeDef = getScopeDefForPageType(pageType);
             if (scopeDef != null) {
@@ -320,6 +321,12 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       return null;
    }
 
+   public Object getCurrentPageInstance(PageEntry pageEnt) {
+      ScopeEnvironment.setAppId(pageEnt.keyName);
+
+      return DynUtil.resolveName(ModelUtil.getTypeName(pageEnt.pageType), false);
+   }
+
    private static String appendLogStr(String orig, String opt) {
       return orig == null || orig.length() == 0 ? " " + opt : orig + ", " + opt;
    }
@@ -369,10 +376,10 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             // support RPC and put it into a separate module - js.rpc or something like that?
             markSyncSession(session, uri, reset, initial);
 
-            String typeName = ModelUtil.getTypeName(pageType);
             Object inst = null;
 
             if (!isObject) {
+               String typeName = ModelUtil.getTypeName(pageType);
                ScopeDefinition scopeDef = getScopeDefForPageType(pageType);
                if (scopeDef != null) {
                   ScopeContext scopeCtx = scopeDef.getScopeContext(true);
@@ -666,7 +673,6 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
       CurrentScopeContext curScopeCtx = null;
 
-      ScopeEnvironment.setAppId(URLPath.getAppNameFromURL(uri));
       try {
          boolean isUrlPage = false;
          List<PageEntry> pageEnts = getPageEntries(uri, queryParams);
@@ -682,12 +688,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
             isUrlPage = pageEnt.urlPage;
 
-            // Run any jobs that came in not in a request (e.g. through the command line or scheduled jobs)
-            // Do this before we set up the session and the context
-            ServletScheduler.execBeforeRequestJobs();
-
-            if (ctx == null)
-               ctx = Context.initContext(request, response, queryParams);
+            ctx = Context.initContext(request, response, queryParams);
 
             LayeredSystem sys = LayeredSystem.getCurrent();
             if (sys != null && sys.options.autoRefresh) {

@@ -314,8 +314,13 @@ class Context {
    static TreeMap<String,String> initQueryParams(HttpServletRequest request) {
       TreeMap<String,String> queryParams = null;
       String queryString = request.getQueryString();
+      return getQueryParamsFromQueryString(queryString);
+   }
+
+   static TreeMap<String,String> getQueryParamsFromQueryString(String queryString) {
       if (queryString == null)
          return null;
+      TreeMap<String,String> queryParams = null;
       String[] paramStrs = queryString.split("&");
       queryParams = new TreeMap<String,String>();
       for (String paramStr:paramStrs) {
