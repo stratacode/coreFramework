@@ -235,7 +235,6 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 // that way we can acquire locks "all or none" to avoid deadlocks.
       for (PageEntry pageEnt:pageEnts) {
          if (pageEnt.urlPage) {
-            ScopeEnvironment.setAppId(pageEnt.keyName);
 
             Object pageType = pageEnt.pageType;
 
@@ -687,6 +686,10 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             PageEntry pageEnt = pageEnts.get(0);
 
             isUrlPage = pageEnt.urlPage;
+
+            // Must be set before we call Context.initContext
+            if (isUrlPage)
+               ScopeEnvironment.setAppId(pageEnt.keyName);
 
             ctx = Context.initContext(request, response, queryParams);
 

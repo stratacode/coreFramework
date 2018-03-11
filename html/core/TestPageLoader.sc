@@ -153,7 +153,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
                   throw new IllegalArgumentException("Timeout opening url: " + url + " - client never requested scope context: " + scopeContextName); 
                }
             }
-            // for the inital page load, we just use the innerHTML which seems accurate and represents the rendered content from the initial page load
+            // for the initial page load, we just use the innerHTML which seems accurate and represents the rendered content from the initial page load
             saveURL(urlPath, pageResultsFile, getClientBodyHTML());
          }
       }
