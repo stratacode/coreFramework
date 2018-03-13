@@ -240,10 +240,16 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
             ScopeDefinition scopeDef = getScopeDefForPageType(pageType);
             if (scopeDef != null) {
-               scopeId = scopeDef.scopeId;
                scopeCtx = scopeDef.getScopeContext(true);
-               scopeName = scopeDef.name;
             }
+            else {
+               if (verbose)
+                  System.out.println("*** No scope defined for page type: " + pageType + " matched by url: " + uri + " - using request scope");
+               scopeDef = RequestScopeDefinition.getRequestScopeDefinition();
+            }
+            scopeName = scopeDef.name;
+            if (scopeName == null)
+               scopeName = scopeDef.aliases.get(0); // "global"
 
             if (locks != null && !scopeNames.contains(scopeName)) {
                // For now all dyn types are synchronized globally because we do not have proper synchronization around loading new types (but we should just like class loader)
@@ -298,7 +304,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
             scopeNames.add(scopeName);
             scopeCtxs.add(scopeCtx);
-            if (scopeName.equals("window"))
+            if (scopeName != null && scopeName.equals("window"))
                windowAdded = true;
          }
          if (!windowAdded && ctx != null) {
