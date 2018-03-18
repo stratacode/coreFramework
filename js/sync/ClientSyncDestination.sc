@@ -27,7 +27,8 @@ object ClientSyncDestination extends SyncDestination {
 
    {
       // When loaded as a local file on the client, turn off real time since there's no server to talk to
-      if (PTypeUtil.getServerName() == null)
+      String serverName = PTypeUtil.getServerName();
+      if (serverName == null || serverName.equals(""))
          realTime = false;
    }
 

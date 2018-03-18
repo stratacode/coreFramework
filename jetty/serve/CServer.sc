@@ -36,8 +36,7 @@ object CServer extends Server {
             theServer.startShutdown();
             theServer.stop();
          }
-         else
-            System.err.println("*** No jetty server to stop!");
+         // else - we may not have called 'main' in if run 'scc -c ...'
       }
       catch (Exception exc) {
          System.err.println("*** Failed to stop jetty server: " + exc);
