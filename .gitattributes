@@ -1,0 +1,5 @@
+*.scj linguist-language=Java
+*.sc linguist-language=Java
+*.sct linguist-language=Java Server Pages
+*.schtml linguist-language=Java Server Pages
+*.sctd linguist-language=Java Server Pages
