@@ -4,13 +4,15 @@ import java.awt.event.ItemListener;
 import javax.swing.JList;
 import javax.swing.ListCellRenderer;
 import javax.swing.DefaultListCellRenderer;
+import sc.type.TypeUtil;
+import sc.type.IBeanMapper;
 
 @Component
 public class JComboBox extends javax.swing.JComboBox implements ComponentStyle {
-   static sc.type.IBeanMapper selectedItemProperty = sc.type.TypeUtil.getPropertyMapping(JComboBox.class, "selectedItem");
-   static sc.type.IBeanMapper selectedIndexProperty = sc.type.TypeUtil.getPropertyMapping(JComboBox.class, "selectedIndex");
-   static sc.type.IBeanMapper userSelectedItemProperty = sc.type.TypeUtil.getPropertyMapping(JComboBox.class, "userSelectedItem");
-   static sc.type.IBeanMapper preferredSizeProperty = sc.type.TypeUtil.getPropertyMapping(JComboBox.class, "preferredSize");
+   static IBeanMapper selectedItemProperty = TypeUtil.getPropertyMapping(JComboBox.class, "selectedItem");
+   static IBeanMapper selectedIndexProperty = TypeUtil.getPropertyMapping(JComboBox.class, "selectedIndex");
+   static IBeanMapper userSelectedItemProperty = TypeUtil.getPropertyMapping(JComboBox.class, "userSelectedItem");
+   static IBeanMapper preferredSizeProperty = TypeUtil.getPropertyMapping(JComboBox.class, "preferredSize");
    {
       // Swing does not support binding events on its text property.
       addItemListener(new ItemListener() {
