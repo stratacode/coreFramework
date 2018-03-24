@@ -54,6 +54,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
 
       // To do testing via sync we need the server and the JS runtime at least. 
       clientSync = sys.serverEnabled && sys.getPeerLayeredSystem("js") != null && sys.syncEnabled;
+      System.out.println("TestPageLoader initialized with clientSync: " + clientSync + " headless: " + headless + " for urls: " + urlPaths);
    }
 
    AsyncProcessHandle openBrowser(String url, String pageResultsFile) {
