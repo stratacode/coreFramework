@@ -9,12 +9,12 @@ public js.sync extends js.core {
    public void init() {
       excludeRuntimes("java", "gwt", "android");
 
-      layeredSystem.syncEnabled = true;
+      if (activated)
+         layeredSystem.syncEnabled = true;
    }
 
    public void start() {
       sc.layer.LayeredSystem system = getLayeredSystem();
-
 
       if (system.runtimeProcessor instanceof sc.lang.js.JSRuntimeProcessor)
           ((sc.lang.js.JSRuntimeProcessor) system.runtimeProcessor).destinationName = "jsHttp";
