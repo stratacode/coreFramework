@@ -13,10 +13,17 @@ import java.io.InputStreamReader;
 import java.io.PrintStream;
 
 /**
- * Used by the test scripts to eliminate or filter lines in the log file before we do comparisons
+ * Used by the test scripts to eliminate or filter lines in the log file before we check the output
+ * For example, if there's a date, build number or error message which has an object id you can choose to
+ * either ignore it, or match it by an algorithm, or replace the variable parts with something consistent - i.e. a date with the string 'date'
  */
 public class TestLogFilter {
-   public String[] excludePatterns = {"\\[{digits}/{digits}.{digits}:ERROR:{escapedString}"};
+   public String[] excludePatterns = {
+                                // chrome error messages - weird errors show up in headless chrome so ignoring - turns out this is probably only needed for the chrome std-out log which hasn't been that helpful so far
+                                "\\[{digits}/{digits}.{digits}:ERROR:{escapedString}",
+                                // scc build stamps for when you run -v
+                                "   scc version: v{digits}.{digits}.{digits}-{identifier}.b{digits}@{escapedString}"
+                                    };
 
    public Parselet[] parseletList;
 
