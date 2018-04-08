@@ -37,7 +37,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
    public TestPageLoader(AbstractInterpreter cmd) {
       this.cmd = cmd;
       this.sys = cmd.system;
-      this.urlPaths = sys.getURLPaths();
+      this.urlPaths = sys.buildInfo.getURLPaths();
       this.headless = sys.options.headless;
 
       // Disable these timeouts when we are debugging the program

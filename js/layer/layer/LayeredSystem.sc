@@ -96,10 +96,6 @@ public class LayeredSystem {
       return current;
    }
 
-   public static List<URLPath> getURLPaths() {
-      return null;
-   }
-
    public boolean serverEnabled;
 
    public boolean getServerEnabled() {
