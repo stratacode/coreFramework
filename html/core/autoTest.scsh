@@ -16,7 +16,7 @@ mkdir -p "$TEST_PAGES_DIR"
 <%
   // A simple script which opens up each of the root pages, one by one
   LayeredSystem sys = LayeredSystem.getCurrent();
-  List<URLPath> paths = sys.getURLPaths();
+  List<URLPath> paths = sys.buildInfo.getURLPaths();
   if (paths != null) {
      for (URLPath path:paths) {
          String url = path.cleanURL(!sys.serverEnabled);
