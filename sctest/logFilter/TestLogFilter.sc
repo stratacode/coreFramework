@@ -22,7 +22,7 @@ public class TestLogFilter {
                                 // chrome error messages - weird errors show up in headless chrome so ignoring - turns out this is probably only needed for the chrome std-out log which hasn't been that helpful so far
                                 "\\[{digits}/{digits}.{digits}:ERROR:{escapedString}",
                                 // scc build stamps for when you run -v
-                                "   scc version: v{digits}.{digits}.{digits}-{identifier}.b{digits}@{escapedString}"
+                                "{whitespace}scc version: v{digits}.{digits}.{digits}-{identifier}.b{digits}@{escapedString}"
                                     };
 
    public Parselet[] parseletList;
