@@ -116,6 +116,8 @@ public class LayeredSystem {
       return null;
    }
 
+   public BuildInfo buildInfo;
+
    private class FetchTypeResponseListener implements IResponseListener {
       String typeName;
       IResponseListener wrapped;
