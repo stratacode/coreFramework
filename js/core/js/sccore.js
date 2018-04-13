@@ -66,7 +66,7 @@ function sc_newClass(typeName, newConstr, extendsClass, implements) {
 
 function sc_newInnerClass(typeName, newConstr, outerClass, extendsClass, implements) {
    if (sc$classTable[typeName])
-      sc_logConsole("redefining class with type name: " + typeName);
+      sc_logConsole("Warning: class: " + typeName + " already defined in another js file - May need @JSSettings to specify a shared jsModuleFile for this type.");
 
    function $clProto() {}; 
 
