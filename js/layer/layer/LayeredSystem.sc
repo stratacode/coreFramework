@@ -11,10 +11,11 @@ import java.util.HashMap;
 
 import sc.type.IResponseListener;
 
-/** The client view of the LayeredSystem which is a subset of the real LayeredSystem
- * TODO: should be using layers to keep this class in sync with the original but that will require building SC with SC which has some downsides
+/** The client view of the LayeredSystem which is a subset of the real LayeredSystem.  Used to store the synchronized info from the server, and for the client
+ * to update server options, and get client-views of the layer and type metadata from the server.
+ * TODO: we should be using layers to keep this class in sync with the original but that will require building SC with SC which has some downsides
  */
-//@Sync(onDemand=true)
+//@Sync(onDemand=true) - this is what the server sets via the API in code
 public class LayeredSystem {
    public List<Layer> layers;
 
@@ -28,49 +29,6 @@ public class LayeredSystem {
 
    @Constant
    public Options options = new Options();
-
-   @Sync(onDemand=true)
-   public static class Options {
-      public boolean buildAllFiles;            // Re-generate all source files when true.  The default is to use dependencies to only generate changed files.
-      public boolean buildAllLayers;           // When true, do not inherit files from previous layers.  The buildDir will have all java files, even from layers that are already compiled
-      public boolean noCompile;
-      @Constant
-      public boolean verbose = false;          // Controls debug level verbose messages
-      public boolean info = true;
-      public boolean debug = true;             // Controls whether java files compiled by this system debuggable
-      public boolean crossCompile = false;
-      public boolean runFromBuildDir = false;  // Change to the buildDir before running the command
-      public boolean runScript = false;
-      public boolean createNewLayer = false;
-      public boolean dynamicLayers = false;
-      public boolean allDynamic = false;       // -dynall: like -dyn but all layers included by the specified layers are also made dynamic
-      /** When true, we maintain the reverse mapping from type to object so that when certain type changes are made, we can propagate those changes to all instances */
-      @Constant
-      public boolean liveDynamicTypes = true;
-      /** When you have multiple build layers, causes each subsequent layer to get all source/class files from the previous. */
-      @Constant
-      public boolean useCommonBuildDir = false;
-      @Constant
-      public String buildDir;
-      @Constant
-      public String buildSrcDir;
-      @Constant
-      public String recordFile; // File used to record script by default
-      @Constant
-      public String restartArgsFile;
-      @Constant
-      public boolean compileOnly = false;  // Enabled with the -c option - only compile, do not run either main methods or runCommands.
-      @Constant
-      public String testScriptName = null; 
-      @Constant
-      public String testResultsDir = null;  
-      @Constant
-      public boolean headless = false;  
-      @Constant
-      public boolean testVerifyMode = false;
-      @Constant
-      public boolean testDebugMode = false;
-   }
 
    public Layer getLayerByDirName(String dirName) {
       if (layers == null)
