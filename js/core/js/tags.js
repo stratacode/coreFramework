@@ -128,6 +128,52 @@ js_Element_c.escBody = function(input) {
          .replace(/'/g, "&#039;");
 }
 
+js_Element_c.getRelURL = function(srcRelPath, urlPath) {
+   var pref = js_Element_c.getRelPrefix(srcRelPath);
+   return pref + (pref.endsWith("/") ? "" : "/") + urlPath;
+}
+
+// JS version of Element.getRelPrefix on server.  Basically, need to convert relative URLs in code on the
+// client based on the current URL path name.  This returns the prefix to append into a URL that's reference
+// comes from srcRelPath.
+js_Element_c.getRelPrefix = function(srcRelPath) {
+   if (srcRelPath == null)
+      srcRelPath = "";
+   var curRelPath = window.location.pathname;
+   if (curRelPath.endsWith("/") && curRelPath.length > 1)
+       curRelPath = curRelPath.substring(0, curRelPath.length - 1);
+   var ix = curRelPath.lastIndexOf('/');
+   if (ix == -1)
+      return srcRelPath;
+   curRelPath = curRelPath.substring(0, ix);
+   if (curRelPath == srcRelPath)
+      return srcRelPath;
+
+   var curRelDirs = curRelPath.split("/");
+   var srcRelDirs = srcRelPath.length == 0 ? [] : srcRelPath.split("/");
+
+   var matchIx = -1;
+   var matchLen = Math.min(curRelDirs.length, srcRelDirs.length);
+   for (var i = 0; i < matchLen; i++) {
+      if (curRelDirs[i] == srcRelDirs[i])
+         matchIx = i;
+      else
+         break;
+   }
+   var relPath = new jv_StringBuilder();
+   for (var i = curRelDirs.length - 1; i > matchIx; i--) {
+      relPath.append("../");
+   }
+   for (var i = matchIx + 1; i < srcRelDirs.length; i++) {
+      var srcRelDir = srcRelDirs[i];
+      if (srcRelDir.length > 0) {
+         relPath.append(srcRelDir);
+         relPath.append("/");
+      }
+   }
+   return relPath.toString();
+}
+
 // Hide this node in the editor - paralles the same annotation on Element in Java
 js_Element_c._PT = {parentNode:{EditorSettings:{visible:false}}};
 

@@ -2,7 +2,7 @@
  * Snippet to be inserted for each object definition which extends the android View class
  * Must be inside of an Activity component.
  */
-<% if (rootName == null) 
+<% if (rootName == null)  // rootName is the object name of the root object when this is a child - in this case, a ref to the outer-most Activity in which we are defined
       throw new IllegalArgumentException("Objects of type: " + typeName + 
                                          " must be children of an Activity/Service"); %>
 <% if (!overrideField && !overrideGet) { %>

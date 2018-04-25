@@ -1,3 +1,4 @@
+/** Wraps javax.swing.JPanel to make it a bindable StrataCode component, where child objects become managed child widgets */
 @Component
 @CompilerSettings(objectTemplate="javax.swing.JComponentInit", newTemplate="javax.swing.JComponentNew", dynChildManager="sc.swing.SwingDynChildManager")
 public class JPanel extends javax.swing.JPanel {
