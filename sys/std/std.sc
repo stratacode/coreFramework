@@ -6,12 +6,14 @@ sys.std {
    compiledOnly = true;
 
    // Files always passed through without path modification, always the default processor
+   /* Now we add 'scr' as a language for the IDE
    object simpleFileProcessor extends LayerFileProcessor {
       prependLayerPackage = false;
       useSrcDir = false;
       extensions = {"scr"};
       processInAllLayers = true;
    }
+   */
 
    object configFileProcessor extends LayerFileProcessor {
       prependLayerPackage = false;

@@ -1,9 +1,18 @@
-<%@ 
-// Exposes these components as a top-level page via the default URL, e.g. TypeName.html   Override the URL pattern, apply URL properties via the URL setting
-@URL(page=true, subTypesOnly=true) 
+<%@
+/**
+ * This page is the default base for all schtml files with an enclosing html tag that extend this layer.
+ * It includes any necessary Javascript files, defines the window id, register the page's URL with the PageDispatcher using the @URL annotation
+ * and sets the default lifecycle of the tag object.
+ */
+// Expose each page with a URL based on their file path, e.g. fileDir/fileName.html
+@URL(page=true, subTypesOnly=true)
+// Set the lifecycle so we store one instance for each page (or app), for each session
 @sc.obj.Scope(name="appSession")
+// Init on startup
 @MainInit(subTypesOnly=true)
-@sc.js.JSSettings(jsModulePattern="js/<%= typeName %>.js", dependentJSFiles="js/tags.js") %>
+// For the JS runtime, each page by default is deployed in it's own .js file and will include the framework js/tags.js file as a dependency
+@sc.js.JSSettings(jsModulePattern="js/<%= typeName %>.js", dependentJSFiles="js/tags.js")
+%>
 <!DOCTYPE html>
 <html abstract="true">
    <head serverContent="true">

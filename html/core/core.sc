@@ -58,7 +58,7 @@ html.core extends sys.std {  // Extending sys.std because we override the standa
    }
 
    object cssLanguage extends sc.lang.CSSLanguage {
-      extensions = {"scss"};
+      extensions = {"sccss"};
 
       compiledTemplate = true;
       postBuildTemplate = true;
@@ -75,7 +75,7 @@ html.core extends sys.std {  // Extending sys.std because we override the standa
 
       resultSuffix = "css";
       // Use processPrefix here so that the processedName is computed as a regular java type
-      // name so we can replace scss files with sc files.
+      // name so we can replace sccss files with sc files.
       //processPrefix = "web";
       srcPathTypes = {null, "web"};
 
