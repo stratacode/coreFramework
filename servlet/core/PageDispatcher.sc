@@ -142,11 +142,21 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       // Used to use the keyName here as the key but really can only have one per pattern anyway and need a precedence so sc.foo.index can override sc.bar.index.
       // TODO: now that we have multiple PageEntry's supporting each URL, should we have an option to support multiple handlers for the same pattern?  patternFilter=true?
       PageEntry oldEnt = pages.get(pattern);
-      if (oldEnt == null || oldEnt.priority < priority)
+      boolean added = false;
+      if (oldEnt == null || oldEnt.priority < priority) {
+         added = true;
          pages.put(pattern, ent);
-
-      if (verbose)
-         System.out.println("PageDispatcher: new page id: " + keyName + " url:" + pattern + " type: " + ModelUtil.getTypeName(pageType) + ")");
+         if (verbose) {
+            if (oldEnt == null)
+               System.out.println("PageDispatcher: new page id: " + keyName + " url:" + pattern + " type: " + ModelUtil.getTypeName(pageType) + ")");
+            else
+               System.out.println("PageDispatcher: overriding page id: " + keyName + " url:" + pattern + " new type: " + ModelUtil.getTypeName(pageType) + ")" + " replaced type: " + ModelUtil.getTypeName(oldEnt.pageType));
+         }
+      }
+      else {
+         if (verbose)
+            System.out.println("PageDispatcher: not adding overridden page: " + keyName + " url:" + pattern + " type: " + ModelUtil.getTypeName(pageType) + ")");
+      }
 
       if (pattern.equals(indexPattern)) {
          if (verbose)
