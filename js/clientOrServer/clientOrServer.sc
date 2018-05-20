@@ -6,6 +6,10 @@
 // the same record.
 js.clientOrServer extends js.core {
    compiledOnly = true;
+
+   codeType = sc.layer.CodeType.Framework;
+   codeFunction = sc.layer.CodeFunction.Program;
+
    public void init() {
       if (layeredSystem.getLayerByDirName("servlet.webApp") != null) {
          // Exclude the javascript, android, and gwt runtimes.  All layers which extend this layer explicitly will also be excluded, unless they explicitly include a layer which uses JS
