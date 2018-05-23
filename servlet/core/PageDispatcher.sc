@@ -143,7 +143,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       // TODO: now that we have multiple PageEntry's supporting each URL, should we have an option to support multiple handlers for the same pattern?  patternFilter=true?
       PageEntry oldEnt = pages.get(pattern);
       boolean added = false;
-      if (oldEnt == null || oldEnt.priority < priority) {
+      if (oldEnt == null || oldEnt.priority <= priority) {
          added = true;
          pages.put(pattern, ent);
          if (verbose) {
@@ -711,7 +711,15 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
             LayeredSystem sys = LayeredSystem.getCurrent();
             if (sys != null && sys.options.autoRefresh) {
-               sys.rebuild();
+               if (sys.rebuild()) {
+                  // Refresh the page entries since they may have been updated after the rebuild
+                  pageEnts = getPageEntries(uri, queryParams);
+                  if (pageEnts == null || pageEnts.size() == 0) { // The URL mapping we originally mapped must have been removed?
+                      if (verbose)
+                         System.out.println("Page request: " + uri + " previously matched a page but after refresh, page is gone!");
+                     return false;
+                  }
+               }
             }
 
             long startTime = 0;
@@ -961,23 +969,24 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
    }
 
    public void typeCreated(Object newType) {
-      Object urlAnnot = DynUtil.getAnnotation(newType, "sc.html.URL");
+      LayeredSystem sys = LayeredSystem.getCurrent();
+      Object urlAnnot = ModelUtil.getInheritedAnnotation(sys, newType, "sc.html.URL");
       if (urlAnnot != null) {
          String newTypeName = DynUtil.getTypeName(newType, false);
-         Boolean isPageObj = (Boolean) DynUtil.getAnnotationValue(newType, "sc.html.URL", "page");
-         Boolean isResourceObj = (Boolean) DynUtil.getAnnotationValue(newType, "sc.html.URL", "resource");
+         Boolean isPageObj = (Boolean) DynUtil.getInheritedAnnotationValue(newType, "sc.html.URL", "page");
+         Boolean isResourceObj = (Boolean) DynUtil.getInheritedAnnotationValue(newType, "sc.html.URL", "resource");
          boolean isURLPage = isPageObj == null || isPageObj;
          boolean isResource = isResourceObj != null && isResourceObj;
          boolean needsSync = DynUtil.needsSync(newType);
-          String pattern = (String) DynUtil.getAnnotationValue(newType, "sc.html.URL", "pattern");
-          String lockScope = (String) DynUtil.getAnnotationValue(newType, "sc.html.URL", "lockScope");
-          String resultSuffix = (String) DynUtil.getInheritedAnnotationValue(newType, "sc.obj.ResultSuffix", "value");
-          if (pattern == null) {
-             pattern = "/" + sc.type.CTypeUtil.getClassName(newTypeName) + (resultSuffix == null ? "" : "." + resultSuffix);
-          }
-          System.out.println("*** Adding page type: " + newType);
-          addPage(newTypeName, pattern, newType, isURLPage, needsSync, isResource,
-                  DynUtil.getLayerPosition(newType), lockScope, QueryParamProperty.getQueryParamProperties(newType));
+         String pattern = (String) DynUtil.getInheritedAnnotationValue(newType, "sc.html.URL", "pattern");
+         String lockScope = (String) DynUtil.getInheritedAnnotationValue(newType, "sc.html.URL", "lockScope");
+         String resultSuffix = (String) DynUtil.getInheritedAnnotationValue(newType, "sc.obj.ResultSuffix", "value");
+         if (pattern == null) {
+            pattern = ModelUtil.getTemplatePathName(newType);
+         }
+         System.out.println("*** Adding page type: " + newType);
+         addPage(newTypeName, pattern, newType, isURLPage, needsSync, isResource,
+                 DynUtil.getLayerPosition(newType), lockScope, QueryParamProperty.getQueryParamProperties(newType));
       }
    }
 
