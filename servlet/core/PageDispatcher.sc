@@ -981,11 +981,12 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
          String pattern = (String) DynUtil.getInheritedAnnotationValue(newType, "sc.html.URL", "pattern");
          String lockScope = (String) DynUtil.getInheritedAnnotationValue(newType, "sc.html.URL", "lockScope");
          String resultSuffix = (String) DynUtil.getInheritedAnnotationValue(newType, "sc.obj.ResultSuffix", "value");
+         String templatePathName = ModelUtil.getTemplatePathName(newType);
          if (pattern == null) {
-            pattern = ModelUtil.getTemplatePathName(newType);
+            pattern = templatePathName;
          }
          System.out.println("*** Adding page type: " + newType);
-         addPage(newTypeName, pattern, newType, isURLPage, needsSync, isResource,
+         addPage(templatePathName, pattern, newType, isURLPage, needsSync, isResource,
                  DynUtil.getLayerPosition(newType), lockScope, QueryParamProperty.getQueryParamProperties(newType));
       }
    }

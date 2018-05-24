@@ -14,7 +14,7 @@
 %>
         
 static {
-   sc.servlet.PageDispatcher.addPage("<%= typeName %>", "<%= url %>", <%= typeIsDynamic ? "sc.dyn.DynUtil.findType(\"" + typeName + "\")" : typeBaseName + ".class" %>, <%= isPage %>, <%= isSync %>, <%= isResource %>, <%= layer.layerPosition %>, <%= lockScope == null ? "null" : '"' + lockScope + '"' %>, <%= QueryParamProperty.toValueString(objType) %>);
+   sc.servlet.PageDispatcher.addPage("<%= templatePathName %>", "<%= url %>", <%= typeIsDynamic ? "sc.dyn.DynUtil.findType(\"" + typeName + "\")" : typeBaseName + ".class" %>, <%= isPage %>, <%= isSync %>, <%= isResource %>, <%= layer.layerPosition %>, <%= lockScope == null ? "null" : '"' + lockScope + '"' %>, <%= QueryParamProperty.toValueString(objType) %>);
 }
 
 <% } %>
