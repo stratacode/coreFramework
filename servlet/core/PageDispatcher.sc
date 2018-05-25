@@ -219,7 +219,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
    }
 
    public static ScopeDefinition getScopeDefForPageType(Object pageType) {
-      String scopeName = ModelUtil.getInheritedScopeName(null, pageType);
+      String scopeName = ModelUtil.getInheritedScopeName(null, pageType, null);
       if (scopeName != null && scopeName.length() > 0) {
          ScopeDefinition scopeDef = ScopeDefinition.getScopeByName(scopeName);
          if (scopeDef == null) {
