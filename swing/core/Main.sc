@@ -7,14 +7,19 @@ import sc.obj.MainSettings;
  * Children of this object are automatically instantiated at startup
  */
 @Component
-@CompilerSettings(objectTemplate="sc.swing.MainInitTemplate")
-public object Main {
+@CompilerSettings(objectTemplate="sc.swing.MainInitTemplate",
+                  mixinTemplate="sc.type.InitTypesMixin")
+public object Main extends sc.type.InitTypesBase {
    /** Access to the args array provided to the main method (if any) */
    public static String[] programArgs;
    /** Create and register a binding manager to ensure events are delivered only on the swing thread */
    object bindingManager extends SwingBindingManager {
    }
    object statementProcessor extends SwingStatementProcessor {
+   }
+
+   public void preInit() {
+      initTypes();
    }
 
    @MainSettings(produceScript=true,execName="swingmain")

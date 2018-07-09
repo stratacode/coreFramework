@@ -50,7 +50,7 @@ public class NumberConverter {
       return newValue;
    }
 
-   String format = "#.##";
+   public String format = "#.##";
 
    @BindSettings(reverseMethod="stringToNumberReverse", modifyParam=true)
    public String numberToString(double number) {

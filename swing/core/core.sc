@@ -11,6 +11,7 @@ import java.awt.Color;
 import java.awt.BorderLayout;
 import java.awt.Insets;
 import java.awt.Cursor;
+import javax.swing.ImageIcon;
 
 import java.awt.Window;
 import java.awt.event.WindowAdapter;

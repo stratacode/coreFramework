@@ -32,7 +32,7 @@ public class JSlider extends javax.swing.JSlider implements ComponentStyle {
       addChangeListener(new ChangeListener() {
          /** Listen to the slider. */
           public void stateChanged(ChangeEvent e) {
-             // These events get send even when the value has not changed
+             // These events are sent even when the value has not changed
              if (!inSet && (lastValue == UNSET_VALUE || getValue() != lastValue)) {
                 SwingUtil.sendDelayedEvent(sc.bind.IListener.VALUE_CHANGED, JSlider.this, valueProp);
                 lastValue = getValue();
