@@ -6,7 +6,7 @@
   sc.layer.LayeredSystem system = sc.layer.LayeredSystem.getCurrent();
   // Use current build layer's buildInfo, so we don't end up referring to types which have not been defined yet when we are building a base layer
   sc.layer.BuildInfo bi = system.currentBuildLayer.buildInfo;
-  java.util.List<sc.layer.TypeGroupMember> mainInitMembers = bi.getTypeGroupMembers("mainInit");
+  java.util.List<sc.layer.InitTypeInfo> initTypes = bi.getInitTypes();
 %>
 <% if (!overrideField && !overrideGet) { %>
    <%=fieldModifiers%> <%=variableTypeName%> <%=lowerClassName%>;
@@ -36,16 +36,19 @@
    <%= variableTypeName%> _mainObj = get<%=upperClassName%>(true); 
    // This is here so that if it is a component, we do not call the getX(false) method.  Alternatively, we'd need to find a way to init/start it if we wanted it staged with other init components
    if (_doInit) { // Only do this the first time in case any initializers below need to reference the Main object
-     <% for (sc.layer.TypeGroupMember mi:mainInitMembers) {
-           if (!mi.isObjectType()) {
-              String objName = (String)mi.getAnnotationValue("sc.swing.MainInit", "name");
+     <% for (sc.layer.InitTypeInfo iti:initTypes) {
+           if (!iti.doStartup) {
+              sc.dyn.DynUtil.findType("<%= initType.initType.typeName %>");
+           }
+           else if (!iti.initType.isObjectType()) {
+              String objName = (String)iti.initType.getAnnotationValue("sc.swing.MainInit", "name");
               if (sc.util.StringUtil.isEmpty(objName))
-                 objName = mi.typeName.replace('.','_');
+                 objName = iti.initType.typeName.replace('.','_');
               objName = sc.type.CTypeUtil.capitalizePropertyName(objName); %>
               <%=lowerClassName%>.get<%=objName %>(); 
      <%    }
            else { %>
-             <%= mi.typeName %>;
+             <%= iti.initType.typeName %>;
      <%    }
     } %>
    }
@@ -53,14 +56,14 @@
 }
 
 <%
-   for (sc.layer.TypeGroupMember mi:mainInitMembers) {
-      if (!mi.isObjectType()) {
-         String objName = (String)mi.getAnnotationValue("sc.swing.MainInit", "name");
+   for (sc.layer.InitTypeInfo iti:initTypes) {
+      if (!iti.initType.isObjectType()) {
+         String objName = (String)iti.initType.getAnnotationValue("sc.swing.MainInit", "name");
          if (sc.util.StringUtil.isEmpty(objName))
-            objName = mi.typeName.replace('.','_');
+            objName = iti.initType.typeName.replace('.','_');
          objName = sc.type.CTypeUtil.capitalizePropertyName(objName);
         %>
-        public object <%=objName %> extends <%=mi.typeName%> {
+        public object <%=objName %> extends <%=iti.initType.typeName%> {
         }
 <% } } %>
 
