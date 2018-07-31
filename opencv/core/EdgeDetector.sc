@@ -1,16 +1,13 @@
-class EdgeDetector {
-   Mat edgeInImg;
-   Mat edgeOutImg = new Mat();
+class EdgeDetector extends ImageProcessor {
+   Mat outMat = new Mat();
 
    double minEdgeVal = 42; // intensity gradient below minVal - definitely not an edge
    double maxEdgeVal = 72;  // intensity gradient above maxVal - definitely an edge - in between based on connectivity
    int apertureSize = 3; // size of sobel kernel used for finding gradients
 
-   int refreshCt = 0;
-
-   minEdgeVal =: refreshEdge();
-   maxEdgeVal =: refreshEdge();
-   apertureSize =: refreshEdge();
+   minEdgeVal =: scheduleRefresh();
+   maxEdgeVal =: scheduleRefresh();
+   apertureSize =: scheduleRefresh();
 
    public void computeEdgeImage() {
       System.out.println("*** Compute edge image running:");
@@ -18,12 +15,12 @@ class EdgeDetector {
          apertureSize++;
       if (apertureSize > 31)
          apertureSize = 31;
-      Imgproc.Canny(edgeInImg, edgeOutImg, minEdgeVal, maxEdgeVal, apertureSize, false);
+      Imgproc.Canny(inMat, outMat, minEdgeVal, maxEdgeVal, apertureSize, false);
 
-      ImgUtil.dumpMinMax(edgeOutImg, "after canny");
+      ImgUtil.dumpMinMax(outMat, "after canny");
    }
 
-   public void refreshEdge() {
+   public void refresh() {
       System.out.println("** Refreshing - edge: " + minEdgeVal + ", " + maxEdgeVal + " sobel size: " + apertureSize);
       computeEdgeImage();
       //refreshFeaturePoints();
@@ -33,6 +30,5 @@ class EdgeDetector {
       // change event.   We could implement IChangeable in a wrapper class for Mat and call a 'sendEvent' on the
       // Mat itself.  For now, the
       //Bind.sendChangedEvent(this, "edgeOutImg");
-      refreshCt++;
    }
 }
