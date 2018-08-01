@@ -33,7 +33,20 @@ public class UnaryBinding extends AbstractMethodBinding {
    protected Object invokeReverseMethod(Object obj, Object value) {
       if (!isValidObject(value))
          return getUnsetOrPending(value);
-      return DynUtil.evalInverseUnaryExpression(operator, null, value);
+      // To support prop =: var++; or ++var - the difference here does not matter because we don't return the value
+      if (operator.equals("++") || operator.equals("--")) {
+         IBinding param = boundParams[0];
+         Object val = param.getPropertyValue(obj);
+         int ival = (Integer) val;
+         if (operator.charAt(0) == '+')
+            ival++;
+         else
+            ival--;
+         param.applyReverseBinding(obj, ival, this);
+         return ival;
+      }
+      else // these are the unary operators that
+         return DynUtil.evalInverseUnaryExpression(operator, null, value);
    }
 
    @Override
