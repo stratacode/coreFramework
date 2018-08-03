@@ -3,7 +3,6 @@ public swing.grid extends gui.grid, swing.core {
    compiledOnly = true;
 
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.UI;
 
    public void start() {
       sc.layer.LayeredSystem system = getLayeredSystem();

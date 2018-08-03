@@ -1,6 +1,5 @@
 sys.std {
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.Program;
 
    hidden = true;
    compiledOnly = true;

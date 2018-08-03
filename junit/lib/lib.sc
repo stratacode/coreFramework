@@ -7,7 +7,7 @@ import static org.junit.Assert.*;
 
 junit.lib {
    //classPath="./lib/junit-4.12.jar:./lib/hamcrest-core-1.3.jar";
-   
+   codeType = CodeType.Framework;
 
    // These classes must be compiled so they can be used by the next layer up in the
    // chain.

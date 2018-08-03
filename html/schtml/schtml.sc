@@ -9,7 +9,6 @@ html.schtml extends html.core {
    compiledOnly = true;
 
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.Program;
 
    {
       // We replace the html.core feature - so that any layers which extend html.core are placed after us in the stack.

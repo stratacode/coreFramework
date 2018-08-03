@@ -5,7 +5,6 @@
 sys.layeredSystem {
    //defaultSyncMode = sc.obj.SyncMode.Automatic;
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.Program;
 
    hidden = true;
    compiledOnly = true;

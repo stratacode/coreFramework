@@ -3,7 +3,6 @@ log4j.core extends sys.std {
    compiledOnly = true;
 
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.Program;
 
    // Log4j complains if we include two incompatible implementation classes and so higher level 
    // packages need to define the impl library.  Here we only pull in the api.

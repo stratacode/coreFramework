@@ -2,7 +2,6 @@
 // Provides functionality for applications that want to use TypeDeclarations as objects, i.e. to edit layer cake applications on the fly.
 sys.layerEdit {
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.Program;
 
    hidden = true;
    compiledOnly = true;

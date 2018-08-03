@@ -16,7 +16,6 @@ html.core extends sys.std {  // Extending sys.std because we override the standa
    compiledOnly = true;
 
    codeType = CodeType.Framework;
-   codeFunction = CodeFunction.Program;
 
    public String defaultWebRoot = "web";
 

@@ -4,7 +4,6 @@ public js.sync extends js.core {
    compiledOnly = true;
 
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.Program;
 
    public void init() {
       excludeRuntimes("java", "gwt", "android");

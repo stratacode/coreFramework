@@ -4,7 +4,6 @@ js.meta extends lib {
    inheritPackage = false;
 
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.Program;
 
    compiledOnly = true;
 }

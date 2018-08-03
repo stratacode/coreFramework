@@ -32,7 +32,6 @@ import sc.opengl.IRenderParent;
 
 opengl.main extends lib, swing.core, util {
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.UI;
 
    compiledOnly = true;
 }

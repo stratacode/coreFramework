@@ -4,7 +4,6 @@ public js.core extends html.core, js.prebuild, js.sys, js.util, sys.sccore {
    compiledOnly = true;
 
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.Program;
 
    public void init() {
       excludeRuntimes("java", "gwt", "android");

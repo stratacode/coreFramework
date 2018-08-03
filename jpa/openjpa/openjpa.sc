@@ -3,7 +3,6 @@
 // now by default.
 jpa.openjpa extends basejpa {
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.Program;
 
    //classPath=sc.util.FileUtil.listFiles(getRelativeFile("./lib"),".*\\.jar");
 

@@ -6,7 +6,6 @@ js.prebuild {
    compiledOnly = true;
 
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.Program;
 
    public void init() {
       includeRuntime("js");

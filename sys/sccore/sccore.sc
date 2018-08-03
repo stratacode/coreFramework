@@ -4,7 +4,6 @@
 // from this layer when looking up the compiled types.
 sys.sccore {
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.Program;
 
    hidden = true; // don't show it in the IDE
    compiledOnly = true; // don't try to interpret this layer

@@ -4,7 +4,6 @@ package sc.tag;
 public js.appPerPage.main extends meta {
    exportPackage = false;
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.Program;
 
    compiledOnly = true;
 

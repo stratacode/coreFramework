@@ -49,8 +49,6 @@ public class Layer {
 
    @Constant public CodeType codeType = CodeType.Application;
 
-   @Constant public CodeFunction codeFunction = CodeFunction.Program;
-
    /** The vanilla name of the layer - no package prefix but does include the layer group */
    @Constant public String getLayerName() {
       String base = layerDirName;
@@ -91,10 +89,6 @@ public class Layer {
          sb.append(codeType);
       }
 
-      if (codeFunction != null) {
-         sb.append(" codeFunction: ");
-         sb.append(codeFunction);
-      }
       sb.append(" #");
       sb.append(layerPosition);
 
@@ -131,8 +125,8 @@ public class Layer {
        return res;
    }
 
-   public boolean matchesFilter(Collection<CodeType> codeTypes, Collection<CodeFunction> codeFunctions) {
-      return (codeTypes == null || codeTypes.contains(codeType)) && (codeFunctions == null || codeFunctions.contains(codeFunction));
+   public boolean matchesFilter(Collection<CodeType> codeTypes) {
+      return (codeTypes == null || codeTypes.contains(codeType));
    }
 
    // Need this to match the compiled class on the server.  Hard to ensure we always process against the source version of this built

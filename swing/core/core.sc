@@ -52,7 +52,6 @@ import sc.swing.*;
 
 swing.core extends swing.meta, util {
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.UI;
 
    compiledOnly = true; // No real reason to make this layer dynamic ever and something about Main.sc seems to make it not work
 

@@ -6,7 +6,6 @@ js.lib {
    static String GEN_JS_PREFIX = "js/types";
 
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.Program;
 
    compiledOnly = true;
    finalLayer = true;

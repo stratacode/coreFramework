@@ -4,7 +4,6 @@ import sc.obj.Constant;
 
 awt.meta {
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.UI;
 
    compiledOnly = true;
    annotationLayer = true;

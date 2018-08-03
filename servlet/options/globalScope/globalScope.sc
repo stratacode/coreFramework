@@ -4,5 +4,4 @@ servlet.options.globalScope extends servlet.schtml {
    compiledOnly = true;
 
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.Program;
 }

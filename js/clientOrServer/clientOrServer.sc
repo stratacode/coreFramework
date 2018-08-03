@@ -8,7 +8,6 @@ js.clientOrServer extends js.core {
    compiledOnly = true;
 
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.Program;
 
    public void init() {
       if (layeredSystem.getLayerByDirName("servlet.webApp") != null) {

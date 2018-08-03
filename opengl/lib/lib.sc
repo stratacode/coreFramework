@@ -3,7 +3,6 @@ package sc.opengl;
 opengl.lib {
    compiledOnly = true;
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.UI;
 
    void init() {
       // For now we can't use the open gl layers for js and android but

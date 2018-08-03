@@ -5,5 +5,4 @@ jetty.schtml extends servlet.schtml, jetty.servlet {
    buildLayer = true;
 
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.Program;
 }

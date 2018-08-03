@@ -2,7 +2,6 @@ public servlet.schtml extends core, html.schtml, webApp {
    compiledOnly = true;
 
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.Program;
 
    public void start() {
       sc.layer.LayeredSystem system = getLayeredSystem();

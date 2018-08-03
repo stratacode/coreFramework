@@ -14,5 +14,4 @@ public jetty.serve extends meta, util, html.core {
    compiledOnly = true;
 
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.Program;
 }

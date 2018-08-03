@@ -5,5 +5,4 @@ servlet.meta extends servlet.webApp {
    compiledOnly = true;
 
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.Program;
 }

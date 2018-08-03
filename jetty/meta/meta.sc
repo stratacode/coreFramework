@@ -13,5 +13,4 @@ jetty.meta extends lib /*, v8compat */ {
    compiledOnly = true;
 
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.Program;
 }

@@ -14,7 +14,6 @@ public servlet.core extends webApp, meta, html.core {
    finalLayer = true;
 
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.Program;
 
    public void init() {
       // Turns on URL access to the layered system

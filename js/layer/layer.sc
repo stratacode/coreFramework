@@ -6,7 +6,6 @@ public js.layer extends js.schtml, js.sync {
    exportPackage = false;
 
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.Program;
 
    compiledOnly = true;
 

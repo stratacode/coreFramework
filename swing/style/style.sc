@@ -1,5 +1,5 @@
 public swing.style extends swing.core {
-   codeType = sc.layer.CodeType.Declarative;
-   codeFunction = sc.layer.CodeFunction.Style;
+   codeType = sc.layer.CodeType.Style;
+   configLayer = true;
    compiledOnly = true;
 }

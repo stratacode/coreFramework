@@ -1,5 +1,6 @@
 
 junit.main extends lib {
+   codeType = CodeType.Framework;
    exportPackage = false;
    public void start() {
       // This one needs to happen even for inactive layers for us to resolve the assertTrue and other methods in the TestCase base class.

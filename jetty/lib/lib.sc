@@ -4,7 +4,6 @@ jetty.lib extends log4j.core {
    compiledOnly = true;
 
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.Program;
 
    object servletPkg extends MvnRepositoryPackage {
       url = "mvn://javax.servlet/javax.servlet-api/3.1.0";

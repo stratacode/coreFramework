@@ -6,7 +6,6 @@ jpa.datanucleus extends basejpa, log4j.core, jdbc.mysql {
    compiledOnly = true;
 
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.Program;
 
    object dataNucleusPkg extends MvnRepositoryPackage {
       //url = "mvn://org.datanucleus/datanucleus-rdbms/4.0.6";

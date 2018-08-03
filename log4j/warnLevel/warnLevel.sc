@@ -3,5 +3,4 @@
 // so this really just changes the root logger to warn only
 log4j.warnLevel extends log4j.core {
    codeType = sc.layer.CodeType.Framework;
-   codeFunction = sc.layer.CodeFunction.Program;
 }
