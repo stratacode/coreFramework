@@ -110,7 +110,11 @@ if (needsConstructor) {
                      %>) { <%
                      pct = 0;
                      for (JSParameter param:paramMeth.parameters) { %>
-         var <%= param.name %> = arguments[<%= pct++ %>];<% } %><%=
+         var <%= param.name %> = arguments[<%= pct++ %>];<%
+                     }
+                     if (paramMeth.varArgs) { %>
+         var <%= paramMeth.varArgsParamName %> = sc_vararg(arguments, <%= pct %>);<%
+                     } %><%=
                        paramMeth.getMethodBody(3) %>}<% methCt++;
                   }
              } %>   }<%           first = false;
@@ -137,8 +141,8 @@ if (needsConstructor) {
             for (JSParameter param:paramMeth.parameters) { %>
       var <%= param.name %> = arguments[<%= pct++ %>];<%
             }
-            if (meth.varArgs) { %>
-      var <%= meth.varArgsParamName %> = sc_vararg(arguments, <%= pct %>);<%
+            if (paramMeth.varArgs) { %>
+      var <%= paramMeth.varArgsParamName %> = sc_vararg(arguments, <%= pct %>);<%
             } %><%=
             paramMeth.getMethodBody(2) %>}<% methCt++;  
         }
