@@ -95,4 +95,9 @@ public class FileUtil {
       System.err.println("*** Not saving string as file in Javascript: " + fileName);
    }
 
+   // Here because of a bug - when we resolve a layer model's use of FileUtil in the JS runtime (e.g. opencv.lib)
+   // we get this file, not the java sc.util.FileUtil
+   public static String listFiles(String dir, String pattern) {
+      throw new UnsupportedOperationException();
+   }
 }
