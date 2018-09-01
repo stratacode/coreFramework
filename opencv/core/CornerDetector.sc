@@ -10,7 +10,7 @@ class CornerDetector extends ImageProcessor {
    blockApertureSize =: scheduleRefresh();
    k =: scheduleRefresh();
 
-   public void refresh() {
+   public boolean refresh() {
       if (inMat.cols() > 0) {
          Mat origImgGreyFloat = new Mat();
          inMat.convertTo(origImgGreyFloat, CvType.CV_32FC1);
@@ -22,7 +22,9 @@ class CornerDetector extends ImageProcessor {
          System.out.println("** Refreshing - corner with sobel: " + blockApertureSize + ", blockSize: " + blockSize + ", k: " +  k);
          Imgproc.cornerHarris(origImgGreyFloat, resFloat, blockSize, blockApertureSize, k);
          resFloat.convertTo(outMat, CvType.CV_8UC1);
+         return true;
       }
+      return false;
    }
 }
 

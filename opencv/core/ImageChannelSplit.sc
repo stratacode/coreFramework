@@ -1,9 +1,10 @@
 class ImageChannelSplit extends ImageProcessor {
    List<Mat> outChannels;
 
-   void refresh() {
+   boolean refresh() {
       List<Mat> channels = new ArrayList<Mat>();
       Core.split(inMat, channels);
       outChannels = channels;
+      return true;
    }
 }

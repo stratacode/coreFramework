@@ -75,6 +75,8 @@ swing.core extends swing.meta, util {
       mainInitProc.typeGroupName = "mainInit";
       mainInitProc.validOnField = false;
       mainInitProc.validOnObject = true;
+      // Using the 'createOnStartup' flag, types with this @MainInit annotation are placed into the BuildInfo initTypes which code-templates can use
+      // to create them at the appropriate time.
       mainInitProc.createOnStartup = true;
 
       registerAnnotationProcessor("sc.swing.MainInit", mainInitProc);

@@ -14,13 +14,14 @@ abstract class ImageProcessor {
          DynUtil.invokeLater(new Runnable() {
             public void run() {
                needsRefresh = false;
-               if (inMat != null)
-                  refresh();
-               outChangeCt++;
+               if (inMat != null) {
+                  if (refresh())
+                     outChangeCt++;
+               }
             }
          }, 0);
       }
    }
 
-   abstract void refresh();
+   abstract boolean refresh();
 }

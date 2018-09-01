@@ -10,7 +10,7 @@ class ErodeDilateFilter extends ImageProcessor {
    dilateSize =: scheduleRefresh();
    erodeSize =: scheduleRefresh();
 
-   public void refresh() {
+   public boolean refresh() {
       if (doDilate)
          System.out.println("*** dialate: " + dilateSize);
       if (doErode)
@@ -31,6 +31,7 @@ class ErodeDilateFilter extends ImageProcessor {
          src = tempMat;
       }
       outMat = src;
+      return true;
    }
 
 }

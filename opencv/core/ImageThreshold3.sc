@@ -12,7 +12,7 @@ class ImageThreshold3 extends ImageProcessor {
 
    String label1, label2, label3;
 
-   public void refresh() {
+   public boolean refresh() {
       Mat res = new Mat();
       System.out.println("*** Threshold: " + label1 + ":" + start1 + "-" + end1 + " " + label2 + ": " + start2 + "-" + end2 + " " + label3 + ": " + start3 + "-" + end3);
       Scalar minValues = new Scalar(start1, start2, start3);
@@ -21,6 +21,6 @@ class ImageThreshold3 extends ImageProcessor {
       Core.inRange(inMat, minValues, maxValues, mask);
       inMat.copyTo(res, mask);
       outMat = res;
-      outChangeCt++;
+      return true;
    }
 }

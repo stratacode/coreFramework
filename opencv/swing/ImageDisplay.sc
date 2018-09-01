@@ -17,6 +17,8 @@ class ImageDisplay extends JLabel {
    }
 
    void refresh() {
+      if (inputMat == null)
+         return;
       if (inputMat.cols() > 0) {
          Imgproc.resize(inputMat, dispMat, new Size(displayWidth, displayHeight));
          dispBuf = ImgSwingUtil.toBufferedImage(dispMat);

@@ -6,7 +6,7 @@ class ImageBlur extends ImageProcessor {
    blurSize =: scheduleRefresh();
    inMat =: scheduleRefresh();
 
-   public void refresh() {
+   public boolean refresh() {
       if (blurSize > 1) {
          outMat = new Mat();
          Imgproc.blur(inMat, outMat, new Size(blurSize, blurSize));
@@ -14,5 +14,6 @@ class ImageBlur extends ImageProcessor {
       else {
          outMat = inMat;
       }
+      return true;
    }
 }

@@ -5,9 +5,10 @@ class CvtColor extends ImageProcessor {
 
    format =: scheduleRefresh();
 
-   public void refresh() {
+   public boolean refresh() {
       if (format == -1)
          throw new IllegalArgumentException("Must set format of CvtColor");
       Imgproc.cvtColor(inMat, outMat, format);
+      return true;
    }
 }

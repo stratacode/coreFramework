@@ -20,7 +20,7 @@ class EdgeDetector extends ImageProcessor {
       ImgUtil.dumpMinMax(outMat, "after canny");
    }
 
-   public void refresh() {
+   public boolean refresh() {
       System.out.println("** Refreshing - edge: " + minEdgeVal + ", " + maxEdgeVal + " sobel size: " + apertureSize);
       computeEdgeImage();
       //refreshFeaturePoints();
@@ -30,5 +30,7 @@ class EdgeDetector extends ImageProcessor {
       // change event.   We could implement IChangeable in a wrapper class for Mat and call a 'sendEvent' on the
       // Mat itself.  For now, the
       //Bind.sendChangedEvent(this, "edgeOutImg");
+      return true;
    }
+
 }
