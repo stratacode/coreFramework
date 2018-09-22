@@ -14,14 +14,16 @@ sys.sccore {
    public void init() {
       sc.layer.LayeredSystem system = getLayeredSystem();
 
-      // Pick up the src files for this layer from the system's corert directory
-      String rtSrcDir = system.getStrataCodeRuntimePath(true, true);
-      preCompiledSrcPath = rtSrcDir;
+      if (activated) { // if we are in the IDE (not activated), it's better to find the source files in the source modules configured in intelliJ
+         // Pick up the src files for this layer from the system's corert directory
+         String rtSrcDir = system.getStrataCodeRuntimePath(true, true);
+         preCompiledSrcPath = rtSrcDir;
 
-      if (rtSrcDir == null)
-         system.error("No stratacode source for layer: " + this + " runtime: " + system.getProcessIdent());
-      else if (system.options.verbose)
-         system.verbose("Core runtime src: " + rtSrcDir + " from layer: " + this + " runtime: " + system.getProcessIdent());
+         if (rtSrcDir == null)
+            system.error("No stratacode source for layer: " + this + " runtime: " + system.getProcessIdent());
+         else if (system.options.verbose)
+            system.verbose("Core runtime src: " + rtSrcDir + " from layer: " + this + " runtime: " + system.getProcessIdent());
+      }
 
       excludeRuntime("java");
    }

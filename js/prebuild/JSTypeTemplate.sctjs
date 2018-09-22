@@ -10,10 +10,10 @@ if (needsConstructor) {
      // Only set this.outer for the first outer class in the chain of inherited outer classes.  It will be reset to the real outer class the first time it is initialized in the instance's actual class
      // If we set it again, we are overridding it with a potentially different and incorrect value in the base class (since we can inherit from the same class at different levels of the same inner class tree).
      outerInstCount == 0 ? "" : "\n   this._outer" + outerInstCount + " = _outer;\n   if (this.outer === undefined) this.outer = _outer;\n" %><%
-   for (JSStatement initStatement:preInitStatements) {%><%= replaceIndent(1, initStatement.toString()) %><% } %>
-<% if (!constructor.needsDispatch) {
+   for (JSStatement initStatement:preInitStatements) {%><%= replaceIndent(1, initStatement.toString()) %><% } %><%
+   if (!constructor.needsDispatch) {
          if (constructor.varArgs) { %>
-         var <%= constructor.varArgsParamName %> = sc_vararg(arguments, <%= constructor.getNumParameters()-1 %>);<%
+   var <%= constructor.varArgsParamName %> = sc_vararg(arguments, <%= constructor.getNumParameters()-1 %>);<%
          } %><%=
          constructor.getMethodBody(1) %><%
       }
@@ -42,7 +42,7 @@ if (needsConstructor) {
          var <%= param.name %> = arguments[<%= pct++ %>];<% } %><%=
                        paramMeth.getMethodBody(3) %>}<% methCt++;
                   }
-              } %>}<% first = false;
+              } %>   }<% first = false;
          }
       }
       else { %><%
@@ -70,7 +70,8 @@ if (needsConstructor) {
             } %><%= paramMeth.getMethodBody(2) %>}<% methCt++; 
          }
       }
-%>}<%
+%>
+}<%
 } %>
 
 <% if (needsClassDef) { 
@@ -83,7 +84,7 @@ if (needsConstructor) {
    if (arguments.length == 0) return;<% } %><%= meth.methodClassInit %><%
       if (!meth.needsDispatch) {
          if (meth.varArgs) { %>
-         var <%= meth.varArgsParamName %> = sc_vararg(arguments, <%= meth.getNumParameters()-1 %>);<%
+   var <%= meth.varArgsParamName %> = sc_vararg(arguments, <%= meth.getNumParameters()-1 %>);<%
          } %><%=
          meth.getMethodBody(1) %><%
       }

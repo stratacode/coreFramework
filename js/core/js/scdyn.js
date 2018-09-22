@@ -430,9 +430,6 @@ sc_DynUtil_c.createInnerInstance = function(newClass, outer, paramSig, paramValu
    else
       DynInst.prototype = newClass.prototype;
 
-   // Create a new instance
-   inst = new DynInst;
-
    // For static types, outer is a type here and not a constructor param
    if (outer !== null && !sc_DynUtil_c.isType(outer)) {
       if (paramValues == null)
@@ -446,10 +443,17 @@ sc_DynUtil_c.createInnerInstance = function(newClass, outer, paramSig, paramValu
    // Call the original Constructor with the temp
    // instance as its context (i.e. its 'this' value)
 
-   if (isPrototype) 
-      ret = newClass.constructor.apply(inst, paramValues);
-   else
+   if (isPrototype) {
+      inst = new newClass.constructor(paramValues);
+      /*
+         inst = new DynInst;
+         ret = newClass.constructor.apply(inst, paramValues);
+      */
+   }
+   else {
+      inst = new DynInst;
       ret = newClass.apply(inst, paramValues);  // we are called with the constructor
+   }
 
    // If an object has been returned then return it otherwise
    // return the original instance.

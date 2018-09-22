@@ -9,6 +9,7 @@ import sc.obj.AppGlobalScopeDefinition;
 object AppSessionScopeDefinition extends ScopeDefinition {
    name = "appSession";
    eventListenerCtx = true;
+   //supportsChangeEvents = true; The window scope should become a child instance for app-session - we deliver the events there... that's how we keep track of whether each window has received the changes
    {
       addParentScope(AppGlobalScopeDefinition);
       addParentScope(SessionScopeDefinition);

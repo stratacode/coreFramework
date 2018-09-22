@@ -666,6 +666,11 @@ public class Bind {
       }
       return toRet;
    }
+   
+   /** Returns true if there are any bindings registered on the given property for the given object. */
+   public static boolean hasBindingListeners(Object obj, String prop) {
+      return PBindUtil.getBindingListeners(obj, prop) != null;
+   }
 
    public static DestinationListener[] getBindings(Object dstObj) {
       List<DestinationListener> res = PBindUtil.getBindings(dstObj);

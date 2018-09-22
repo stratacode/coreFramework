@@ -11,7 +11,10 @@ import sc.lang.AbstractInterpreter;
 
 import sc.layer.AsyncProcessHandle;
 
-// Need this to run for the 'java server' only in client/server mode but also 'js only' case.
+// Using runtimes='default' here to cause this to run for the 'java server' only in client/server mode and also in the 'js only' case,
+// where it's run it in the bootstrap runtime so we can load the various static pages in the browser.
+// It will not be included in the JS runtime for client/server mode - some of the dependencies require it to be in the Java runtime (like
+// the ability to launch a web browser).
 @sc.obj.Exec(runtimes="default")
 public class TestPageLoader implements sc.obj.ISystemExitListener {
    AbstractInterpreter cmd;

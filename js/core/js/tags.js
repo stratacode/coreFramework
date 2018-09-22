@@ -394,6 +394,8 @@ js_HTMLElement_c.mapAttributeToProperty = function(name) {
 
 // Marks the names of object properties that are copied back into the DOM for this tag
 js_HTMLElement_c.refreshAttNames = ["class", "style", "repeat"];
+// The list of attributes which change due to user interaction on the client that we sync to the server for 'serverTags'
+js_HTMLElement_c.eventAttNames = [];
 // The set of attributes when their value goes to null or "" the attribute name itself is removed
 js_HTMLElement_c.removeOnEmpty = {};
 
@@ -1382,6 +1384,11 @@ js_HTMLElement_c.outputEndTag = function(sb) {
 js_HTMLElement_c.outputBody = function(sb) {
 }
 
+js_HTMLElement_c.markBodyValid = function(v) {
+   this.bodyValid = v; 
+}
+
+
 js_HTMLElement_c.serverContent = false;
 
 js_HTMLElement_c.outputTag = function(sb) {
@@ -1467,7 +1474,9 @@ js_HTMLElement_c.invalidateRepeatTags = function() {
    }
 }
 
+// Specifies the standard DOM events - each event can specify a set of alias properties.  A 'callback' function is lazily added to each domEvent entry the first time we need to listen for that DOM event on an object
 js_HTMLElement_c.domEvents = {clickEvent:{}, dblClickEvent:{}, mouseDownEvent:{}, mouseMoveEvent:{}, mouseOverEvent:{aliases:["hovered"], computed:true}, mouseOutEvent:{aliases:["hovered"], computed:true}, mouseUpEvent:{}, keyDownEvent:{}, keyPressEvent:{}, keyUpEvent:{}, submitEvent:{}, changeEvent:{}, blurEvent:{}, focusEvent:{}, resizeEvent:{aliases:["innerWidth","innerHeight"]}};
+// the reverse direction for the aliases field of the domEvent entry
 js_HTMLElement_c.domAliases = {innerWidth:"resizeEvent", innerHeight:"resizeEvent", hovered:["mouseOverEvent","mouseOutEvent"]};
 
 // Initialize the domEvent properties as null at the class level so we do not have to maintain them for each tag instance.
@@ -1598,6 +1607,7 @@ function js_Input() {
 js_Input_c = sc_newClass("sc.lang.html.Input", js_Input, js_HTMLElement, null);
 
 js_Input_c.refreshAttNames = js_HTMLElement_c.refreshAttNames.concat(["value", "disabled", "checked"]);
+js_Input_c.eventAttNames = js_HTMLElement_c.eventAttNames.concat(["value", "checked", "changeEvent", "clickCount"]);
 js_Input_c.removeOnEmpty = {value:true};
 
 //js_Input_c.booleanAtts = {checked:true};
@@ -1633,7 +1643,7 @@ js_Input_c.domChanged = function(origElem, newElem) {
    if (newElem !== null) {
       sc_addEventListener(newElem, 'change', js_Input_c.doChangeEvent);
       sc_addEventListener(newElem, 'keyup', js_Input_c.doChangeEvent);
-      if (this.value != null)
+      if (this.value != null && !this.serverContent)
          newElem.value = this.value; 
    }
 }
@@ -1745,6 +1755,7 @@ function js_Select() {
    this.selectedValue = null;
 }
 js_Select_c = sc_newClass("sc.lang.html.Select", js_Select, js_HTMLElement, null);
+js_Select_c.eventAttNames = js_HTMLElement_c.eventAttNames.concat([ "selectedIndex"]);
 
 js_Select_c.doChangeEvent = function(event) {
    var elem = event.currentTarget ? event.currentTarget : js_findCurrentTargetSimple(event.srcElement, "selectedIndex");
@@ -1763,7 +1774,8 @@ js_Select_c.domChanged = function(origElem, newElem) {
       sc_removeEventListener(origElem, 'change', js_Select_c.doChangeEvent);
    if (newElem != null) {
       sc_addEventListener(newElem, 'change', js_Select_c.doChangeEvent);
-      newElem.selectedIndex = this.selectedIndex;
+      if (!this.serverContent) // when serverContent the tagObject is just using the DOM's value
+         newElem.selectedIndex = this.selectedIndex;
    }
 }
 
@@ -1889,6 +1901,7 @@ function js_Option() {
 js_Option_c = sc_newClass("sc.lang.html.Option", js_Option, js_HTMLElement, null);
 
 js_Option_c.refreshAttNames = js_HTMLElement_c.refreshAttNames.concat["selected", "disabled", "value"];
+js_Option_c.eventAttNames = js_HTMLElement_c.eventAttNames.concat["selected", "optionData"];
 
 js_Option_c.setOptionData = function(dv) {
    this.optionData = dv;
@@ -1917,6 +1930,7 @@ function js_Form() {
    this.submitCount = 0;
 }
 js_Form_c = sc_newClass("sc.lang.html.Form", js_Form, js_HTMLElement, null);
+js_Form_c.eventAttNames = js_HTMLElement_c.eventAttNames.concat([ "submitCount", "submitEvent"]);
 
 js_Form_c.submitEvent = function(event) {
    var elem = event.currentTarget ? event.currentTarget : js_findCurrentTargetSimple(event.srcElement, "submitCount");
@@ -1997,6 +2011,7 @@ function js_Page() {
    // Signal to others not to bother refreshing individually - avoids refreshing individual tags when we are going to do it at the page level anyway
    js_Element_c.globalRefreshScheduled = true;
    this.makeRoot();
+   this.serverTags = {};
 }
 
 js_Page_c = sc_newClass("sc.lang.html.Page", js_Page, js_HTMLElement, null);
@@ -2016,6 +2031,8 @@ js_Page_c.refresh = function() {
       this.refreshedOnce = true;
       sc_runClientInitJobs();
    }
+
+    this.refreshServerTags();
 }
 
 
@@ -2060,13 +2077,6 @@ function js_HtmlPage() {
 
 js_HtmlPage_c = sc_newClass("sc.lang.html.HtmlPage", js_HtmlPage, js_Html, null);
 
-function js_Img() {
-   js_HTMLElement.call(this);
-   this.tagName = "img";
-   this.src = null;
-   this.height = this.width = 0;
-}
-
 js_HtmlPage_c.isPageElement = js_Page_c.isPageElement = function() { return true; }
 
 js_HtmlPage_c.getPageURL = js_Page_c.getPageURL = function() {
@@ -2088,6 +2098,115 @@ js_HtmlPage_c.getPageBaseURL = js_Page_c.getPageBaseURL = function() {
 
 js_HtmlPage_c.getQueryParamProperties = js_Page_c.getQueryParamProperties = function() {
    return this.queryParamProperties;
+}
+
+// Called to create, or update a server tag object, pointing to the DOM element specified by 'id'.
+// It's called from a server response handler with an optional serverTag info object describing the properties the
+// server is interested in. It returns the resulting tag object
+js_Element_c.updateServerTag = function(tagObj, id, serverTag, addSync) {
+   var element = document.getElementById(id);
+   if (element != null) {
+      if (tagObj == null && element.scObj != null)
+         tagObj = element.scObj;
+      if (tagObj == null) {
+         var tagClass = js_HTMLElement_c.tagNameToType[element.tagName.toLowerCase()];
+         if (tagClass == null)
+            tagClass = js_HTMLElement_c;
+         if (tagClass != null) {
+            tagObj = sc_DynUtil_c.createInstance(tagClass, null, null);
+            tagObj.parentNode = this;
+            tagObj.setId(id);
+            tagObj.serverContent = true;
+            tagObj.setDOMElement(element);
+
+            if (addSync) {
+               var props = serverTag == null || serverTag.props == null ? tagObj.eventAttNames : serverTag.props.toArray().concat(tagObj.eventAttNames);
+
+               sc_SyncManager_c.registerSyncInst(tagObj, id, true, false); // register but do not init because we do that next with a specific set of props
+
+               // Synchronize the tag instance - this will add listeners for the properties we need to listen for the tag object.
+               // The tag object will then listen for the appropriate DOM events and update the tag object as necessary.  That will
+               // trigger queuing of sync events for these properties.
+               sc_SyncManager_c.addSyncInst(tagObj, false, false, null, new sc_SyncProperties(null, null, props, 0), 0, 0);
+            }
+         }
+      }
+      // DOM element has changed
+      else if (tagObj.element != element) {
+         if (js_Element_c.verbose)
+            console.log("updating DOM element for tagObject with " + id);
+         tagObj.setDOMElement(element);
+         if (serverTag != null && serverTag.props != null) {
+            console.error("Unimplemented case: serverTag props change!"); // Need to adjust the sync properties we are listening on if they have changed
+         }
+      }
+   }
+   else {
+      if (tagObj == null) // is called for generic lookups that might fail so no logging here
+         return null;
+      else {
+         if (js_Element_c.verbose)
+            console.log("Removing serverTag object " + id + ": no longer in DOM");
+         delete oldServerTags[id];
+         sc_DynUtil_c.dispose(tagObj);
+         tagObj = null;
+      }
+   }
+   return tagObj;
+}
+
+js_Element_c.setInnerHTML = function(htmlTxt) {
+   if (this.element != null) {
+      this.element.innerHTML = htmlTxt;
+   }
+}
+
+js_HtmlPage_c.refreshServerTags = js_Page_c.refreshServerTags = function() {
+    if (typeof sc_SyncManager_c != "undefined") {
+        // The sc.js.ServerTagManager object gets created by the sync layer but it's not synchronized itself.  Instead, just resolve it from the dyn system 
+        //var serverTagMgr = sc_DynUtil_c.resolveName("sc.js.ServerTagManager", false, false);
+        var serverTagMgr = sc_SyncManager_c.getSyncInst("sc.js.PageServerTagManager");
+        if (serverTagMgr != null) {
+            var oldServerTags = this.serverTags;
+            var newServerTags = serverTagMgr.serverTags;
+            var it = newServerTags.entrySet().iterator();
+
+            var oldSyncState = sc_SyncManager_c.getSyncState();
+            sc_SyncManager_c.setSyncState(sc_clInit(sc_SyncManager_SyncState_c).Initializing);
+
+            try {
+                while (it.hasNext()) {
+                   var ent = it.next();
+                   var id = ent.getKey();
+                   var serverTag = ent.getValue();
+                   var tagObj = oldServerTags == null ? null : oldServerTags[id];
+                   var newTagObj = js_HtmlPage_c.updateServerTag(tagObj, id, serverTag, true);
+                   if (newTagObj != tagObj) {
+                      if (newTagObj != null) {
+                         if (oldServerTags == null)
+                            oldServerTags = this.serverTags = {};
+                         oldServerTags[id] = newTagObj;
+                      }
+                      else if (newTagObj == null && oldServerTags != null) {
+                         // already disposed in updateServerTag
+                         delete oldServerTags[id];
+                      }
+                   }
+               }
+            }
+            finally {
+                sc_SyncManager_c.setSyncState(oldSyncState);
+            }
+            // TODO: remove oldServerTags that are not in newServerTags
+        }
+    }
+}
+
+function js_Img() {
+    js_HTMLElement.call(this);
+    this.tagName = "img";
+    this.src = null;
+    this.height = this.width = 0;
 }
 
 js_Img_c = sc_newClass("sc.lang.html.Img", js_Img, js_HTMLElement, null);
@@ -2203,14 +2322,14 @@ js_RefreshAttributeListener_c.initAddListener = function(elem, domListener, prop
       js_HTMLElement_c.initListener(domListener, prop, aliasName);
    }
    sc_addEventListener(elem, domListener.eventName, domListener.callback);
-   if (this._eventListeners == null)
-      this._eventListeners = [domListener];
+   if (this.scObj._eventListeners == null)
+      this.scObj._eventListeners = [domListener];
    else
-      this._eventListeners.push(domListener);
+      this.scObj._eventListeners.push(domListener);
 }
 
-// Gets called from the data binding system when a new binding is added to obj for prop.  If we already have a DOM element
-// associated with this tag object, 
+// Gets called when a new data binding expression is added to the tag object for a given property (e.g. a dom event property).
+// Registers the corresponding DOM element listener so we can fire the appropriate change event on the tag object.
 js_RefreshAttributeListener_c.listenerAdded = function(obj, prop, newListener, eventMask, priority) {
    var tagObj = this.scObj;
    if (tagObj != null) {
@@ -2375,3 +2494,15 @@ function js_QueryParamProperty(enclType, propName, paramName, propType, req) {
 }
 
 js_QueryParamProperty_c = sc_newClass("sc.lang.html.QueryParamProperty", js_QueryParamProperty, null, null);
+
+// Maps tag names to the base class object that implements those tag classes - defaults to js_HTMLElement_c for other tags
+js_HTMLElement_c.tagNameToType = {input:js_Input_c, form:js_Form_c, select:js_Select_c, option:js_Option_c};
+
+js_Event_c = sc_newClass("sc.lang.html.Event", Event, null, null);
+
+// Adding a default for this property which we use as a sync property to mirror currentTarget in the event
+Event.prototype.currentTag = null;
+
+if (typeof sc_SyncManager_c != "undefined") {
+   sc_SyncManager_c.addSyncType(js_Event_c, null, ["type", "currentTag", "timeStamp"], null, sc_clInit(sc_SyncOptions_c).SYNC_INIT_DEFAULT);
+}

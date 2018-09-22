@@ -1,3 +1,5 @@
+import sc.js.ServerTag;
+import sc.js.ServerTagManager;
 import sc.lang.html.Element;
 
 import java.util.LinkedHashMap;
@@ -42,6 +44,8 @@ import sc.lang.html.QueryParamProperty;
 import sc.js.URLPath;
 
 import sc.sync.SyncManager;
+import sc.sync.SyncOptions;
+import sc.sync.SyncProperties;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterConfig;
@@ -462,6 +466,13 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
             // This runs any code triggered by 'do later' jobs during the page-init phase.  It makes sure the page content is in sync before we start rendering.
             ctx.execLaterJobs();
+
+            // When we've finished preparing the page for a second time, we fire any "innerHTML" property change events
+            // efficiently, walking down the tree to find the first node which has had bodyTxt changes.  If anyone is listening
+            // for those properties, it will queue up sync change events here.
+            if (doSync && !initial && inst instanceof Element) {
+               ((Element) inst).fireChangedTagEvents();
+            }
          }
 
          i++;
@@ -544,7 +555,10 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       boolean needsDyn = false;
       Element mainPage = null, mainHead = null, mainBody = null;
       boolean doSync = false;
-      //LinkedHashSet<String> jsFiles = new LinkedHashSet<String>();
+
+      Map<String,ServerTag> serverTags = null;
+
+   //LinkedHashSet<String> jsFiles = new LinkedHashSet<String>();
       for (PageEntry pageEnt:pageEnts) {
          Object inst = insts.get(i);
          if (inst instanceof Element && pageEnt.urlPage) {
@@ -558,8 +572,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
             Element page = (Element) inst;
 
-            if (pageEnts.size() < 2)
+            if (pageEnts.size() < 2) {
                sb = page.output();
+            }
             else {
                Element headElem = (Element) DynUtil.getProperty(page, "head");
                Element bodyElem = (Element) DynUtil.getProperty(page, "body");
@@ -588,16 +603,17 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                      bodyElem.outputBody(bodySB);
                }
             }
+            serverTags = page.addServerTags(WindowScopeDefinition, serverTags, false);
 
-            /*
-            List<String> pageFiles = page.getJSFiles();
-            if (pageFiles != null) {
-               for (int jsix = 0; jsix < pageFiles.size(); jsix++) {
-                  String pageFile = pageFiles.get(jsix);
-                  jsFiles.add(pageFile);
-               }
+         /*
+         List<String> pageFiles = page.getJSFiles();
+         if (pageFiles != null) {
+            for (int jsix = 0; jsix < pageFiles.size(); jsix++) {
+               String pageFile = pageFiles.get(jsix);
+               jsFiles.add(pageFile);
             }
-            */
+         }
+         */
 
             ctx.execLaterJobs();
 
@@ -614,6 +630,18 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
          sb.append(headSB);
          sb.append(bodySB);
          mainPage.outputEndTag(sb);
+      }
+
+      if (serverTags != null) {
+         WindowScopeContext wctx = ctx.getWindowScopeContext(true);
+
+         ServerTagManager mgr = (ServerTagManager) wctx.getValue("sc.js.PageServerTagManager");
+         if (mgr == null) {
+            mgr = new ServerTagManager();
+            wctx.setValue("sc.js.PageServerTagManager", mgr);
+         }
+         mgr.serverTags = serverTags;
+         SyncManager.addSyncInst(mgr, false, true, "window", null);
       }
 
       int pageBodySize = sb == null ? 0 : sb.length();
@@ -727,7 +755,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                startTime = System.currentTimeMillis();
 
             try {
-               // TODO: check if we need a session for this request before creating it
+               // TODO - performance: if we do not have a session scope registered, we could avoid creating the session
                session = request.getSession(true);
 
                // Acquires the locks for the page and gets info
@@ -912,6 +940,12 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       if (pageDispatcher != null)
          System.err.println("*** Warning - replacing existing static page dispatcher");
       pageDispatcher = this;
+
+      Element.initSync();
+
+      SyncManager.addSyncType(ServerTagManager.class, new SyncProperties(null, null, new Object[] {"serverTags"}, null, SyncOptions.SYNC_INIT_DEFAULT, WindowScopeDefinition.scopeId));
+      SyncManager.addSyncType(ServerTag.class, new SyncProperties(null, null, new Object[] {"id", "props"}, null, SyncOptions.SYNC_INIT_DEFAULT, WindowScopeDefinition.scopeId));
+      //SyncManager.addSyncType(ServerTag.ServerTagProp.class, new SyncProperties(null, null, new Object[] {"propName"}, null, SyncOptions.SYNC_INIT_DEFAULT, WindowScopeDefinition.scopeId));
    }
 
    public List<PageDispatcher.PageEntry> getPageEntriesOrError(Context ctx, String url) {

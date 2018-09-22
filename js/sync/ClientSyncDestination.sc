@@ -83,9 +83,9 @@ object ClientSyncDestination extends SyncDestination {
          receiveLanguage = "js";
       if (SyncManager.trace) {
          if (toApply == null || toApply.length() == 0)
-            System.out.println("Server returned no changes");
+            System.out.println("No changes in server response");
          else
-            System.out.println("Applying changes" + (receiveLanguage == null ? "" : " in " + receiveLanguage) + " from server: '" + toApply + "'" + (isReset ? "reset" : "") +"\n");
+            System.out.println("Applying server response " + (receiveLanguage == null ? "changes" : receiveLanguage) + ": '" + toApply + "'" + (isReset ? "reset" : "") +"\n");
       }
       if (receiveLanguage != null && receiveLanguage.equals("js")) {
          DynUtil.evalScript(toApply);
@@ -100,6 +100,15 @@ object ClientSyncDestination extends SyncDestination {
 
    public void initSyncManager() {
       syncManager = new ClientSyncManager(this);
+
+      // Hook into the synchronization system so we can resolve sync updates for DOM elements - by id for which
+      // there is no tag class on the client - the server tags.  A resolver to lookup or create the tag object for
+      // this lookup in the sync system if there is one.
+      syncManager.addFrameworkNameContext(new sc.dyn.INameContext() {
+         public Object resolveName(String name, boolean create, boolean returnTypes) {
+            return Element.updateServerTag(null, name, null, false);
+         }
+      });
    }
 
    /** Sending the raw layer definition to the server as it can parse it easily there. */
