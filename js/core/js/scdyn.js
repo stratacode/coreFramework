@@ -444,11 +444,12 @@ sc_DynUtil_c.createInnerInstance = function(newClass, outer, paramSig, paramValu
    // instance as its context (i.e. its 'this' value)
 
    if (isPrototype) {
-      inst = new newClass.constructor(paramValues);
-      /*
+      if (newClass.constructor == Element)
+         inst = new newClass.constructor(paramValues);
+      else {
          inst = new DynInst;
          ret = newClass.constructor.apply(inst, paramValues);
-      */
+      }
    }
    else {
       inst = new DynInst;
