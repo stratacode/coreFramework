@@ -632,7 +632,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
          mainPage.outputEndTag(sb);
       }
 
-      if (serverTags != null) {
+      if (serverTags != null && serverTags.size() > 0) {
          WindowScopeContext wctx = ctx.getWindowScopeContext(true);
 
          ServerTagManager mgr = (ServerTagManager) wctx.getValue("sc.js.PageServerTagManager");
