@@ -459,7 +459,7 @@ js_HTMLElement_c.updateDOM = function() {
    this.bodyValid = true;
 }
 
-js_HTMLElement_c.setDOMElement = function(newElement) {
+js_HTMLElement_c.updateFromDOMElement = js_HTMLElement_c.setDOMElement = function(newElement) {
    if (newElement !== this.element) {
       var orig = this.element;
       if (orig !== null) {
@@ -1388,6 +1388,10 @@ js_HTMLElement_c.markBodyValid = function(v) {
    this.bodyValid = v; 
 }
 
+js_HTMLElement_c.markStartTagValid = function(v) {
+   this.startValid = v;
+}
+
 
 js_HTMLElement_c.serverContent = false;
 
@@ -1646,6 +1650,12 @@ js_Input_c.domChanged = function(origElem, newElem) {
       if (this.value != null && !this.serverContent)
          newElem.value = this.value; 
    }
+}
+
+js_Input_c.updateFromDOMElement = function(newElem) {
+   js_HTMLElement_c.updateFromDOMElement.call(this, newElem);
+   this.value = newElem.value;
+   this.checked = newElem.checked;
 }
 
 js_Input_c.setValue = function(newVal) {
@@ -2117,7 +2127,7 @@ js_Element_c.updateServerTag = function(tagObj, id, serverTag, addSync) {
             tagObj.parentNode = this;
             tagObj.setId(id);
             tagObj.serverContent = true;
-            tagObj.setDOMElement(element);
+            tagObj.updateFromDOMElement(element);
 
             if (addSync) {
                var props = serverTag == null || serverTag.props == null ? tagObj.eventAttNames : serverTag.props.toArray().concat(tagObj.eventAttNames);
@@ -2135,7 +2145,7 @@ js_Element_c.updateServerTag = function(tagObj, id, serverTag, addSync) {
       else if (tagObj.element != element) {
          if (js_Element_c.verbose)
             console.log("updating DOM element for tagObject with " + id);
-         tagObj.setDOMElement(element);
+         tagObj.updateFromDOMElement(element);
          if (serverTag != null && serverTag.props != null) {
             console.error("Unimplemented case: serverTag props change!"); // Need to adjust the sync properties we are listening on if they have changed
          }
@@ -2153,6 +2163,168 @@ js_Element_c.updateServerTag = function(tagObj, id, serverTag, addSync) {
       }
    }
    return tagObj;
+}
+
+js_Element_c.setStartTagTxt = function(startTagTxt) {
+   if (this.element != null) {
+      if (!startTagTxt.startsWith("<")) {
+         console.error("invalid start tag txt");
+         return;
+      }
+
+      var tagName = "";
+      var tnix;
+      var stlen = startTagTxt.length;
+      var endTag = false;
+      for (tnix = 1; tnix < stlen; tnix++) {
+         var c = startTagTxt.charAt(tnix);
+         if (/\s/.test(c))
+            break;
+         if (c == '/' || c == '>') {
+            endTag = true;
+            break;
+         }
+         tagName = tagName + c;
+      }
+      if (tagName == null) {
+         console.error("Missing tag name");
+         return;
+      }
+      if (!tagName.equalsIgnoreCase(this.element.tagName)) {
+         console.error("Invalid tag name change - current tag: " + this.element.tagName + " != " + tagName);
+         return;
+      }
+      var attName = "";
+      var oldAtts = this.element.attributes;
+      var newAtts = {};
+      var newAttsArr = [];
+      var anix = tnix + 1;
+      for (; anix < stlen; anix++) {
+         var c = startTagTxt.charAt(anix);
+         if (c == '=') { // parse attribute
+            if (attName == "") {
+               console.error("Invalid attribute");
+               return;
+            }
+            var avix = anix + 1;
+            var attVal = "";
+            var delim = null;
+            for (; avix < stlen; avix++) {
+               c = startTagTxt.charAt(avix);
+               if (!delim) {
+                  if (c == '"' || c == "'") {
+                     if (attVal != "") {
+                        console.error("Invalid attribute");
+                        return;
+                     }
+                     delim = c;
+                  }
+                  else if (/\s/.test(c)) {
+                     if (attVal == "")
+                        continue;
+                     else
+                        break;
+                  }
+                  else if (c == '>' || c == '/') {
+                     endTag = true;
+                     break;
+                  }
+                  else {
+                     attVal += c;
+                  }
+               }
+               else {
+                  if (delim == c) {
+                     delim = null;
+                     break;
+                  }
+                  if (c == '\\' && avix < stlen - 1) {
+                     avix++;
+                     var nc = startTagTxt.charAt(avix);
+                     if (nc == '"' || nc == '\'' || nc == '\\')
+                        c = nc;
+                     else {
+                        var esc = true;
+                        if (nc == 'n') {
+                           attVal += '\n';
+                        }
+                        else if (nc == 't') {
+                           attVal += '\t';
+                        }
+                        else if (nc == 'r') {
+                           attVal += '\r';
+                        }
+                        else {
+                           console.error("Unrecognized escape");
+                           return;
+                        }
+                        continue;
+                     }
+                  }
+                  attVal += c;
+               }
+            }
+            if (delim != null) {
+               console.error("Unclosed string with: " + delim);
+               return;
+            }
+            newAtts[attName] = attVal;
+            newAttsArr.push(attName);
+            attName = "";
+            attVal = "";
+            anix = avix;
+         }
+         else if (c == '/' || c == '>') {
+            endTag = true;
+            break;
+         }
+         else if (/\s/.test(c)) {
+            if (attName == "")
+               continue;
+            else {
+               newAtts[attName] = true;
+               newAttsArr.push(attName);
+               attName = "";
+            }
+         }
+         else {
+            attName += c;
+         }
+         if (endTag)
+            break;
+      }
+      if (!endTag) {
+         console.error("Invalid start tag txt");
+         return;
+      }
+      if (attName.length > 0) { // last value-less attribute
+         newAtts[attName] = true;
+         newAttsArr.push(attName);
+      }
+      var elem = this.element;
+      for (var i = 0; i < newAttsArr.length; i++) {
+         var newAttName = newAttsArr[i];
+         var oldVal = elem.getAttribute(newAttName);
+         var newVal = newAtts[newAttName];
+         if (oldVal == null) {
+            if (newVal == true && elem.hasAttribute(newAttName))
+               elem.removeAttribute(newAttName);
+         }
+         if (oldVal == null || !oldVal.equals(newVal)) {
+            if (newVal == true)
+               elem.setAttribute(newAttName, true);
+            else
+               elem.setAttribute(newAttName, newVal);
+         }
+      }
+      for (var i = 0; i < oldAtts.length; i++) {
+         var oldAttName = oldAtts[i].name;
+         if (!newAtts[oldAttName]) {
+            elem.removeAttribute(oldAttName);
+            i--;
+         }
+      }
+   }
 }
 
 js_Element_c.setInnerHTML = function(htmlTxt) {

@@ -1,7 +1,7 @@
 import java.util.Collection;
 
 /** 
-  This acts lik a java.util.ArrayList but is usable with data binding and data synchronization.
+  This acts like a java.util.ArrayList but is usable with data binding and data synchronization.
   It sends change events as you modify it.
   <p>
   Because it is synchronizable as a property and sends change events we disable the auto-sync stuff for it.  
