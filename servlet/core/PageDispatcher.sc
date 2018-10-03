@@ -363,7 +363,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       int i = 0;
       for (PageEntry pageEnt:pageEnts) {
          if (pageEnt.urlPage) {
-            // Enable sync for the page if it needsSync, or if sync is enabled and we are in test mode (so we can control the client with test scripts).  If the client has no js.sync layer (syncEnabled=false), it won't have loaded the syncManager and so we can't do the client/server/sync
+            // Enable sync for the page if it needsSync, or if sync is enabled and we are in test mode (so we can control the client with test scripts).
+            // The syncEnabled flag is set based on whether the js.sync layer is present.  If the client has no js.sync layer (syncEnabled=false), it won't
+            // have loaded the syncManager and so we can't do the client/server/sync
             boolean doSync = pageEnt.doSync || (testMode && sys != null && sys.syncEnabled);
 
             Object pageType = pageEnt.pageType;
@@ -396,7 +398,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             markSyncSession(session, uri, reset, initial);
 
             Object inst = null;
+            boolean newInst = false;
 
+            // For page objects that are classes, we'll create the class and register it here
             if (!isObject) {
                String typeName = ModelUtil.getTypeName(pageType);
                ScopeDefinition scopeDef = getScopeDefForPageType(pageType);
@@ -409,12 +413,17 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                         scopeCtx.setValue(typeName, inst);
                         // Register this instance by name but don't initialize it.
                         SyncManager.registerSyncInst(inst, typeName, scopeDef.scopeId, false);
+                        newInst = true;
                      }
                   }
                }
             }
             if (inst == null) {
                inst = ModelUtil.getAndRegisterGlobalObjectInstance(pageType);
+               newInst = true;
+            }
+            if (newInst && inst instanceof Element) {
+               initPageInst((Element) inst);
             }
             insts.add(inst);
 
@@ -467,17 +476,29 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             // This runs any code triggered by 'do later' jobs during the page-init phase.  It makes sure the page content is in sync before we start rendering.
             ctx.execLaterJobs();
 
-            // When we've finished preparing the page for a second time, we fire any "innerHTML" property change events
+            // When we've finished preparing the page for a second time, we fire any "startTagTxt" and "innerHTML" property change events
             // efficiently, walking down the tree to find the first node which has had bodyTxt changes.  If anyone is listening
             // for those properties, it will queue up sync change events here.
             if (doSync && !initial && inst instanceof Element) {
-               ((Element) inst).fireChangedTagEvents();
+               Element pageElem = ((Element) inst);
+
+               // When we are synchronizing changes using server tags
+               if (pageElem.needsRefresh)
+                  Bind.refreshBindings(pageElem);
+
+               pageElem.fireChangedTagEvents(false);
             }
          }
 
          i++;
       }
       return insts;
+   }
+
+   public void initPageInst(Element pageObj) {
+      // TODO: should this be settable someplace?  This could be set into the HtmlPage's class but that seems less
+      // flexible.   Might want to control this with a startup option?
+      pageObj.cache = sc.lang.html.CacheMode.Enabled;
    }
 
    static String getRuntimeString(long startTime) {
@@ -639,9 +660,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
          if (mgr == null) {
             mgr = new ServerTagManager();
             wctx.setValue("sc.js.PageServerTagManager", mgr);
+            SyncManager.addSyncInst(mgr, false, true, "window", null);
          }
          mgr.serverTags = serverTags;
-         SyncManager.addSyncInst(mgr, false, true, "window", null);
       }
 
       int pageBodySize = sb == null ? 0 : sb.length();

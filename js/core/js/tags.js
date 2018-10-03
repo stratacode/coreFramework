@@ -17,6 +17,7 @@ function js_HTMLElement() {
    this.repeatVar = null;
    this.repeatIndex = -1;
    this.repeatVarName = null;
+   this.serverRepeat = false;
    this.HTMLClass = null;
    this.visible = true;
    this.invisTags = null;
@@ -405,7 +406,7 @@ var sc$rootTagsArray = [];
 function sc_refresh() {
    for (var i = 0; i < sc$rootTagsArray.length; i++) {
       var rootTag = sc$rootTagsArray[i];
-      if (rootTag.needsRefresh) {
+      if (rootTag.needsRefresh) { // When bindings in a tag need to be manually refreshed, you can set 'needsRefresh=true' on the root tag and we'll refresh all bindings on the page
          sc_Bind_c.refreshBindings(rootTag);
       }
    }
@@ -725,7 +726,7 @@ js_HTMLElement_c.initChildren = function() {
    }
 }
 
-js_HTMLElement_c.repeatNeedsSync = function() {
+js_HTMLElement_c.anyChangedRepeatTags = function() {
    var repeat = this.repeat;
    var repeatTags = this.repeatTags;
    if (this.repeat === null) {
@@ -2115,11 +2116,14 @@ js_HtmlPage_c.getQueryParamProperties = js_Page_c.getQueryParamProperties = func
 // server is interested in. It returns the resulting tag object
 js_Element_c.updateServerTag = function(tagObj, id, serverTag, addSync) {
    var element = document.getElementById(id);
+
+   var isRepeat = js_RepeatServerTag_c.isRepeatId(id);
+
    if (element != null) {
       if (tagObj == null && element.scObj != null)
          tagObj = element.scObj;
       if (tagObj == null) {
-         var tagClass = js_HTMLElement_c.tagNameToType[element.tagName.toLowerCase()];
+         var tagClass = isRepeat ? js_RepeatServerTag_c : js_HTMLElement_c.tagNameToType[element.tagName.toLowerCase()];
          if (tagClass == null)
             tagClass = js_HTMLElement_c;
          if (tagClass != null) {
@@ -2130,6 +2134,9 @@ js_Element_c.updateServerTag = function(tagObj, id, serverTag, addSync) {
             tagObj.updateFromDOMElement(element);
 
             if (addSync) {
+               if (isRepeat)
+                  console.error("Synchronizing repeat tag - case not supported");
+
                var props = serverTag == null || serverTag.props == null ? tagObj.eventAttNames : serverTag.props.toArray().concat(tagObj.eventAttNames);
 
                sc_SyncManager_c.registerSyncInst(tagObj, id, true, false); // register but do not init because we do that next with a specific set of props
@@ -2372,6 +2379,19 @@ js_HtmlPage_c.refreshServerTags = js_Page_c.refreshServerTags = function() {
             // TODO: remove oldServerTags that are not in newServerTags
         }
     }
+   js_HtmlPage_c.refreshServerTagsScheduled = false;
+}
+
+js_HtmlPage_c.refreshServerTagsScheduled = false;
+
+js_HtmlPage_c.schedRefreshServerTags = function() {
+   if (!js_HtmlPage_c.refreshServerTagsScheduled) {
+      js_HtmlPage_c.refreshServerTagsScheduled = true;
+      for (var i = 0; i < sc$rootTagsArray.length; i++) {
+          var rootTag = sc$rootTagsArray[i];
+          sc_addRunLaterMethod(rootTag, js_HtmlPage_c.refreshServerTags, 5);
+      }
+   }
 }
 
 function js_Img() {
@@ -2546,7 +2566,7 @@ js_RepeatListener_c = sc_newClass("sc.lang.html.RepeatListener", js_RepeatListen
 js_RepeatListener_c.valueValidated = function(obj, prop, detail, apply) {
    var scObj = this.scObj;
    // When an update occurs to the repeat element, check if we need to refresh the list
-   if (scObj.repeatTags === null || scObj.repeatNeedsSync()) {
+   if (scObj.repeatTags === null || scObj.anyChangedRepeatTags()) {
       scObj.invalidateRepeatTags();
    }
 }
@@ -2665,12 +2685,88 @@ function js_QueryParamProperty(enclType, propName, paramName, propType, req) {
    this.required = req;
 }
 
+function js_RepeatServerTag() {
+   js_HTMLElement.call(this);
+   this.serverRepeat = true;
+}
+
+// A class used to managed a 'repeat' tag which is rendered on the server.  The role of this class is to update
+// the DOM when sync changes are received from the server with changes to the innerHTML property of this tag.
+js_RepeatServerTag_c = sc_newClass("sc.lang.html.RepeatServerTag", js_RepeatServerTag, js_HTMLElement, null);
+
+// For repeat server tags, no need to add any listeners
+js_RepeatServerTag_c.updateFromDOMElement = function(newElement) {
+   if (newElement !== this.element) {
+      var orig = this.element;
+      if (orig !== null) {
+         delete orig.scObj;
+      }
+
+      this.element = newElement;
+      if (newElement !== null) {
+         //sc_id(newElement); enable for debugging to make it easier to identify unique elements
+
+         // This can happen if
+         if (newElement.scObj !== undefined) {
+            console.log("Warning: replacing object: " + sc_DynUtil_c.getInstanceId(newElement.scObj) + " with: " + sc_DynUtil_c.getInstanceId(this) + " for tag: " + this.tagName);
+         }
+         newElement.scObj = this;
+      }
+   }
+}
+
+js_RepeatServerTag_c.setInnerHTML = function(htmlTxt) {
+   if (this.element != null) {
+      do {
+         var next = this.element.nextElementSibling;
+         if (next == null)
+            break;
+         var nextId = next.id;
+         if (nextId == null)
+            break;
+         var repeatInnerName = this.repeatInnerName;
+         var ix = nextId.indexOf(this.repeatInnerName);
+         // does the id of the next tag not match the expected pattern either "repeatTagName" or like "repeatTagName1"
+         if (ix != 0 && nextId.length > repeatInnerName.length && /\d/.test(nextId.substr(repeatInnerName.length)))
+            break;
+         this.element.parentNode.removeChild(next);
+      } while (true);
+      this.element.insertAdjacentHTML("afterend", htmlTxt);
+      js_HtmlPage_c.schedRefreshServerTags();
+   }
+}
+
+js_RepeatServerTag_c.isRepeatId = function(id) {
+   return js_RepeatServerTag_c.getRepeatInnerName(id) != null;
+}
+
+js_RepeatServerTag_c.getRepeatInnerName = function(id) {
+   // Check if this is a 'repeat' element based on it's id name scheme and compute the id prefix for it's children
+   var ix = id.indexOf('_Repeat');
+   var repeatInnerName = null;
+   if (ix != -1) {
+      var rlen = '_Repeat'.length
+      if (ix + rlen == id.length)
+         repeatInnerName = id.substring(0, ix);
+      else if (id.charAt(ix+rlen) == '_') // TODO: if it is like foo_repeat_3 we need to do foo_3 right?
+         repeatInnerName = id.substring(0, ix) + id.substring(ix + rlen);
+   }
+   return repeatInnerName;
+}
+
+js_RepeatServerTag_c.setId = function(newVal) {
+   this.id = newVal;
+   this.repeatInnerName = js_RepeatServerTag_c.getRepeatInnerName(newVal);
+}
+
 js_QueryParamProperty_c = sc_newClass("sc.lang.html.QueryParamProperty", js_QueryParamProperty, null, null);
 
 // Maps tag names to the base class object that implements those tag classes - defaults to js_HTMLElement_c for other tags
 js_HTMLElement_c.tagNameToType = {input:js_Input_c, form:js_Form_c, select:js_Select_c, option:js_Option_c};
 
+// Need to make these types using the sc java model for the sync system
 js_Event_c = sc_newClass("sc.lang.html.Event", Event, null, null);
+js_MouseEvent_c = sc_newClass("sc.lang.html.MouseEvent", MouseEvent, Event, null);
 
 // Adding a default for this property which we use as a sync property to mirror currentTarget in the event
 Event.prototype.currentTag = null;

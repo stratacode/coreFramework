@@ -16,7 +16,8 @@
 <!DOCTYPE html>
 <html abstract="true">
    <head serverContent="true">
-      <script type="text/javascript" noCache="true">
+      <!-- Setting stateless=true here means that the entire tag and its body are included in the 'outputBody' method of the parent, no object generated for this tag -->
+      <script type="text/javascript" stateless="true">
          var sc_windowId = <%= sc.type.PTypeUtil.getWindowId() %>;
          var sc_testMode = <%= sc.type.PTypeUtil.testMode %>;
       </script>
