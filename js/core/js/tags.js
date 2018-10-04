@@ -2111,6 +2111,16 @@ js_HtmlPage_c.getQueryParamProperties = js_Page_c.getQueryParamProperties = func
    return this.queryParamProperties;
 }
 
+js_HtmlPage_c.getServerTagById = function(id) {
+   for (var i = 0; i < sc$rootTagsArray.length; i++) {
+      var rootTag = sc$rootTagsArray[i];
+      var st = rootTag.serverTags[id];
+      if (st)
+         return st;
+   }
+   return null;
+}
+
 // Called to create, or update a server tag object, pointing to the DOM element specified by 'id'.
 // It's called from a server response handler with an optional serverTag info object describing the properties the
 // server is interested in. It returns the resulting tag object
@@ -2159,8 +2169,16 @@ js_Element_c.updateServerTag = function(tagObj, id, serverTag, addSync) {
       }
    }
    else {
-      if (tagObj == null) // is called for generic lookups that might fail so no logging here
-         return null;
+      if (tagObj == null) {
+         // When called from refreshServerTags, we don't want to consult the existing tag objects, or we won't find removed elements but we might receive 
+         // events for an object which is being removed from the DOM.  So for resolveName we are having it return oldTags to avoid those errors.
+         if (!addSync) 
+            tagObj = js_HtmlPage_c.getServerTagById(id);
+         if (tagObj != null) {
+            return tagObj; // There was an old server tag by this name - we'll return it in case the DOM is being populated with this element
+         }
+         // no logging here - just return null since this is called for all sync lookups
+      }
       else {
          if (js_Element_c.verbose)
             console.log("Removing serverTag object " + id + ": no longer in DOM");

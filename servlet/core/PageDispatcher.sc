@@ -90,6 +90,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
    static public boolean verbose = false, trace = false, traceLocks = false, testMode = false;
 
+   static public boolean defaultPageCache = true;
+
    public static long serverStartTime = System.currentTimeMillis();
 
    private FilterConfig filterConfig;
@@ -498,7 +500,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
    public void initPageInst(Element pageObj) {
       // TODO: should this be settable someplace?  This could be set into the HtmlPage's class but that seems less
       // flexible.   Might want to control this with a startup option?
-      pageObj.cache = sc.lang.html.CacheMode.Enabled;
+      if (defaultPageCache)
+         pageObj.cache = sc.lang.html.CacheMode.Enabled;
    }
 
    static String getRuntimeString(long startTime) {
@@ -937,6 +940,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
          if (sys.options.testMode)
             testMode = true;
+
+         defaultPageCache = sys.options.defaultPageCache;
 
          if (Element.trace) {
             Context.trace = trace = true;
