@@ -225,7 +225,12 @@ js_HTMLElement_c.setVisible = function(vis) {
       this.visible = vis;
       // TODO: we used to have code in here to try and avoid an extra invalidate call if we were already invisible and making the element invisible.  But not sure if that really is a worthwhile optimization
       //var domElem = this.element != null;
-      this.invalidate();
+      // When a tag becomes visible or invisible, the parent tag's body needs to be refreshed
+      var enclTag = this.getEnclosingTag();
+      if (enclTag != null)
+         enclTag.invalidateBody();
+      else
+         this.invalidate();
       sc_Bind_c.sendEvent(sc_IListener_c.VALUE_CHANGED, this, "visible" , vis);
    }
 }
@@ -467,14 +472,13 @@ js_HTMLElement_c.updateFromDOMElement = js_HTMLElement_c.setDOMElement = functio
           delete orig.scObj;
       }
 
-      if (this.element === null && newElement !== null) {
+      this.element = newElement;
+      if (orig === null && newElement !== null) {
           this.addAttributeListener();
       }
 
-      this.element = newElement;
       if (newElement !== null) {
 
-               
          //sc_id(newElement); enable for debugging to make it easier to identify unique elements
         
          // This can happen if 
