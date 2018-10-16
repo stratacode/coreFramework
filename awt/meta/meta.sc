@@ -14,6 +14,6 @@ awt.meta {
 
       // Awt requires the default runtime, Desktop process
       //addRuntime(null);
-      addProcess(sc.layer.ProcessDefinition.create("Desktop"));
+      addProcess(sc.layer.ProcessDefinition.create("Desktop", "java", false));
    }
 }
