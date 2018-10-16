@@ -28,7 +28,7 @@ jetty.lib extends log4j.core {
 
       // Jetty requires the default runtime - Server process
       //addRuntime(null);
-      addProcess(sc.layer.ProcessDefinition.create("Server"));
+      addProcess(sc.layer.ProcessDefinition.create("Server", "java", true));
 
       System.setProperty("org.eclipse.jetty.xml.XmlParser.Validating", "false");
    }

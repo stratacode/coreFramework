@@ -15,7 +15,7 @@ servlet.webApp extends util, html.schtml {
 
       // The servlet stuff requires the default runtime, Server process
       //addRuntime(null);
-      addProcess(sc.layer.ProcessDefinition.create("Server"));
+      addProcess(sc.layer.ProcessDefinition.create("Server", "java", true));
    }
 
    public void start() {
