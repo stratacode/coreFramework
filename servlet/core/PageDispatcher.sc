@@ -109,8 +109,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       int priority;
       String lockScope; // The scope name to use for locking.  if null, use the type's scope as the scope for the lock.
       String mimeType;
-      boolean doSync; // Set to true during compilation based on whether there's a client/server pair of objects
-      boolean hasServerTags; // If there's no client tag object but there are serverTags in the server version which also need sync apis on the server
+      boolean doSync; // Set to true during compilation based on whether there's a client/server sync'ing - matching js to java classes
+      boolean hasServerTags; // There's no client tag object but there is one or more serverTags in the server version.  Server tags also need sync
       boolean resource;
 
       // Stores the list of query parameters (if any) for the given page - created with @QueryParam
