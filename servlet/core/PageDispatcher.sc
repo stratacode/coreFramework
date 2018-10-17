@@ -109,7 +109,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       int priority;
       String lockScope; // The scope name to use for locking.  if null, use the type's scope as the scope for the lock.
       String mimeType;
-      boolean doSync;
+      boolean doSync; // Set to true during compilation based on whether there's a client/server pair of objects
+      boolean hasServerTags; // If there's no client tag object but there are serverTags in the server version which also need sync apis on the server
       boolean resource;
 
       // Stores the list of query parameters (if any) for the given page - created with @QueryParam
@@ -143,6 +144,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       ent.urlPage = urlPage;
       ent.resource = isResource;
       ent.doSync = doSync;
+      // TODO: should we add an annotation for this - some page objects may not have server tags so we could avoid some work for them.
+      ent.hasServerTags = DynUtil.isAssignableFrom(Element.class, pageType);
       ent.mimeType = getMimeType(pattern);
       ent.queryParamProps = queryParamProps;
       // Used to use the keyName here as the key but really can only have one per pattern anyway and need a precedence so sc.foo.index can override sc.bar.index.
@@ -368,7 +371,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             // Enable sync for the page if it needsSync, or if sync is enabled and we are in test mode (so we can control the client with test scripts).
             // The syncEnabled flag is set based on whether the js.sync layer is present.  If the client has no js.sync layer (syncEnabled=false), it won't
             // have loaded the syncManager and so we can't do the client/server/sync
-            boolean doSync = pageEnt.doSync || (testMode && sys != null && sys.syncEnabled);
+            boolean doSync = pageEnt.doSync || pageEnt.hasServerTags || (testMode && sys != null && sys.syncEnabled);
 
             Object pageType = pageEnt.pageType;
             boolean isObject = ModelUtil.isObjectType(pageType);
@@ -411,7 +414,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                   if (scopeCtx != null) {
                      inst = scopeCtx.getValue(typeName);
                      if (inst == null) {
-                        inst = ModelUtil.getObjectInstance(pageType);
+                        inst = ModelUtil.getAndRegisterGlobalObjectInstance(pageType);
                         scopeCtx.setValue(typeName, inst);
                         // Register this instance by name but don't initialize it.
                         SyncManager.registerSyncInst(inst, typeName, scopeDef.scopeId, false);
@@ -588,7 +591,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
          if (inst instanceof Element && pageEnt.urlPage) {
             needsDyn = true;
 
-            if (pageEnt.doSync || testMode)
+            if (pageEnt.doSync || pageEnt.hasServerTags || testMode)
                doSync = true;
 
             if (pageEnt.mimeType != null)
@@ -814,7 +817,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                   System.out.println("Page complete: session: " + getTraceInfo(session) + traceBuffer + " for " + getRuntimeString(startTime));
 
                // We don't want to register a command context for the '.css' page - i.e. pageEnt.resource = true
-               if (sys != null && isUrlPage && (pageEnt.doSync || (testMode && !pageEnt.resource))) {
+               if (sys != null && isUrlPage && (pageEnt.doSync || pageEnt.hasServerTags || (testMode && !pageEnt.resource))) {
                   // In test mode only we accept the scopeAlias parameter, so we can attach to a specific request's scope context from the test script
                   String scopeContextName = !sys.options.testMode ? null : request.getParameter("scopeContextName");
                   // If the command line interpreter is enabled, use a scopeContextName so the command line is sync'd up to the scope of the page page we rendered
@@ -829,7 +832,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             }
             finally {
                try {
-                  if (pageEnt.doSync) {
+                  if (pageEnt.doSync || pageEnt.hasServerTags) {
                      // This clears the initial sync flag in case we called setInitialSync(..., true) in initPageObjects.  It also clears the SyncState for the other initPageObjects cases.
                      SyncManager.setInitialSync("jsHttp", uri, WindowScopeDefinition.scopeId, false);
                   }
@@ -1038,6 +1041,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
          boolean isURLPage = isPageObj == null || isPageObj;
          boolean isResource = isResourceObj != null && isResourceObj;
          boolean needsSync = DynUtil.needsSync(newType);
+         boolean hasServerTags = DynUtil.isAssignableFrom(Element.class, newType); // TODO: should we have an annotation for this?
          String pattern = (String) DynUtil.getInheritedAnnotationValue(newType, "sc.html.URL", "pattern");
          String lockScope = (String) DynUtil.getInheritedAnnotationValue(newType, "sc.html.URL", "lockScope");
          String resultSuffix = (String) DynUtil.getInheritedAnnotationValue(newType, "sc.obj.ResultSuffix", "value");

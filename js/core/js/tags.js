@@ -409,6 +409,17 @@ var sc$rootTags = new Object();
 var sc$rootTagsArray = [];
 
 function sc_refresh() {
+   if (sc$rootTagsArray.length === 0) {
+      if (typeof sc_SyncManager_c != "undefined") {
+         var serverTagMgr = sc_SyncManager_c.getSyncInst("sc.js.PageServerTagManager");
+         if (serverTagMgr) { // If there are server tags and no top-level page object - it's entirely a server tag page object.   Create a pageObj stub to refresh the server tags.
+            var pageObj = new js_HtmlPage();
+            pageObj.serverContent = true;
+            pageObj.refreshServerTags();
+            sc$rootTagsArray.push(pageObj);
+         }
+      }
+   }
    for (var i = 0; i < sc$rootTagsArray.length; i++) {
       var rootTag = sc$rootTagsArray[i];
       if (rootTag.needsRefresh) { // When bindings in a tag need to be manually refreshed, you can set 'needsRefresh=true' on the root tag and we'll refresh all bindings on the page
