@@ -145,7 +145,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       ent.resource = isResource;
       ent.doSync = doSync;
       // TODO: should we add an annotation for this - some page objects may not have server tags so we could avoid some work for them.
-      ent.hasServerTags = DynUtil.isAssignableFrom(Element.class, pageType);
+      // Also, if we synchronize more than one page object for the same page, we'll need to improve the logic for selecting the current
+      // context because the sccss files conflict with the main page when driving the test scripts (e.g. prepDemoTodo)
+      ent.hasServerTags = !isResource && DynUtil.isAssignableFrom(Element.class, pageType);
       ent.mimeType = getMimeType(pattern);
       ent.queryParamProps = queryParamProps;
       // Used to use the keyName here as the key but really can only have one per pattern anyway and need a precedence so sc.foo.index can override sc.bar.index.
