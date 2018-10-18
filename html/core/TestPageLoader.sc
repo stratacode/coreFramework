@@ -232,7 +232,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
          endSession(processRes);
          numLoaded++;
       }
-      System.out.println("- Done loading: " + numLoaded + " pages" + (indexSkipped ? "- skipIndexPage set" : ""));
+      System.out.println("- Done loading: " + numLoaded + " pages" + (indexSkipped ? " - skipIndexPage set" : ""));
    }
 
    public void saveClientConsole(URLPath urlPath) {
