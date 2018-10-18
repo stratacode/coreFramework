@@ -16,6 +16,7 @@ class BodyTypeDeclaration extends Definition {
       return typeName;
    }
 
+
    private String fullTypeName;
    @Constant
    public void setFullTypeName(String ftn) {

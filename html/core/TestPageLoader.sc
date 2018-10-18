@@ -27,7 +27,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
    public boolean loadAllPages = true;
    public boolean recordClientOutput = true;
 
-   // Holds any started processes
+   // Processes started by the test page loader for browser instances
    List<AsyncProcessHandle> processes = new ArrayList<AsyncProcessHandle>();
 
    public boolean headless;
@@ -164,7 +164,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
       catch (RuntimeException exc) {
          endSession(processRes);
          processRes = null;
-         System.err.println("*** Caught exception in loadURL: " + urlPath.url + ": " + exc);
+         System.err.println("*** Exception from loadURL: " + urlPath.url + ": " + exc);
          exc.printStackTrace();
          throw exc;
       }
@@ -200,21 +200,29 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
    }
 
    void runPageTest(URLPath urlPath) {
-      String testScriptName = "test" + sc.type.CTypeUtil.capitalizePropertyName(urlPath.name) + ".scr";
+      String typeName = sc.type.CTypeUtil.capitalizePropertyName(urlPath.name);
+      String testScriptName = "test" + typeName + ".scr";
       if (cmd.exists(testScriptName)) {
          if (!clientSync) // Ideally in this case, we'd have a way to convert the testApp.scr file into a program to download when we run in testMode
-             System.out.println("Skipping testScript: " + testScriptName + " for client-only application");
-         else
-             cmd.include(testScriptName);
+            System.out.println("Skipping " + testScriptName + " for type: " + typeName + " - scripts not yet supported for client-only application");
+         else {
+            System.out.println("--- Running " + testScriptName + " for type: " + typeName);
+            cmd.include(testScriptName);
+            System.out.println("- Done: " + testScriptName);
+         }
       }
    }
 
    public void loadAllPages() {
       int numLoaded = 0;
+      System.out.println("--- Loading all pages from: " + urlPaths.size() + " urls");
+      boolean indexSkipped = false;
       for (URLPath urlPath:urlPaths) {
          // Simple applications have only a single URL - the root.  Others have an index page and the application pages so we only skip when there's more than one
-         if (skipIndexPage && urlPath.name.equals("index") && urlPaths.size() > 1)
+         if (skipIndexPage && urlPath.name.equals("index") && urlPaths.size() > 1) {
+            indexSkipped = true;
             continue;
+         }
          AsyncProcessHandle processRes = loadURL(urlPath, null);
 
          runPageTest(urlPath);
@@ -224,7 +232,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
          endSession(processRes);
          numLoaded++;
       }
-      System.out.println("Done loading: " + numLoaded + " pages...");
+      System.out.println("- Done loading: " + numLoaded + " pages" + (indexSkipped ? "- skipIndexPage set" : ""));
    }
 
    public void saveClientConsole(URLPath urlPath) {
