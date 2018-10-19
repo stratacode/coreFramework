@@ -152,8 +152,8 @@ html.core extends sys.std {  // Extending sys.std because we override the standa
       //system.addTestCommand(system.options.testVerifyMode ? "./autoTest.sh" : "./runTest.sh");
 
       // Warn the user if there's no upstream layer for either javascript or a server implementation
-      if (activated && system.getLayerByDirName("js.template") == null && system.getLayerByDirName("servlet.schtml") == null && system.getLayerByDirName("wicket.core") == null && system.getLayerByDirName("html.schtml") == null && system.getLayerByDirName("js.schtml") == null) {
-         System.err.println("*** Warning: html.core layer included without html.schtml, js.schtml and servlet.schtml.  Include js.schtml for a client, servlet.schtml for a server or both for a synchronized implementation. By itself, html.core provides an API for HTML generation but does not even generate a default HTML file.");
+      if (activated && system.getLayerByDirName("js.allInOne") == null && system.getLayerByDirName("servlet.schtml") == null && system.getLayerByDirName("wicket.core") == null && system.getLayerByDirName("html.schtml") == null && system.getLayerByDirName("js.schtml") == null) {
+         System.err.println("*** Warning: html.core layer included without html.schtml, js.schtml, servlet.schtml, and js.allInOne.  Include js.schtml for a client, servlet.schtml for a server or both for a synchronized implementation. Use js.allInOne for building a single JS app - all in one file. By itself, html.core provides an API for HTML generation but does not even generate a default HTML file.");
       }
 
       sc.lang.DefaultAnnotationProcessor urlProc = new sc.lang.DefaultAnnotationProcessor();

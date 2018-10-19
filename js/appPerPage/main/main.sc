@@ -1,5 +1,6 @@
 package sc.tag;
 
+// TODO: should this be merged into js.schtml?  It uses "Page" but will we ever use Page without schtml?
 @sc.js.JSSettings(jsModuleFile="js/taggen.js", requiredModule=true)
 public js.appPerPage.main extends meta {
    exportPackage = false;
