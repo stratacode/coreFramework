@@ -493,7 +493,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                if (pageElem.needsRefresh)
                   Bind.refreshBindings(pageElem);
 
-               pageElem.validateTags();
+               //pageElem.validateTags();
 
                pageElem.fireChangedTagEvents(false);
             }
