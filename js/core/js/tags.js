@@ -2197,7 +2197,6 @@ js_Element_c.updateServerTag = function(tagObj, id, serverTag, addSync) {
       else {
          if (js_Element_c.verbose)
             console.log("Removing serverTag object " + id + ": no longer in DOM");
-         delete oldServerTags[id];
          sc_DynUtil_c.dispose(tagObj);
          tagObj = null;
       }
@@ -2370,6 +2369,7 @@ js_Element_c.setStartTagTxt = function(startTagTxt) {
 js_Element_c.setInnerHTML = function(htmlTxt) {
    if (this.element != null) {
       this.element.innerHTML = htmlTxt;
+      js_HtmlPage_c.schedRefreshServerTags();
    }
 }
 
@@ -2759,8 +2759,8 @@ js_RepeatServerTag_c.setInnerHTML = function(htmlTxt) {
             break;
          var repeatInnerName = this.repeatInnerName;
          var ix = nextId.indexOf(this.repeatInnerName);
-         // does the id of the next tag not match the expected pattern either "repeatTagName" or like "repeatTagName1"
-         if (ix != 0 && nextId.length > repeatInnerName.length && /\d/.test(nextId.substr(repeatInnerName.length)))
+         // continue removing elements while the nextId is either == name or name_1, name_2, etc.
+         if (ix != 0 || (nextId.length != repeatInnerName.length && !/_\d/.test(nextId.substr(repeatInnerName.length))))
             break;
          this.element.parentNode.removeChild(next);
       } while (true);
