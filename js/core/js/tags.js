@@ -398,7 +398,7 @@ js_HTMLElement_c.mapAttributeToProperty = function(name) {
    return res;
 }
 
-// Marks the names of object properties that are copied back into the DOM for this tag
+// The properties of the tagObject we listen to for changes.  When they change, we'll update the backing DOM element
 js_HTMLElement_c.refreshAttNames = ["class", "style", "repeat"];
 // The list of attributes which change due to user interaction on the client that we sync to the server for 'serverTags'
 js_HTMLElement_c.eventAttNames = [];
@@ -555,7 +555,7 @@ js_HTMLElement_c.domChanged = function(origElem, newElem) {
       }
    }
    if (newElem !== null) {
-      var curListeners = this.getNeededListeners();
+      var curListeners = this.getDOMEventListeners();
       if (curListeners != null) {
          if (this._eventListeners != null) 
              console.log("*** error: replacing element event listeners");
@@ -587,7 +587,7 @@ js_HTMLElement_c.domChanged = function(origElem, newElem) {
    }
 }
 
-js_HTMLElement_c.initListener = function(listener, prop, scEventName) {
+js_HTMLElement_c.initDOMListener = function(listener, prop, scEventName) {
    if (scEventName == null)
       scEventName = prop;
    else
@@ -600,10 +600,10 @@ js_HTMLElement_c.initListener = function(listener, prop, scEventName) {
    listener.callback = sc_newEventArgListener(js_HTMLElement_c.eventHandler, listener);
 }
 
-function js_initDomListener(listener, prop, eventName, res) {
+function js_initDOMListener(listener, prop, eventName, res) {
    // For efficiency, each domEvent stores initially an empty object.  We lazily create the string names and callback to avoid creating them for each instance.
    if (listener.callback == null) {
-       js_HTMLElement_c.initListener(listener, prop, eventName);
+       js_HTMLElement_c.initDOMListener(listener, prop, eventName);
    }
    if (res == null)
       res = [];
@@ -611,11 +611,11 @@ function js_initDomListener(listener, prop, eventName, res) {
    return res;
 }
 
-// For the given HTMLElement instance, return the array of listeners for dom events we need to listen on.  This will correspond to the set of clickEvent, etc. properties 
-// which have listeners on them.  For those only we need to listen to the underlying DOM event.  If we listened to every DOM event for every tag object it would be 
-// expensive so this optimization will help a lot.  The other piece to the puzzle is that we need to listen for new bindings added to this object and add the corresponding
-// listener when someone starts listening on an event object.
-js_HTMLElement_c.getNeededListeners = function() {
+// For the given HTMLElement instance, return the array of dom event listeners (dom listeners).  The domEvents like clickEvent, are converted to properties
+// of the tag object.  We do this lazily in the browser for speed, and only create and set the properties for the events which someone is listening to.
+// This means we do need to listen for the 'addListener' binding event so when a new listener is added, we can start listening on the appropriate dom
+// DOM event property.
+js_HTMLElement_c.getDOMEventListeners = function() {
    var listeners = sc_getBindListeners(this);
    var res = null;
    var domEvents = this.domEvents;
@@ -633,11 +633,11 @@ js_HTMLElement_c.getNeededListeners = function() {
             else if (domAliases.hasOwnProperty(prop)) {
                var eventNameList = domAliases[prop];
                // The alias may require multiple events - e.g. mouseOverEvent and mouseOutEvent for hovered
-               if (sc_instanceOf(eventNameList, Array)) {
+               if (eventNameList.constructor === Array) {
                   for (var i = 0; i < eventNameList.length; i++) {
-                     var eventName = eventNameList[i];
-                     listener = domEvents[eventName];
-                     res = js_initDomListener(listener, prop, eventName, res);
+                     var nextEventName = eventNameList[i];
+                     listener = domEvents[nextEventName];
+                     res = js_initDOMListener(listener, prop, nextEventName, res);
                   }
                   handled = true;
                }
@@ -647,7 +647,7 @@ js_HTMLElement_c.getNeededListeners = function() {
                }
             }
             if (listener != null && !handled) {
-               res = js_initDomListener(listener, prop, eventName, res);
+               res = js_initDOMListener(listener, prop, eventName, res);
             }
          }
       }
@@ -1541,7 +1541,7 @@ js_HTMLElement_c.processEvent = function(elem, event, listener) {
       event.currentTag = scObj;
       var eventValue;
 
-      // e.g. innerWidth or hovered
+      // e.g. innerWidth or hovered - properties computed from other DOM events
       if (listener.alias != null) {
          // e.g. hovered which depends on mouseOut/In - just fire the change event as the property is changed in the DOM api
          var computed = listener.computed;
@@ -2204,8 +2204,12 @@ js_Element_c.updateServerTag = function(tagObj, id, serverTag, addSync) {
    return tagObj;
 }
 
+// For readability in the logs, flexibility in code-gen and efficiency in rendering we send the start tag txt all at once so
+// there's work here in parsing it and updating the DOM.
+// NOTE: replicated in tags.js so keep these two in sync
 js_Element_c.setStartTagTxt = function(startTagTxt) {
-   if (this.element != null) {
+   var elem = this.element;
+   if (elem != null) {
       if (!startTagTxt.startsWith("<")) {
          console.error("invalid start tag txt");
          return;
@@ -2229,12 +2233,12 @@ js_Element_c.setStartTagTxt = function(startTagTxt) {
          console.error("Missing tag name");
          return;
       }
-      if (!tagName.equalsIgnoreCase(this.element.tagName)) {
-         console.error("Invalid tag name change - current tag: " + this.element.tagName + " != " + tagName);
+      if (!tagName.equalsIgnoreCase(elem.tagName)) {
+         console.error("Invalid tag name change - current tag: " + elem.tagName + " != " + tagName);
          return;
       }
       var attName = "";
-      var oldAtts = this.element.attributes;
+      var oldAtts = elem.attributes;
       var newAtts = {};
       var newAttsArr = [];
       var anix = tnix + 1;
@@ -2340,7 +2344,6 @@ js_Element_c.setStartTagTxt = function(startTagTxt) {
          newAtts[attName] = true;
          newAttsArr.push(attName);
       }
-      var elem = this.element;
       for (var i = 0; i < newAttsArr.length; i++) {
          var newAttName = newAttsArr[i];
          var oldVal = elem.getAttribute(newAttName);
@@ -2528,6 +2531,7 @@ js_StyleSheet_c.setDOMElement = function(elem) {
 
 js_RefreshAttributeListener_c = sc_newClass("sc.lang.html.RefreshAttributeListener", js_RefreshAttributeListener, sc_AbstractListener, null);
 
+// Called when one of the tagObject properties we need to listen to has changed via the data binding events.  Update the corresponding DOM attribute
 js_RefreshAttributeListener_c.valueValidated = function(obj, prop, detail, apply) {
    if (this.scObj.element !== null) {
       var newVal = obj[prop];
@@ -2544,7 +2548,7 @@ js_RefreshAttributeListener_c.valueValidated = function(obj, prop, detail, apply
 js_RefreshAttributeListener_c.initAddListener = function(elem, domListener, prop, aliasName) {
    // For efficiency, each domEvent stores initially an empty object.  We lazily create the string names and callback to avoid creating them for each instance.
    if (domListener.callback == null) {
-      js_HTMLElement_c.initListener(domListener, prop, aliasName);
+      js_HTMLElement_c.initDOMListener(domListener, prop, aliasName);
    }
    sc_addEventListener(elem, domListener.eventName, domListener.callback);
    if (this.scObj._eventListeners == null)

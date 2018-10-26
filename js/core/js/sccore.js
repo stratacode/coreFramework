@@ -50,25 +50,25 @@ function sc_hasProp(obj, prop) {
    return obj[prop] !== undefined;
 }
 
-function sc_newObj(typeName, newConstr, extendsClass, implements) {
-   return sc_newInnerObj(typeName, newConstr, null, extendsClass, implements);
+function sc_newObj(typeName, newConstr, extendsClass, implArr) {
+   return sc_newInnerObj(typeName, newConstr, null, extendsClass, implArr);
 }
 
-function sc_newInnerObj(typeName, newConstr, outerClass, extendsClass, implements) {
-   var proto = sc_newInnerClass(typeName, newConstr, outerClass, extendsClass, implements);
+function sc_newInnerObj(typeName, newConstr, outerClass, extendsClass, implArr) {
+   var proto = sc_newInnerClass(typeName, newConstr, outerClass, extendsClass, implArr);
    proto.$objectType = true;
    return proto;
 }
 
-function sc_newClass(typeName, newConstr, extendsClass, implements) {
-   return sc_newInnerClass(typeName, newConstr, null, extendsClass, implements);
+function sc_newClass(typeName, newConstr, extendsClass, implArr) {
+   return sc_newInnerClass(typeName, newConstr, null, extendsClass, implArr);
 }
 
-function sc_newInnerClass(typeName, newConstr, outerClass, extendsClass, implements) {
+function sc_newInnerClass(typeName, newConstr, outerClass, extendsClass, implArr) {
    if (sc$classTable[typeName])
       sc_logConsole("Warning: class: " + typeName + " already defined in another js file - May need @JSSettings to specify a shared jsModuleFile for this type.");
 
-   function $clProto() {}; 
+   function $clProto() {};
 
    if (newConstr === undefined || newConstr == null) {
       console.log("No constructor for: " + typeName);  
@@ -81,6 +81,8 @@ function sc_newInnerClass(typeName, newConstr, outerClass, extendsClass, impleme
       if (extendsClass.$typeName == null)
          console.log("Class: " + typeName + " initialized before its extends class: " + extendsClass);
 
+      // TODO: replace this here and above with Object.create and get rid of $clProto
+      //newConstr.prototype = Object.create(extendsClass.prototype);
       $clProto.prototype = extendsClass.prototype;
       newConstr.prototype = new $clProto();
       if (sc$liveDynamicTypes) {
@@ -93,14 +95,14 @@ function sc_newInnerClass(typeName, newConstr, outerClass, extendsClass, impleme
    var newProto = newConstr.prototype;
    newProto.$protoName = typeName;
 
-   if (implements) {
-      newConstr.$implements = implements;
+   if (implArr) {
+      newConstr.$implements = implArr;
       /* Currently the interfaces is just a marker on the type and does not actually modify the type.  
       var key; 
       var newProto = newConstr.prototype;
 
-      for (var i = 0; i < implements.length; i++) {
-         var impl = implements[i];
+      for (var i = 0; i < implArr.length; i++) {
+         var impl = implArr[i];
 	 for (key in impl) {
             if (!newProto.hasOwnProperty(key) && !newConstr.hasOwnProperty(key))
 	       newProto[key] = impl[key];

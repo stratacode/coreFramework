@@ -1,3 +1,4 @@
+/** A basic layer that defines some common system defaults - resource and config file definitions */
 sys.std {
    codeType = sc.layer.CodeType.Framework;
 

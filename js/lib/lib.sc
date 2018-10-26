@@ -5,15 +5,15 @@ package sc.js;
 js.lib {
    static String GEN_JS_PREFIX = "js/types";
 
-   codeType = sc.layer.CodeType.Framework;
+   codeType = CodeType.Framework;
 
    compiledOnly = true;
    finalLayer = true;
 
    public void init() {
-      sc.layer.LayeredSystem sys = getLayeredSystem();
+      LayeredSystem sys = getLayeredSystem();
       sc.lang.js.JSRuntimeProcessor runtimeProc = (sc.lang.js.JSRuntimeProcessor)
-                                   sc.layer.LayeredSystem.getRuntime("js");
+                                   LayeredSystem.getRuntime("js");
       if (runtimeProc == null) {
          runtimeProc = new sc.lang.js.JSRuntimeProcessor();
          runtimeProc.addSyncProcessName("Server");
@@ -32,7 +32,7 @@ js.lib {
    }
 
    public void start() {
-      sc.layer.LayeredSystem system = getLayeredSystem();
+      LayeredSystem system = getLayeredSystem();
 
       // For Javascript, property mappers are probably not worth it - use just use native hashtable string keys for properties like everyone else
       // Need to wait to do this till start because init is called even for the main runtime and we don't want to change the mode for that one
@@ -51,7 +51,7 @@ js.lib {
       */
 
       // Register a file processor that recognizes the generated js src files for each type.
-      sc.layer.LayerFileProcessor jsFileProcessor = new sc.layer.LayerFileProcessor();
+      LayerFileProcessor jsFileProcessor = new LayerFileProcessor();
       jsFileProcessor.prependLayerPackage = false;
       jsFileProcessor.useSrcDir = true;
       system.registerPatternFileProcessor(GEN_JS_PREFIX + "/.*", jsFileProcessor, this);
