@@ -159,7 +159,9 @@ function sc_hasProp(obj, prop) {
    return obj[prop] !== undefined;
 }
 
-function sc_refresh() {} // Used by generated code
+function sc_refresh() { // Called at the end of loading a page - in case autoSync is turned on, kick off the first autoSync
+   syncMgr.postCompleteSync();
+}
 
 Error.prototype.printStackTrace = function() {  // Used in generated code
    if (this.stack)
@@ -905,7 +907,7 @@ syncMgr = sc_SyncManager_c = {
    pollTime: 500,
    numSendsInProgress: 0,
    numWaitsInProgress: 0,
-   connected: false,
+   connected: true,
    refreshTagsScheduled: false,
    applySyncLayer: function(lang,json,detail) {
       if (sc_SyncManager_c.trace) {
@@ -1026,6 +1028,8 @@ syncMgr = sc_SyncManager_c = {
                      }
                      else if (prop === "checked")
                         chElem.checked = val;
+                     else if (prop === "selectedIndex")
+                        chElem.selectedIndex = val;
                      else
                         console.error("unrecognized property in stags sync layer: " + prop);
                   }
