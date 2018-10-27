@@ -495,7 +495,11 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
                //pageElem.validateTags();
 
-               pageElem.fireChangedTagEvents(false);
+               //pageElem.fireChangedTagEvents(false);
+
+               // Run any 'doLater' jobs triggered by the page rendering process or refreshBinding process.  In particular, we might have invalidated server tags
+               // which will now have changed events fired by calling fireChangedTagEvents()
+               ctx.execLaterJobs();
             }
          }
 
