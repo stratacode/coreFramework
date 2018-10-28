@@ -726,6 +726,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                sb.append(initSync);
                sb.append(JSRuntimeProcessor.SyncEndCode);
             }
+            else
+               sb.append(JSRuntimeProcessor.NoSyncCode); // Always do an sc_refresh call at the end of the request so we can start a 'sync' call
          }
          if (trace || Element.trace) {
             sb.append("js_Element_c.trace = true;\n");

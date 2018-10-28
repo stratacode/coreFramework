@@ -125,7 +125,7 @@ function sc_runRunLaterMethods() {
             rlm.method.call(rlm.thisObj);
          }
          catch (e) {
-            console.error("Exception: " + e + " in run later method: " + rlm + " stack:" + e.stack);
+            sc_logError("Exception: " + e + " in run later method: " + rlm + " stack:" + e.stack);
          }
       }
    }
@@ -163,9 +163,38 @@ function sc_refresh() { // Called at the end of loading a page - in case autoSyn
    syncMgr.postCompleteSync();
 }
 
+function sc_logError(str) {
+   if (window.sc_errorCount === undefined)
+      window.sc_errorCount = 0;
+   window.sc_errorCount++;
+   console.error(str);
+   sc_rlog(str);
+}
+
+function sc_rlog(str) {
+   if (sc_PTypeUtil_c && sc_PTypeUtil_c.testMode) {
+      var log = window.sc_consoleLog;
+      if (log === undefined)
+         window.sc_consoleLog = log = [str];
+      else
+         log.push(str);
+   }
+}
+
+function sc_log(str) {
+   sc_rlog(str);
+   console.log(str);
+}
+
+function sc_getConsoleLog() {
+   if (window.sc_consoleLog)
+      return window.sc_consoleLog.join("\n");
+   return "<empty js console>";
+}
+
 Error.prototype.printStackTrace = function() {  // Used in generated code
    if (this.stack)
-      console.log(this.stack);
+      sc_log(this.stack);
 }
 
 sc_PTypeUtil_c = {
@@ -178,9 +207,9 @@ sc_PTypeUtil_c = {
             listener.response(httpReq.responseText);
          else {
             if (stat != 205) // This is the sync reset response
-               console.error("server session lost");
+               sc_logError("server session lost");
             // This may be the 'reset' request which is not an error
-            //console.error("Non status='200' response to POST: status=" + httpReq.status + ": " + httpReq.statusText + " response: " + httpReq.responseText);
+            //sc_logError("Non status='200' response to POST: status=" + httpReq.status + ": " + httpReq.statusText + " response: " + httpReq.responseText);
             // Called below in onreadystatechange
             else
                listener.error(stat, httpReq.statusText);
@@ -190,7 +219,7 @@ sc_PTypeUtil_c = {
          if (httpReq.readyState == 4) {
             var stat = httpReq.status;
             if(stat != 200 && stat != 205) {
-               console.error("Return status: " + stat + " for: " + url);
+               sc_logError("Return status: " + stat + " for: " + url);
                listener.error(httpReq.status, httpReq.statusText);
             }
          }
@@ -198,7 +227,7 @@ sc_PTypeUtil_c = {
       /*
       httpReq.onabort = httpReq.onError = function(evt) {
          sc_logError("aborted response: " + httpReq.status);
-         console.error("Aborted response to POST: " + httpReq.status + ": " + httpReq.statusText);
+         sc_logError("Aborted response to POST: " + httpReq.status + ": " + httpReq.statusText);
          listener.error(httpReq.status, httpReq.statusText);
       }
       */
@@ -251,7 +280,7 @@ sc_Bind_c = {
    trace:false,
    sendChangedEvent: function(obj,propName, val) {
       if (sc_SyncManager_c.trace || sc_Bind_c.trace)
-         console.log("Sync client change: " + sc_instId(obj) + "." + propName + " = " + val);
+         sc_log("Sync client change: " + sc_instId(obj) + "." + propName + " = " + val);
       syncMgr.addChange(obj, propName, val);
    }
 };
@@ -331,13 +360,13 @@ js_HTMLElement_c.processEvent = function(elem, event, listener) {
       }
 
       if (js_Element_c.trace && listener.scEventName != "mouseMoveEvent")
-         console.log("tag event: " + listener.propName + ": " + listener.scEventName + " = " + eventValue);
+         sc_log("tag event: " + listener.propName + ": " + listener.scEventName + " = " + eventValue);
       sc_Bind_c.sendChangedEvent(scObj, listener.propName, eventValue);
 
       // TODO: for event properties should we delete the property here or set it to null?  flush the queue of events if somehow a queue is enabled here?
    }
    else
-      console.log("Unable to find scObject to update in eventHandler");
+      sc_log("Unable to find scObject to update in eventHandler");
 };
 
 js_HTMLElement_c.getInnerWidth = function() {
@@ -366,11 +395,11 @@ js_HTMLElement_c.getHovered = function() {
       var related = mouseEvent.relatedTarget;
       // Suppress over and out events which are going to/from children of the same node
       if (this.element != null && (related == null || !this.element.contains(related))) {
-         console.log("Setting hovered: " + isMouseOver + " on: " + this.getId());
+         sc_log("Setting hovered: " + isMouseOver + " on: " + this.getId());
          this.hovered = isMouseOver;
       }
       else
-         console.log("Skipping hovered for: " + isMouseOver + " on: " + this.getId());
+         sc_log("Skipping hovered for: " + isMouseOver + " on: " + this.getId());
    }
    if (this.hovered !== undefined)
       return this.hovered;
@@ -398,7 +427,7 @@ js_HTMLElement_c.updateFromDOMElement = function(newElement) {
 
          // This can happen if
          if (newElement.scObj !== undefined) {
-            console.log("Warning: replacing object: " + sc_instId(newElement.scObj) + " with: " + sc_instId(this) + " for tag: " + this.tagName);
+            sc_log("Warning: replacing object: " + sc_instId(newElement.scObj) + " with: " + sc_instId(this) + " for tag: " + this.tagName);
          }
          newElement.scObj = this;
       }
@@ -423,7 +452,7 @@ js_HTMLElement_c.domChanged = function(origElem, newElem) {
       var curListeners = this.getDOMEventListeners();
       if (curListeners != null) {
          if (this._eventListeners != null)
-            console.log("*** error: replacing element event listeners");
+            sc_log("*** error: replacing element event listeners");
          for (var i = 0; i < curListeners.length; i++) {
             var listener = curListeners[i];
 
@@ -561,7 +590,7 @@ js_Input_c.doChangeEvent = function(event) {
          scObj.setChecked(this.checked);
    }
    else
-      console.log("Unable to find scObject to update in doChangeEvent");
+      sc_log("Unable to find scObject to update in doChangeEvent");
 }
 
 js_Input_c.setValue = function(newVal) {
@@ -631,7 +660,7 @@ js_Select_c.doChangeEvent = function(event) {
       scObj.setSelectedIndex(ix);
    }
    else
-      console.log("Unable to find scObject to update in doChangeEvent");
+      sc_log("Unable to find scObject to update in doChangeEvent");
 }
 
 js_Select_c.domChanged = function(origElem, newElem) {
@@ -704,7 +733,7 @@ js_Form_c.submitEvent = function(event) {
    if (scObj !== undefined)
       scObj.setSubmitCount(scObj.getSubmitCount()+1);
    else
-      console.log("Unable to find scObject to update in submitEvent");
+      sc_log("Unable to find scObject to update in submitEvent");
 }
 
 js_Form_c.submit = function() {
@@ -780,7 +809,7 @@ js_RepeatTag_c.updateFromDOMElement = function(newElement) {
 
          // This can happen if
          if (newElement.scObj !== undefined) {
-            console.log("Warning: replacing object: " + sc_instId(newElement.scObj) + " with: " + sc_instId(this) + " for tag: " + this.tagName);
+            sc_log("Warning: replacing object: " + sc_instId(newElement.scObj) + " with: " + sc_instId(this) + " for tag: " + this.tagName);
          }
          newElement.scObj = this;
       }
@@ -846,7 +875,7 @@ sc_SyncListener_c.response = function(responseText) {
                   var lenStr = nextText.substring(lenStart, endLenIx);
                   var syncLen = parseInt(lenStr);
                   if (isNaN(syncLen)) {
-                     console.error("Invalid length in sync response: " + e);
+                     sc_logError("Invalid length in sync response: " + e);
                      break;
                   }
                   var layerDefStart = endLenIx + 1;
@@ -857,13 +886,13 @@ sc_SyncListener_c.response = function(responseText) {
                   else if (lang === "js")
                      eval(processDef);
                   else
-                     console.error("Unrecognized language in sync response: " + lang);
+                     sc_logError("Unrecognized language in sync response: " + lang);
                }
             }
          }
       }
       else {
-         console.error("Unrecognized text in sync listener response");
+         sc_logError("Unrecognized text in sync listener response");
          break;
       }
    }
@@ -878,19 +907,19 @@ sc_SyncListener_c.error = function(code, text) {
       // - writeToDestination(initSyncJSON, null, this, "reset=true", null);
       // accumulating probably input.value, selectedIndex, etc. but not changeEvent.  Send that to the server
       // part of the reset (SyncDestination.SyncListener)
-      console.error("*** Server session - expired - reset not yet implemented for server-only client");
+      sc_logError("*** Server session - expired - reset not yet implemented for server-only client");
    }
    else if (code === 410) { // server shutdown
       syncMgr.connected = false;
       syncMgr.realTime = false;
-      console.error("*** Server shutdown");
+      sc_logError("*** Server shutdown");
    }
    else if (code === 500 || code === 0) {
       syncMgr.connected = false;
-      console.error("*** Server reported error code: " + code);
+      sc_logError("*** Server reported error code: " + code);
    }
    else
-      console.error("*** Unrecognized server error: " + code);
+      sc_logError("*** Unrecognized server error: " + code);
    syncMgr.postCompleteSync();
 };
 
@@ -911,16 +940,16 @@ syncMgr = sc_SyncManager_c = {
    refreshTagsScheduled: false,
    applySyncLayer: function(lang,json,detail) {
       if (sc_SyncManager_c.trace) {
-         console.log("Sync applying server changes (from: " + (detail ? detail : "init") + " request): " + json);
+         sc_log("Sync applying server changes (from: " + (detail ? detail : "init") + " request): " + json);
      }
       if (lang !== "json") {
-         console.error("unable to apply non-json sync layer");
+         sc_logError("unable to apply non-json sync layer");
          return;
       }
       var so = JSON.parse(json);
       var sl = so.sync;
       if (!sl) {
-         console.error("Invalid JSON for applySyncLayer - missing top-level 'sync'");
+         sc_logError("Invalid JSON for applySyncLayer - missing top-level 'sync'");
          return;
       }
       var curPkg = "";
@@ -937,7 +966,7 @@ syncMgr = sc_SyncManager_c = {
             if (cl === "sc.js.ServerTag")
                newServerTags[newArgs[0]] = {name:newArgs[0]};
             else if (cl !== "sc.js.ServerTagManager")
-               console.error("Unrecognized class for $new in stags.js: " + cl);
+               sc_logError("Unrecognized class for $new in stags.js: " + cl);
             continue;
          }
          var newPkg = cmd["$pkg"];
@@ -958,7 +987,7 @@ syncMgr = sc_SyncManager_c = {
                   st.props = stProps.props;
                }
                else
-                  console.error("No ServerTag for modify");
+                  sc_logError("No ServerTag for modify");
             }
             // e.g. { "PageServerTagManager":{
             //       "serverTags":{"a":"ref:ServerTag__0","input":"ref:ServerTag__1","input_1":"ref:ServerTag__2","form":"ref:ServerTag__4",..."}
@@ -978,14 +1007,25 @@ syncMgr = sc_SyncManager_c = {
                      if (!refServerTag)
                         refServerTag = syncMgr.serverTags[stId];
                      if (!refServerTag)
-                        console.error("Server tag reference not found");
+                        sc_logError("Server tag reference not found");
                      else {
                         newServerTagList.push(refServerTag);
                         activeServerTags[stId] = refServerTag;
                      }
                   }
                   else
-                     console.error("Invalid serverTag ref");
+                     sc_logError("Invalid serverTag ref");
+               }
+            }
+            else if (name === "DynUtil") { // Support some select remote methods for testing
+               var mObj = cmd[name];
+               var mName = mObj.$meth;
+               var callId = mObj.callId;
+               if (mName === "evalScript") {
+                  var res = eval(mObj.args[0]);
+                  var retType = res ? res.constructor.name : "null";
+                  syncMgr.pendingChanges.push({t:"methReturn", res:res, callId:callId, retType:retType});
+                  syncMgr.scheduleSync();
                }
             }
             else {
@@ -1031,15 +1071,15 @@ syncMgr = sc_SyncManager_c = {
                      else if (prop === "selectedIndex")
                         chElem.selectedIndex = val;
                      else
-                        console.error("unrecognized property in stags sync layer: " + prop);
+                        sc_logError("unrecognized property in stags sync layer: " + prop);
                   }
                }
                else
-                  console.error("Unable to find DOM element to match id: " + name);
+                  sc_logError("Unable to find DOM element to match id: " + name);
             }
          }
          else {
-            console.error("Unrecognized sync cmd for server tag: " + cmd);
+            sc_logError("Unrecognized sync cmd for server tag: " + cmd);
          }
       }
       if (serverTagsChanged) {
@@ -1119,9 +1159,9 @@ syncMgr = sc_SyncManager_c = {
          // DOM element has changed
          else if (tagObj.element !== element) {
             if (js_Element_c.verbose)
-               console.log("updating DOM element for tagObject with " + id);
+               sc_log("updating DOM element for tagObject with " + id);
             if (serverTag != null && serverTag.props != null) {
-               console.error("Unimplemented case: serverTag props change!");
+               sc_logError("Unimplemented case: serverTag props change!");
             }
             var props = serverTag == null || serverTag.props == null ? tagObj.eventAttNames : serverTag.props.concat(tagObj.eventAttNames);
             tagObj.listenerProps = props;
@@ -1131,7 +1171,7 @@ syncMgr = sc_SyncManager_c = {
       else {
          if (tagObj != null) {
             if (js_Element_c.verbose)
-               console.log("Removing serverTag object " + id + ": no longer in DOM");
+               sc_log("Removing serverTag object " + id + ": no longer in DOM");
             sc_DynUtil_c.dispose(tagObj);
             tagObj = null;
          }
@@ -1140,6 +1180,9 @@ syncMgr = sc_SyncManager_c = {
    },
    addChange: function(obj, propName, val) {
       syncMgr.pendingChanges.push({o:obj, p:propName, v:val});
+      syncMgr.scheduleSync();
+   },
+   scheduleSync: function() {
       if (!syncMgr.syncScheduled) {
          syncMgr.syncScheduled = true;
          sc_addRunLaterMethod(syncMgr, syncMgr.sendSync, 5);
@@ -1161,12 +1204,12 @@ syncMgr = sc_SyncManager_c = {
                else if (v.constructor === MouseEvent)
                   evName = "MouseEvent";
                else {
-                  console.error("Property: " + change.p + " no serializer for: " + v);
+                  sc_logError("Property: " + change.p + " no serializer for: " + v);
                   evName = null;
                }
                if (evName) { // For events, need to first create the event, then send a 'ref' to it
                   if (!v.currentTag) { // We should have an scObj for all events we are listening on
-                     console.error("Unable to send event change - missing object");
+                     sc_logError("Unable to send event change - missing object");
                      continue;
                   }
                   jsArr.push({$pkg:"sc.lang.html"});
@@ -1185,16 +1228,23 @@ syncMgr = sc_SyncManager_c = {
             }
          }
 
-         // TODO: should we gather all consecutive changes for the same object - or will that even happen on the client?
          // TODO: need to gather the 'initial' state at least - map stored by the 'id' of the object.  When
          // serverTags are removed, must remove that state.  Don't capture 'events' in the initial store since that could cause a 'replay' of a
          // form submit.  In fact, we need a way to mark the clickEvent etc. so they are not stored in the initial state on the server.
-         // Output the sync format for a property change: { "objId" : { "propName" : val } }
-         var propChange = {};
-         propChange[change.p] = v;
-         var objChange = {};
-         objChange[change.o.getId()] = propChange;
-         jsArr.push(objChange);
+         var type = change.t;
+         if (!type) { //
+            // TODO: should we gather all consecutive changes for the same object - or will that even happen on the client?
+            // Output the sync property format for a property change: { "objId" : { "propName" : val } }
+            var propChange = {};
+            propChange[change.p] = v;
+            var objChange = {};
+            objChange[change.o.getId()] = propChange;
+            jsArr.push(objChange);
+         }
+         else if (type === "methReturn") {
+            var mr = {$methReturn:change.res, callId:change.callId, retType:change.retType};
+            jsArr.push(mr)
+         }
       }
 
       var jObj = {sync:jsArr};
@@ -1216,12 +1266,12 @@ syncMgr = sc_SyncManager_c = {
       if (!anyChanges) {
          syncMgr.numWaitsInProgress++;
          if (sc_SyncManager_c.trace)
-            console.log("Sending sync wait request: " + (syncMgr.waitTime === -1 ? "(no wait)" : "wait: " + syncMgr.waitTime));
+            sc_log("Sending sync wait request: " + (syncMgr.waitTime === -1 ? "(no wait)" : "wait: " + syncMgr.waitTime));
       }
       else {
          syncMgr.numSendsInProgress++;
          if (sc_SyncManager_c.trace)
-            console.log("Sending sync: " + json);
+            sc_log("Sending sync: " + json);
       }
 
       sc_PTypeUtil_c.postHttpRequest(url, json, "text/plain", new sc_SyncListener(anyChanges));
@@ -1241,7 +1291,7 @@ syncMgr = sc_SyncManager_c = {
    // NOTE: replicated in tags.js so keep these two in sync
    setStartTagTxt:function(elem, startTagTxt) {
       if (!startTagTxt.startsWith("<")) {
-         console.error("invalid start tag txt");
+         sc_logError("invalid start tag txt");
          return;
       }
 
@@ -1260,11 +1310,11 @@ syncMgr = sc_SyncManager_c = {
          tagName = tagName + c;
       }
       if (tagName == null) {
-         console.error("Missing tag name");
+         sc_logError("Missing tag name");
          return;
       }
       if (tagName.toLowerCase() !== elem.tagName.toLowerCase()) {
-         console.error("Invalid tag name change - current tag: " + elem.tagName + " != " + tagName);
+         sc_logError("Invalid tag name change - current tag: " + elem.tagName + " != " + tagName);
          return;
       }
       var attName = "";
@@ -1276,7 +1326,7 @@ syncMgr = sc_SyncManager_c = {
          var c = startTagTxt.charAt(anix);
          if (c == '=') { // parse attribute
             if (attName == "") {
-               console.error("Invalid attribute");
+               sc_logError("Invalid attribute");
                return;
             }
             var avix = anix + 1;
@@ -1287,7 +1337,7 @@ syncMgr = sc_SyncManager_c = {
                if (!delim) {
                   if (c == '"' || c == "'") {
                      if (attVal != "") {
-                        console.error("Invalid attribute");
+                        sc_logError("Invalid attribute");
                         return;
                      }
                      delim = c;
@@ -1328,7 +1378,7 @@ syncMgr = sc_SyncManager_c = {
                            attVal += '\r';
                         }
                         else {
-                           console.error("Unrecognized escape");
+                           sc_logError("Unrecognized escape");
                            return;
                         }
                         continue;
@@ -1338,7 +1388,7 @@ syncMgr = sc_SyncManager_c = {
                }
             }
             if (delim != null) {
-               console.error("Unclosed string with: " + delim);
+               sc_logError("Unclosed string with: " + delim);
                return;
             }
             attName = attName.toLowerCase();
@@ -1368,7 +1418,7 @@ syncMgr = sc_SyncManager_c = {
             break;
       }
       if (!endTag) {
-         console.error("Invalid start tag txt");
+         sc_logError("Invalid start tag txt");
          return;
       }
       if (attName.length > 0) { // last value-less attribute

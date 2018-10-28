@@ -5,10 +5,10 @@ function sc_logError(str) {
    if (window.sc_errorCountListener != undefined)
       window.sc_errorCountListener();
    console.error(str);
-   sc_log(str);
+   sc_rlog(str);
 }
 
-function sc_log(str) {
+function sc_rlog(str) {
    if (sc_PTypeUtil_c && sc_PTypeUtil_c.testMode) {
       var log = window.sc_consoleLog;
       if (log === undefined)
@@ -18,8 +18,8 @@ function sc_log(str) {
    }
 }
 
-function sc_logConsole(str) {
-   sc_log(str);
+function sc_log(str) {
+   sc_rlog(str);
    console.log(str);
 }
 
@@ -66,7 +66,7 @@ function sc_newClass(typeName, newConstr, extendsClass, implArr) {
 
 function sc_newInnerClass(typeName, newConstr, outerClass, extendsClass, implArr) {
    if (sc$classTable[typeName])
-      sc_logConsole("Warning: class: " + typeName + " already defined in another js file - May need @JSSettings to specify a shared jsModuleFile for this type.");
+      sc_log("Warning: class: " + typeName + " already defined in another js file - May need @JSSettings to specify a shared jsModuleFile for this type.");
 
    function $clProto() {};
 

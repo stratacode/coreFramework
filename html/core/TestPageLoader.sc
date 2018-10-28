@@ -11,10 +11,11 @@ import sc.lang.AbstractInterpreter;
 
 import sc.layer.AsyncProcessHandle;
 
-// Using runtimes='default' here to cause this to run for the 'java server' only in client/server mode and also in the 'js only' case,
-// where it's run it in the bootstrap runtime so we can load the various static pages in the browser.
-// It will not be included in the JS runtime for client/server mode - some of the dependencies require it to be in the Java runtime (like
-// the ability to launch a web browser).
+// Using runtimes='default' here so this code is run for the 'java server' runtime only in client/server mode and run on the server for the 'js only' case,
+// Use default in general when there's a need to run code in the "bootstrap runtime" - i.e. the one generating the code for the other runtime.   This way 
+// we can still launch and control a browser session that talks to the JS-only application.  
+// With default, this class will not be included in the JS runtime for client/server mode - nor can it be run there because some of the dependencies 
+// require it to be in the Java runtime (like the ability to launch a web browser).
 @sc.obj.Exec(runtimes="default")
 public class TestPageLoader implements sc.obj.ISystemExitListener {
    AbstractInterpreter cmd;
@@ -55,8 +56,11 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
       if (sys.serverEnabled && !sys.waitForRuntime(waitForRuntimeTime))
          throw new IllegalArgumentException("Server failed to start in 5 seconds");
 
-      // To do testing via sync we need the server and the JS runtime at least. 
-      clientSync = sys.serverEnabled && sys.getPeerLayeredSystem("js") != null && sys.syncEnabled;
+      // (old) To do testing via sync we need the server and the JS runtime at least. 
+      //clientSync = sys.serverEnabled && sys.getPeerLayeredSystem("js") != null && sys.syncEnabled;
+      // We can use the server tag sync if it's server only - TODO: should we add sys.syncEnabled and add an html/sync layer that sets it?  We could then
+      // enable sync for serverTags when it's set.  Or maybe if it's included or testMode is set?
+      clientSync = sys.serverEnabled;
       System.out.println("TestPageLoader initialized with clientSync: " + clientSync + " headless: " + headless + " for urls: " + urlPaths);
    }
 
@@ -154,6 +158,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
             if (scopeContextName != null) {
                if (sc.obj.CurrentScopeContext.waitForReady(scopeContextName, waitForPageTime) == null) {
                   endSession(processRes);
+                  processRes = null;
                   throw new IllegalArgumentException("Timeout opening url: " + url + " - client never requested scope context: " + scopeContextName); 
                }
             }
@@ -203,7 +208,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
       String typeName = sc.type.CTypeUtil.capitalizePropertyName(urlPath.name);
       String testScriptName = "test" + typeName + ".scr";
       if (cmd.exists(testScriptName)) {
-         if (!clientSync) // Ideally in this case, we'd have a way to convert the testApp.scr file into a program to download when we run in testMode
+         if (!clientSync) // TODO: in this case, we'd like to convert the testApp.scr file into a program to download when we run in testMode
             System.out.println("Skipping " + testScriptName + " for type: " + typeName + " - scripts not yet supported for client-only application");
          else {
             System.out.println("--- Running " + testScriptName + " for type: " + typeName);
@@ -225,11 +230,14 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
          }
          AsyncProcessHandle processRes = loadURL(urlPath, null);
 
-         runPageTest(urlPath);
+         try {
+            runPageTest(urlPath);
 
-         saveClientConsole(urlPath);
-
-         endSession(processRes);
+            saveClientConsole(urlPath);
+         }
+         finally {
+            endSession(processRes);
+         }
          numLoaded++;
       }
       System.out.println("- Done loading: " + numLoaded + " pages" + (indexSkipped ? " - skipIndexPage set" : ""));

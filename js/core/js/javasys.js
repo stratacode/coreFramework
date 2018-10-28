@@ -240,7 +240,7 @@ jv_PrintStream_c.println = function() {
       sc_logError(str);
    }
    else if (console.log) {
-      sc_logConsole(str);
+      sc_log(str);
    }
    this.buf = null;
 }
