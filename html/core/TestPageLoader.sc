@@ -22,8 +22,8 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
    sc.layer.LayeredSystem sys; 
    List<URLPath> urlPaths; 
 
-   public int waitForPageTime = 7000;
-   public int waitForRuntimeTime = 7000;
+   public int waitForPageTime = 140000;
+   public int waitForRuntimeTime = 140000;
 
    public boolean loadAllPages = true;
    public boolean recordClientOutput = true;
