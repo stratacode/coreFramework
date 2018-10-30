@@ -22,8 +22,8 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
    sc.layer.LayeredSystem sys; 
    List<URLPath> urlPaths; 
 
-   public int waitForPageTime = 140000;
-   public int waitForRuntimeTime = 140000;
+   public int waitForPageTime = 190000;
+   public int waitForRuntimeTime = 190000;
 
    public boolean loadAllPages = true;
    public boolean recordClientOutput = true;
@@ -159,7 +159,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
                if (sc.obj.CurrentScopeContext.waitForReady(scopeContextName, waitForPageTime) == null) {
                   endSession(processRes);
                   processRes = null;
-                  throw new IllegalArgumentException("Timeout opening url: " + url + " - client never requested scope context: " + scopeContextName); 
+                  throw new IllegalArgumentException("Timeout opening url: " + url + " after: " + waitForPageTime + " millis - no client request for scope context: " + scopeContextName); 
                }
             }
             // for the initial page load, we just use the innerHTML which seems accurate and represents the rendered content from the initial page load
