@@ -169,10 +169,11 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             System.out.println("PageDispatcher: not adding overridden page: " + keyName + " url:" + pattern + " type: " + ModelUtil.getTypeName(pageType) + ")");
       }
 
-      if (pattern.equals(indexPattern)) {
+      if (pattern.endsWith(indexPattern)) {
+         String dir = pattern.equals(indexPattern) ? "" : pattern.substring(0,pattern.length() - indexPattern.length());
          if (verbose)
-            System.out.println("PageDispatcher: adding index page");
-         addPage("_index_", "/", pageType, urlPage, doSync, isResource, priority, lockScope, queryParamProps);
+            System.out.println("PageDispatcher: adding index page for: " + (dir.length() == 0 ? "doc root" : dir));
+         addPage(dir + "_index_", dir + "/", pageType, urlPage, doSync, isResource, priority, lockScope, queryParamProps);
       }
    }
 
@@ -495,10 +496,10 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
                //pageElem.validateTags();
 
-               //pageElem.fireChangedTagEvents(false);
+               //pageElem.refreshTags(false);
 
                // Run any 'doLater' jobs triggered by the page rendering process or refreshBinding process.  In particular, we might have invalidated server tags
-               // which will now have changed events fired by calling fireChangedTagEvents()
+               // which will now have changed events fired by calling refreshTags()
                ctx.execLaterJobs();
             }
          }
@@ -710,13 +711,13 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             CharSequence initSync = SyncManager.getInitialSync("jsHttp", WindowScopeDefinition.scopeId, resetSync, "js");
                // Here are in injecting code into the generated script for debugging - if you enable logging on the server, it's on in the client automatically
             if (SyncManager.trace) {
-               sb.append("sc_SyncManager_c.trace = true;\n");
+               sb.append("if (typeof sc_SyncManager_c != 'undefined') sc_SyncManager_c.trace = true;\n");
             }
             if (SyncManager.verbose) {
-               sb.append("sc_SyncManager_c.verbose = true;\n");
+               sb.append("if (typeof sc_SyncManager_c != 'undefined') sc_SyncManager_c.verbose = true;\n");
             }
             if (SyncManager.traceAll) {
-               sb.append("sc_SyncManager_c.traceAll = true;\n");
+               sb.append("if (typeof sc_SyncManager_c != 'undefined') sc_SyncManager_c.traceAll = true;\n");
             }
             // Propagate this option when we load up the page so the client has the same defaultLanguage that we do (if it's not the default)
             if (!SyncManager.defaultLanguage.equals("json"))

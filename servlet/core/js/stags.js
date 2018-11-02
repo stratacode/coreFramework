@@ -160,6 +160,7 @@ function sc_hasProp(obj, prop) {
 }
 
 function sc_refresh() { // Called at the end of loading a page - in case autoSync is turned on, kick off the first autoSync
+   sc_log("sc_refresh() called");
    syncMgr.postCompleteSync();
 }
 
@@ -270,7 +271,8 @@ sc_DynUtil_c = {
          setMethod.call(obj, val);
       else
          obj[prop] = val;
-   }
+   },
+   dispose: function(obj) {} // placeholder - anything to do here?
 
 }
 
@@ -436,8 +438,7 @@ js_HTMLElement_c.updateFromDOMElement = function(newElement) {
    }
 };
 
-// Called when the DOM element associated with the tag object has changed.
-js_HTMLElement_c.domChanged = function(origElem, newElem) {
+js_HTMLElement_c.removeDOMEventListeners = function(origElem) {
    if (origElem !== null) {
       var curListeners = this._eventListeners;
       if (curListeners != null) {
@@ -448,6 +449,11 @@ js_HTMLElement_c.domChanged = function(origElem, newElem) {
          this._eventListeners = null;
       }
    }
+}
+
+// Called when the DOM element associated with the tag object has changed.
+js_HTMLElement_c.domChanged = function(origElem, newElem) {
+   this.removeDOMEventListeners(origElem);
    if (newElem !== null) {
       var curListeners = this.getDOMEventListeners();
       if (curListeners != null) {
@@ -857,6 +863,8 @@ sc_SyncListener_c.completeSync = function() {
 }
 
 sc_SyncListener_c.response = function(responseText) {
+   sc_log("in response handler");
+   this.completeSync();
    var syncLayerStart = "sync:";
    syncMgr.connected = true; // Success from server means we are connected
    var nextText = responseText;
@@ -896,11 +904,11 @@ sc_SyncListener_c.response = function(responseText) {
          break;
       }
    }
-   this.completeSync();
    syncMgr.postCompleteSync();
 };
 
 sc_SyncListener_c.error = function(code, text) {
+   sc_log("in error handler");
    this.completeSync();
    if (code === 205) { // session on server has expired
       // TODO: need to do initial sync code here.  We'll collect all of the changes we want the server to have
@@ -936,6 +944,7 @@ syncMgr = sc_SyncManager_c = {
    pollTime: 500,
    numSendsInProgress: 0,
    numWaitsInProgress: 0,
+   autoSyncScheduled: false,
    connected: true,
    refreshTagsScheduled: false,
    applySyncLayer: function(lang,json,detail) {
@@ -1070,8 +1079,10 @@ syncMgr = sc_SyncManager_c = {
                         chElem.checked = val;
                      else if (prop === "selectedIndex")
                         chElem.selectedIndex = val;
+                     else if (prop === "style")
+                        chElem.style = val;
                      else
-                        sc_logError("unrecognized property in stags sync layer: " + prop);
+                        sc_logError("Unrecognized property in stags sync layer: " + prop);
                   }
                }
                else
@@ -1159,9 +1170,14 @@ syncMgr = sc_SyncManager_c = {
          // DOM element has changed
          else if (tagObj.element !== element) {
             if (js_Element_c.verbose)
-               sc_log("updating DOM element for tagObject with " + id);
+               sc_log("Updating DOM element for tagObject with " + id);
             if (serverTag != null && serverTag.props != null) {
-               sc_logError("Unimplemented case: serverTag props change!");
+               var oldProps = tagObj.listenerProps;
+               if (!oldProps || oldProps.length !== serverTag.props.length) {
+                  if (js_Element_c.verbose)
+                     sc_log("Updating DOM event listeners properties for: " + id);
+                  tagObj.removeDOMEventListeners(tagObj.element);
+               }
             }
             var props = serverTag == null || serverTag.props == null ? tagObj.eventAttNames : serverTag.props.concat(tagObj.eventAttNames);
             tagObj.listenerProps = props;
@@ -1278,13 +1294,21 @@ syncMgr = sc_SyncManager_c = {
    },
    autoSync:function() {
       if (syncMgr.numSendsInProgress === 0 && syncMgr.numWaitsInProgress === 0) {
+         sc_log("autoSync - writing to destination");
          syncMgr.writeToDestination("");
       }
+      else
+         sc_log("autoSync - not writing to destination");
+      syncMgr.autoSyncScheduled = false;
    },
    postCompleteSync:function() {
-      if (syncMgr.pollTime !== -1 && syncMgr.numSendsInProgress === 0 && syncMgr.numWaitsInProgress === 0 && syncMgr.connected) {
+      if (syncMgr.pollTime !== -1 && syncMgr.numSendsInProgress === 0 && syncMgr.numWaitsInProgress === 0 && syncMgr.connected && !syncMgr.autoSyncScheduled) {
+         sc_log("Post complete sync: scheduling autoSync with:  numSends: " + syncMgr.numSendsInProgress + " numWaits: " + syncMgr.numWaitsInProgress)
+         syncMgr.autoSyncScheduled = true;
          setTimeout(syncMgr.autoSync, syncMgr.pollTime);
       }
+      else
+         sc_log("Post complete sync: not scheduling autoSync with:  numSends: " + syncMgr.numSendsInProgress + " numWaits: " + syncMgr.numWaitsInProgress)
    },
    // For readability in the logs, flexibility in code-gen and efficiency in rendering we send the start tag txt all at once so
    // there's work here in parsing it and updating the DOM.

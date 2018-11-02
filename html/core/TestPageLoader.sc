@@ -8,6 +8,7 @@ import sc.obj.AppGlobalScopeDefinition;
 import java.io.File;
 import sc.dyn.DynUtil;
 import sc.lang.AbstractInterpreter;
+import sc.layer.LayeredSystem;
 
 import sc.layer.AsyncProcessHandle;
 
@@ -19,7 +20,7 @@ import sc.layer.AsyncProcessHandle;
 @sc.obj.Exec(runtimes="default")
 public class TestPageLoader implements sc.obj.ISystemExitListener {
    AbstractInterpreter cmd;
-   sc.layer.LayeredSystem sys; 
+   LayeredSystem sys; 
    List<URLPath> urlPaths; 
 
    public int waitForPageTime = 190000;
@@ -56,11 +57,17 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
       if (sys.serverEnabled && !sys.waitForRuntime(waitForRuntimeTime))
          throw new IllegalArgumentException("Server failed to start in 5 seconds");
 
-      // (old) To do testing via sync we need the server and the JS runtime at least. 
-      //clientSync = sys.serverEnabled && sys.getPeerLayeredSystem("js") != null && sys.syncEnabled;
-      // We can use the server tag sync if it's server only - TODO: should we add sys.syncEnabled and add an html/sync layer that sets it?  We could then
-      // enable sync for serverTags when it's set.  Or maybe if it's included or testMode is set?
-      clientSync = sys.serverEnabled;
+      LayeredSystem jsPeer = sys.getPeerLayeredSystem("js");
+      // When clientSync is true, we use RPC to talk to the browser process
+      // as part of testing - to fetch page contents, and logs.  
+      // When it's false, we can still get the page output from chrome
+      // command.  This false case happens for either 'client only' mode
+      // or client/server mode where sync is not enabled.  Server tags supports
+      // the RPC commands we use in testing here.
+      // TODO: maybe we should enable server tag sync using a new html.sync
+      // layer and that would simplify this logic and add the ability to
+      // use server tags without sync.
+      clientSync = sys.serverEnabled && (jsPeer == null || sys.syncEnabled);
       System.out.println("TestPageLoader initialized with clientSync: " + clientSync + " headless: " + headless + " for urls: " + urlPaths);
    }
 
