@@ -71,7 +71,7 @@ android.lib extends util {
    //public static String platformTarget = "android-20";
    //public static String buildToolsVersion = "20.0.0";
    public static String platformTarget = "android-19";
-   public static String buildToolsVersion = "19.1.0";
+   public static String buildToolsVersion = "19.4.0";
 
    // A list of places to look for ant by default
    public static String[] antPaths = {
@@ -128,7 +128,7 @@ android.lib extends util {
       platformDir = sc.util.FileUtil.concat(sdkDir, "platforms", platformTarget);
       java.io.File platformFile = new java.io.File(platformDir);
       if (!(platformFile.isDirectory())) {
-         System.out.println("No directory - " + platformDir + " - updating android SDK for platform target: " + platformTarget + " build tools version: " + buildToolsVersion);
+         System.out.println("No file - " + platformFile + " - updating android SDK for platform target: " + platformTarget + " build tools version: " + buildToolsVersion);
          // -u = noui,  -s = no https, -t = filter  - filters such as android-19, build-tools-19.0.3 etc. do not work.  It does not seem like  
          // it's possible to do this self-install.  So instead we take out the -u option and force the user to deal with it.
          // It looks like android list --extended provides the set of filters that are valid.  Not the --all ones so that limits which packages you can
