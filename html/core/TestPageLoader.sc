@@ -190,8 +190,11 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
       }
    }
 
-   // NOTE: using this for tests is not very robust because any changes made to the elements of the DOM are not reflected.  Instead, we'll
-   // use the tag objects to generate the HTML output that reflects the page's current state. 
+   // NOTE: using this for tests is not very robust when using the JS runtime 
+   // because any changes made to the elements of the DOM are not reflected.  But
+   // for server tags, it works because we update both.  For the JS runtime
+   // we use the tag objects to generate the HTML output that reflects the 
+   // page's current state - i.e. the output_c() method. 
    public String getClientBodyHTML() {
       return (String) DynUtil.evalRemoteScript(AppGlobalScopeDefinition.getAppGlobalScope(), "document.body.innerHTML;");
    }
