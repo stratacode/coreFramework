@@ -343,6 +343,7 @@ jv_Array_c.newInstance = function() {
 function jv_Exception() {
    // TODO: simulate this on IE using callee and arguments perhaps?
    this.stack = new Error().stack;
+   this.message = arguments.length === 1 ? arguments[0] : null;
 }
 
 jv_Exception_c = sc_newClass("java.lang.Exception", jv_Exception, jv_Object, null);

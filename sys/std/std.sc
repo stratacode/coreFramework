@@ -86,6 +86,7 @@ sys.std {
           "      <%= variableTypeName %> _<%= lowerClassName %> = (<%= variableTypeName %>) _ctx.getValue(\"<%= typeClassName %>\");\n";
       appGlobalScope.customSetter = 
           "      _ctx.setValue(\"<%= typeClassName %>\", _<%= lowerClassName %>);\n";
+      appGlobalScope.addDependentType(sc.obj.AppGlobalScopeDefinition.class);
       registerScopeProcessor("appGlobal", appGlobalScope);
 
       // Defines a new object lifecycle where instances are stored for each request
@@ -101,7 +102,8 @@ sys.std {
           "      sc.obj.RequestScopeDefinition.setValue(\"<%= typeClassName %>\", _<%= lowerClassName %>);\n";
       // Changes how synchronization is performed in this scope.  It will use a stateless protocol - transferring all synchronized state on each request. 
       // Automatic sync is disabled
-      requestScope.temporaryScope = true; 
+      requestScope.temporaryScope = true;
+      requestScope.addDependentType(sc.obj.RequestScopeDefinition.class);
       registerScopeProcessor("request", requestScope);
    }
 }

@@ -25,9 +25,10 @@ public js.core extends html.core, js.prebuild, js.sys, js.util, sys.sccore {
       // Files in the web directory are marked as type 'web' and go into the defaultWebRoot 'web'
       addSrcPath("web", "web", defaultWebRoot);
 
-      // So JS code can use these scopes which are defined in the servlet.core layer
+      // So JS code can use these scopes which are defined in the servlet.core layer.  But they all map to global on the client
       registerScopeAlias("session", "global");
-      registerScopeAlias("appSession", "appGlobal");
+      registerScopeAlias("appSession", "global");
+      registerScopeAlias("appGlobal", "global");
 
       // Adds a static code snippet to register the page when you annotate a class with @URL.
       // If we happen to register an inner class the addPage still goes on the parent type

@@ -1,6 +1,7 @@
 import sc.js.ServerTag;
 import sc.js.ServerTagManager;
 import sc.lang.html.Element;
+import sc.lang.html.HtmlPage;
 
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -576,14 +577,14 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
    public StringBuilder getInitialSync(List<Object> insts, Context ctx, String uri, List<PageEntry> pageEnts, StringBuilder traceBuffer) {
       try {
          PerfMon.start("getInitialSync");
-         return getOutputFromPages(insts, ctx, uri, pageEnts, true, false, traceBuffer);
+         return getOutputFromPages(insts, ctx, uri, pageEnts, true, true, false, traceBuffer);
       }
       finally {
          PerfMon.end("getInitialSync");
       }
    }
 
-   public StringBuilder getOutputFromPages(List<Object> insts, Context ctx, String uri, List<PageEntry> pageEnts, boolean needsInitialSync, boolean resetSync, StringBuilder traceBuffer) {
+   public StringBuilder getOutputFromPages(List<Object> insts, Context ctx, String uri, List<PageEntry> pageEnts, boolean isPageView, boolean needsInitialSync, boolean resetSync, StringBuilder traceBuffer) {
       // If this is really a page, render it.
       StringBuilder sb = null, headSB = null, bodySB = null;
 
@@ -607,6 +608,10 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                ctx.mimeType = pageEnt.mimeType;
 
             Element page = (Element) inst;
+
+            // Part of the API to help track individual page views - increment this value which may trigger bindings in the page
+            if (isPageView && page instanceof sc.lang.html.HtmlPage)
+               ((HtmlPage)page).pageVisitCount++;
 
             if (pageEnts.size() < 2) {
                sb = page.output();
@@ -1034,7 +1039,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             // e.g. sc_DynUtil_c.updateHTML("idName", escaped HTML string).  We can build that by walking down the object tree, calling the is-valid, outputStart and body methods manually as needed?
 
             PerfMon.start("getOutputFromPages");
-            pageOutput = pageDispatcher.getOutputFromPages(insts, ctx, url, pageEnts, initSync, resetSync, traceBuffer);
+            pageOutput = pageDispatcher.getOutputFromPages(insts, ctx, url, pageEnts, false, initSync, resetSync, traceBuffer);
             PerfMon.end("getOutputFromPages");
          }
       }

@@ -2107,6 +2107,7 @@ js_Page_c._updateInst = js_Html_c._updateInst = function() {
 
 function js_HtmlPage() {
    js_Html.call(this);
+   this.pageVisitCount = 0;
 }
 
 js_HtmlPage_c = sc_newClass("sc.lang.html.HtmlPage", js_HtmlPage, js_Html, null);

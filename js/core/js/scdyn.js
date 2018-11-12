@@ -902,6 +902,10 @@ sc_PTypeUtil_c.setThreadLocal = function(key, value) {
    return orig;
 }
 
+sc_PTypeUtil_c.getThreadName = function() {
+   return "js-thread";
+}
+
 sc_DynUtil_c.isArray = sc_PTypeUtil_c.isArray = function(type) {
    if (type === null)
       return false;
