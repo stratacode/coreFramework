@@ -2,7 +2,7 @@ import sc.js.URLPath;
 import java.util.List;
 import java.util.ArrayList;
 import sc.util.FileUtil;
-import sc.obj.ScopeEnvironment;
+import sc.type.PTypeUtil;
 import sc.obj.CurrentScopeContext;
 import sc.obj.AppGlobalScopeDefinition;
 import java.io.File;
@@ -160,7 +160,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
          }
 
          if (clientSync) {
-            ScopeEnvironment.setAppId(urlPath.keyName);
+            PTypeUtil.setAppId(urlPath.keyName);
 
             if (scopeContextName != null) {
                if (sc.obj.CurrentScopeContext.waitForReady(scopeContextName, waitForPageTime) == null) {

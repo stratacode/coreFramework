@@ -1,4 +1,6 @@
 <%@
+import sc.type.PTypeUtil;
+
 /**
  * This page is the default base for all schtml files with an enclosing html tag that extend this layer.
  * It includes any necessary Javascript files, defines the window id, register the page's URL with the PageDispatcher using the @URL annotation
@@ -19,8 +21,9 @@
    <head serverContent="true">
       <!-- Setting stateless=true here means that the entire tag and its body are included in the 'outputBody' method of the parent, no object generated for this tag -->
       <script type="text/javascript" stateless="true">
-         var sc_windowId = <%= sc.type.PTypeUtil.getWindowId() %>;
-         var sc_testMode = <%= sc.type.PTypeUtil.testMode %>;
+         var sc_windowId = <%= PTypeUtil.getWindowId() %>;
+         var sc_appId = "<%= PTypeUtil.getAppId() %>";
+         var sc_testMode = <%= PTypeUtil.testMode %>;
       </script>
    </head>
    <body>

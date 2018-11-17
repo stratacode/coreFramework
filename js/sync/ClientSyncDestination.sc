@@ -67,6 +67,9 @@ object ClientSyncDestination extends SyncDestination {
       // Never wait when we are posting data - aka a 'send' versus a 'sync'
       if (waitTime != -1 && layerDef.length() == 0)
          useParams += "&waitTime=" + waitTime;
+      if (SyncManager.trace) {
+         System.out.println("Sync: POST /sync" + useParams);
+      }
       PTypeUtil.postHttpRequest("/sync" + useParams, layerDef, "text/plain", listener);
    }
 

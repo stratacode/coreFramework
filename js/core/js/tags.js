@@ -39,6 +39,7 @@ js_Element_c.trace = false;
 js_Element_c.verbose = false;
 js_Element_c.verboseRepeat = false;
 js_Element_c.needsRefresh = false;
+js_Element_c.refreshOnInit = false;
 js_Element_c.wrap = js_Element_c.bodyOnly = false;
 js_Element_c.pendingType = js_Element_c.pendingEvent = null;
 js_Element_c.isPageElement = function() { return false; }
@@ -2004,7 +2005,7 @@ js_Form_c.getSubmitCount = function() {
 function js_Page() {
    js_HTMLElement.call(this);
    // Schedule a refresh once this script is done loading
-   sc_addLoadMethodListener(this, js_Page_c.refresh);
+   sc_addLoadMethodListener(this, js_Page_c.onPageLoad);
    sc_runLaterScheduled = true;
    this.refreshedOnce = false;
    var url = window.location.href;
@@ -2043,16 +2044,32 @@ function js_Page() {
       }
    }
    // Signal to others not to bother refreshing individually - avoids refreshing individual tags when we are going to do it at the page level anyway
-   js_Element_c.globalRefreshScheduled = true;
+   if (this.refreshOnInit)
+      js_Element_c.globalRefreshScheduled = true;
    this.makeRoot();
    this.serverTags = {};
 }
 
 js_Page_c = sc_newClass("sc.lang.html.Page", js_Page, js_HTMLElement, null);
 
+js_Page_c.onPageLoad = function() {
+   sc_runRunLaterMethods(); // in case these trigger a global refresh
+   if (js_Element_c.globalRefreshScheduled || this.refreshOnInit)
+      this.refresh();
+   // If a global refresh is not needed, we'll just update the DOM
+   else {
+      this.updateDOM();
+      if (!this.element)
+          console.error("No element found for page"); // TODO: do a refresh here?
+      sc_runClientInitJobs();
+      this.refreshedOnce = true;
+      this.refreshServerTags();
+   }
+}
+
 js_Page_c.refresh = function() {
-   // Do this right before we refresh.  That delays them till after the script code in the page 
-   // has been loaded so all of the dependencies are satisfied.  
+   // Do this right before we refresh.  That delays them till after the script code in the page
+   // has been loaded so all of the dependencies are satisfied.
    sc_runRunLaterMethods();
    // TODO: should we be refreshing only the body tag, not the head and HTML?
    /*
@@ -2065,7 +2082,6 @@ js_Page_c.refresh = function() {
       this.refreshedOnce = true;
       sc_runClientInitJobs();
    }
-
     this.refreshServerTags();
 }
 

@@ -1,7 +1,6 @@
 import sc.dyn.DynUtil;
 import sc.obj.ScopeContext;
 import sc.obj.ScopeDefinition;
-import sc.obj.ScopeEnvironment;
 
 import javax.servlet.http.HttpSessionBindingListener;
 import javax.servlet.http.HttpSessionBindingEvent;
@@ -60,7 +59,7 @@ class AppSessionScopeContext extends ScopeContext implements HttpSessionBindingL
    }
 
    public boolean isCurrent() {
-      return Context.getCurrentSession() == session && sc.util.StringUtil.equalStrings(ScopeEnvironment.getAppId(), appId);
+      return Context.getCurrentSession() == session && sc.util.StringUtil.equalStrings(sc.type.PTypeUtil.getAppId(), appId);
    }
 
    public String toString() {

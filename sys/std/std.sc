@@ -70,7 +70,7 @@ sys.std {
 
       registerLanguage(scshLang, "scsh");
 
-      // Registers a standard scope which is "per-application", where the application is defined by the ScopeEnvironment's appId value.
+      // Registers a standard scope which is "per-application", where the application is defined by the appId value in the environment.
       // For a web application, the appId defaults to the base part of the URL.  For a desktop application 'null' is the default app which
       // will work just like global but it's a hook to allow multiple independent resident apps to use independent instances of the same
       // components or maybe support a multi-tenant application.

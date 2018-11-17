@@ -880,7 +880,14 @@ sc_PTypeUtil_c.addClientInitJob = function(runnable) {
 sc_PTypeUtil_c.getWindowId = function() {
    if (window["sc_windowId"] != undefined)
       return sc_windowId;
-   console.error("No sc_windowId defined - usually this is defined in a block of Javascript from the initial page load.");
+   console.error("No sc_windowId defined - usually defined in Javascript added to HtmlPage in the head section");
+   return -1;
+}
+
+sc_PTypeUtil_c.getAppId = function() {
+   if (window["sc_appId"] != undefined)
+      return sc_appId;
+   console.error("No sc_appId defined - usually defined in Javascript added to HtmlPage in the head section");
    return -1;
 }
 

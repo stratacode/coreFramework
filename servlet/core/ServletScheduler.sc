@@ -10,7 +10,7 @@ class ServletScheduler implements sc.dyn.IScheduler {
       ScheduledJob sj = new ScheduledJob();
       sj.toInvoke = runnable;
       sj.priority = priority;
-      sj.curScopeCtx = CurrentScopeContext.getEnvScopeContextState();
+      sj.curScopeCtx = CurrentScopeContext.getThreadScopeContext();
       Context ctx = Context.getCurrentContext();
 
       // No current request - schedule this job to run before the next one

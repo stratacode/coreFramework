@@ -36,7 +36,6 @@ import sc.layer.LayeredSystem;
 
 import sc.obj.ScopeContext;
 import sc.obj.ScopeDefinition;
-import sc.obj.ScopeEnvironment;
 import sc.obj.RequestScopeDefinition;
 import sc.obj.CurrentScopeContext;
 
@@ -350,7 +349,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
    }
 
    public Object getCurrentPageInstance(PageEntry pageEnt) {
-      ScopeEnvironment.setAppId(pageEnt.keyName);
+      PTypeUtil.setAppId(pageEnt.keyName);
 
       return DynUtil.resolveName(ModelUtil.getTypeName(pageEnt.pageType), false);
    }
@@ -711,22 +710,23 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
          if (sc.bind.Bind.trace) {
             sb.append("sc_Bind_c.trace = true;\n");
          }
+         // TODO: done in HtmlPage!
          sb.append("   var sc_windowId = " + ctx.getWindowId() + ";\n");
          if (doSync) {
             CharSequence initSync = SyncManager.getInitialSync("jsHttp", WindowScopeDefinition.scopeId, resetSync, "js");
-               // Here are in injecting code into the generated script for debugging - if you enable logging on the server, it's on in the client automatically
+            // Here are in injecting code into the generated script for debugging - if you enable logging on the server, it's on in the client automatically
             if (SyncManager.trace) {
-               sb.append("if (typeof sc_SyncManager_c != 'undefined') sc_SyncManager_c.trace = true;\n");
+               sb.append("   if (typeof sc_SyncManager_c != 'undefined') sc_SyncManager_c.trace = true;\n");
             }
             if (SyncManager.verbose) {
-               sb.append("if (typeof sc_SyncManager_c != 'undefined') sc_SyncManager_c.verbose = true;\n");
+               sb.append("   if (typeof sc_SyncManager_c != 'undefined') sc_SyncManager_c.verbose = true;\n");
             }
             if (SyncManager.traceAll) {
-               sb.append("if (typeof sc_SyncManager_c != 'undefined') sc_SyncManager_c.traceAll = true;\n");
+               sb.append("   if (typeof sc_SyncManager_c != 'undefined') sc_SyncManager_c.traceAll = true;\n");
             }
             // Propagate this option when we load up the page so the client has the same defaultLanguage that we do (if it's not the default)
             if (!SyncManager.defaultLanguage.equals("json"))
-               sb.append("sc_SyncManager_c.defaultLanguage = \"" + SyncManager.defaultLanguage + "\";\n");
+               sb.append("   sc_SyncManager_c.defaultLanguage = \"" + SyncManager.defaultLanguage + "\";\n");
             if (initSync != null && (initSyncSize = initSync.length()) > 0) {
                sb.append(JSRuntimeProcessor.SyncBeginCode);
                sb.append(initSync);
@@ -736,7 +736,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                sb.append(JSRuntimeProcessor.NoSyncCode); // Always do an sc_refresh call at the end of the request so we can start a 'sync' call
          }
          if (trace || Element.trace) {
-            sb.append("js_Element_c.trace = true;\n");
+            sb.append("   js_Element_c.trace = true;\n");
          }
          sb.append("</script>");
       }
@@ -783,7 +783,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
             // Must be set before we call Context.initContext
             if (isUrlPage)
-               ScopeEnvironment.setAppId(pageEnt.keyName);
+               PTypeUtil.setAppId(pageEnt.keyName);
 
             ctx = Context.initContext(request, response, queryParams);
 
@@ -882,7 +882,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
          finally {
             if (curScopeCtx != null)
                CurrentScopeContext.popCurrentScopeContext(true);
-            ScopeEnvironment.setAppId(null);
+            PTypeUtil.setAppId(null);
          }
       }
    }

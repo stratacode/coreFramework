@@ -29,6 +29,7 @@ public js.core extends html.core, js.prebuild, js.sys, js.util, sys.sccore {
       registerScopeAlias("session", "global");
       registerScopeAlias("appSession", "global");
       registerScopeAlias("appGlobal", "global");
+      registerScopeAlias("window", "global");
 
       // Adds a static code snippet to register the page when you annotate a class with @URL.
       // If we happen to register an inner class the addPage still goes on the parent type

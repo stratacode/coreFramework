@@ -23,7 +23,6 @@ import javax.servlet.FilterChain;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 
-import sc.obj.ScopeEnvironment;
 import sc.obj.ScopeContext;
 import sc.obj.CurrentScopeContext;
 import sc.obj.IScopeChangeListener;
@@ -122,7 +121,7 @@ class SyncServlet extends HttpServlet {
 
          PageDispatcher.PageEntry pageEnt = pageEnts.get(0);
 
-         ScopeEnvironment.setAppId(pageEnt.keyName);
+         sc.type.PTypeUtil.setAppId(pageEnt.keyName);
 
          ctx = Context.initContext(request, response, null);
 
@@ -333,7 +332,7 @@ class SyncServlet extends HttpServlet {
                }
                ctx.execLaterJobs();
                Context.clearContext();
-               ScopeEnvironment.setAppId(null);
+               sc.type.PTypeUtil.setAppId(null);
             }
          }
          catch (RuntimeException exc) {

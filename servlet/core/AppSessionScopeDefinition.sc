@@ -1,6 +1,5 @@
 import sc.obj.ScopeContext;
 import sc.obj.ScopeDefinition;
-import sc.obj.ScopeEnvironment;
 import sc.obj.GlobalScopeDefinition;
 import sc.obj.AppGlobalScopeDefinition;
 
@@ -28,7 +27,7 @@ object AppSessionScopeDefinition extends ScopeDefinition {
       if (session == null)
          return super.getScopeContext(create);
       AppSessionScopeContext ctx;
-      String appId = ScopeEnvironment.getAppId();
+      String appId = sc.type.PTypeUtil.getAppId();
       String key = "_sessionApp_" + appId;
       ctx = (AppSessionScopeContext) session.getAttribute(key);
       if (ctx == null && create) {
