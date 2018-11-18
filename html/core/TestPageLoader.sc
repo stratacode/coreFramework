@@ -51,11 +51,12 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
          waitForRuntimeTime = waitForPageTime = 60*60*24*3*1000;
       }
 
-      System.out.println("Waiting for server to start...");
+      System.out.println("--- Waiting for server to start...");
       sys.addSystemExitListener(this);
       //cmd.sleep(5000);
       if (sys.serverEnabled && !sys.waitForRuntime(waitForRuntimeTime))
          throw new IllegalArgumentException("Server failed to start in 5 seconds");
+      System.out.println("- Server started");
 
       LayeredSystem jsPeer = sys.getPeerLayeredSystem("js");
       // When clientSync is true, we use RPC to talk to the browser process

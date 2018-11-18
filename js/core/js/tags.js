@@ -2052,39 +2052,6 @@ function js_Page() {
 
 js_Page_c = sc_newClass("sc.lang.html.Page", js_Page, js_HTMLElement, null);
 
-js_Page_c.onPageLoad = function() {
-   sc_runRunLaterMethods(); // in case these trigger a global refresh
-   if (js_Element_c.globalRefreshScheduled || this.refreshOnInit)
-      this.refresh();
-   // If a global refresh is not needed, we'll just update the DOM
-   else {
-      this.updateDOM();
-      if (!this.element)
-          console.error("No element found for page"); // TODO: do a refresh here?
-      sc_runClientInitJobs();
-      this.refreshedOnce = true;
-      this.refreshServerTags();
-   }
-}
-
-js_Page_c.refresh = function() {
-   // Do this right before we refresh.  That delays them till after the script code in the page
-   // has been loaded so all of the dependencies are satisfied.
-   sc_runRunLaterMethods();
-   // TODO: should we be refreshing only the body tag, not the head and HTML?
-   /*
-   if (this.body != null)
-      this.body.refresh();
-   else */
-   js_HTMLElement_c.refresh.call(this);
-   js_Element_c.globalRefreshScheduled = false;
-   if (!this.refreshedOnce) {
-      this.refreshedOnce = true;
-      sc_runClientInitJobs();
-   }
-    this.refreshServerTags();
-}
-
 
 function js_Div() {
    js_HTMLElement.call(this);
@@ -2160,6 +2127,41 @@ js_HtmlPage_c.getServerTagById = function(id) {
    }
    return null;
 }
+
+js_HtmlPage_c.onPageLoad = js_Page_c.onPageLoad = function() {
+   sc_runRunLaterMethods(); // in case these trigger a global refresh
+   if (js_Element_c.globalRefreshScheduled || this.refreshOnInit)
+      this.refresh();
+   // If a global refresh is not needed, we'll just update the DOM
+   else {
+      this.updateDOM();
+      if (!this.element)
+         console.error("No element found for page"); // TODO: do a refresh here?
+      sc_runClientInitJobs();
+      this.refreshedOnce = true;
+      this.refreshServerTags();
+   }
+}
+
+js_HtmlPage_c.refresh = js_Page_c.refresh = function() {
+   // Do this right before we refresh.  That delays them till after the script code in the page
+   // has been loaded so all of the dependencies are satisfied.
+   sc_runRunLaterMethods();
+   // TODO: should we be refreshing only the body tag, not the head and HTML?
+   /*
+   if (this.body != null)
+      this.body.refresh();
+   else */
+   js_HTMLElement_c.refresh.call(this);
+   js_Element_c.globalRefreshScheduled = false;
+   if (!this.refreshedOnce) {
+      this.refreshedOnce = true;
+      sc_runClientInitJobs();
+   }
+   this.refreshServerTags();
+}
+
+
 
 // Called to create, or update a server tag object, pointing to the DOM element specified by 'id'.
 // It's called from a server response handler with an optional serverTag info object describing the properties the
