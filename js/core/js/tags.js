@@ -39,7 +39,7 @@ js_Element_c.trace = false;
 js_Element_c.verbose = false;
 js_Element_c.verboseRepeat = false;
 js_Element_c.needsRefresh = false;
-js_Element_c.refreshOnInit = false;
+js_Element_c.refreshOnInit = true;
 js_Element_c.wrap = js_Element_c.bodyOnly = false;
 js_Element_c.pendingType = js_Element_c.pendingEvent = null;
 js_Element_c.isPageElement = function() { return false; }

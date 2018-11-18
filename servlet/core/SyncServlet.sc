@@ -348,7 +348,6 @@ class SyncServlet extends HttpServlet {
    }
 
    private void applySyncLayer(Context ctx, HttpServletRequest request, String receiveLanguage, HttpSession session, String url, String syncGroup, boolean isReset) throws IOException {
-
       int len = request.getContentLength();
       boolean noLength = false;
       if (len == -1) {
@@ -369,9 +368,8 @@ class SyncServlet extends HttpServlet {
          }
 
           // Apply changes from the client.
-         ServletSyncDestination.applySyncLayer(bufStr, receiveLanguage, isReset);
+         ServletSyncDestination.applySyncLayer(bufStr, receiveLanguage, isReset, "client");
       }
       ctx.execLaterJobs();
-
    }
 }

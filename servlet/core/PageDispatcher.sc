@@ -379,19 +379,20 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             Object pageType = pageEnt.pageType;
             boolean isObject = ModelUtil.isObjectType(pageType);
 
-            if (initial) {
-               // Mark this as the initial sync mode
-               SyncManager.setInitialSync("jsHttp", uri, RequestScopeDefinition.getRequestScopeDefinition().scopeId, true);
-            }
-            else {
-               // When we get the page for a sync reset operation, we do not record the changes and it's not the "initial sync" layer
-               if (resetSync)
-                  SyncManager.setSyncState(SyncManager.SyncState.ApplyingChanges);
-               else
-                  SyncManager.setSyncState(SyncManager.SyncState.RecordingChanges);
-            }
-
             if (doSync) {
+
+               if (initial) {
+                  // Mark this as the initial sync mode - NOTE: only make this call if you are later going to call getInitialSync or you will leave the scope
+                  SyncManager.setInitialSync("jsHttp", uri, RequestScopeDefinition.getRequestScopeDefinition().scopeId, true);
+               }
+               else {
+               // When we get the page for a sync reset operation, we do not record the changes and it's not the "initial sync" layer
+                  if (resetSync)
+                     SyncManager.setSyncState(SyncManager.SyncState.ApplyingChanges);
+                  else
+                     SyncManager.setSyncState(SyncManager.SyncState.RecordingChanges);
+               }
+
                if (reset) { // When we are loading an initial page, the client state is gone so need to reset the window context state.
                   reset = false;
                   SyncManager.resetContext(WindowScopeDefinition.scopeId);
@@ -445,12 +446,13 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
             if (inst != null) {
                hasInst = true;
-               // If necessary, parse the URI again but this time set properties as necessary in inst.
+               // If necessary, parse the URI again but this time set properties as necessary in inst - the pageObject.
                String svClassName = pageEnt.patternParselet.getSemanticValueClassName();
                Object svClass = sc.dyn.DynUtil.findType(svClassName);
                if (svClass != null && ModelUtil.isInstance(svClass, inst))
                   language.parseIntoInstance(uri, pageEnt.patternParselet, inst);
 
+               // Loop over the query param properties defined for this page and set the corresponding properties in the pageObject
                if (pageEnt.queryParamProps != null) {
                   for (QueryParamProperty qpp:pageEnt.queryParamProps) {
                      Object paramValue = ctx.queryParams == null ? null : ctx.queryParams.get(qpp.paramName);

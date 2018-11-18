@@ -81,14 +81,14 @@ object ClientSyncDestination extends SyncDestination {
    }
 
    // Apply changes from the server, either by evaluating JS or use the super method which uses the deserializer to apply it
-   public void applySyncLayer(String toApply, String receiveLanguage, boolean isReset) {
+   public void applySyncLayer(String toApply, String receiveLanguage, boolean isReset, String detail) {
       if (receiveLanguage == null && toApply != null && !toApply.startsWith("sync:"))
          receiveLanguage = "js";
       if (SyncManager.trace) {
          if (toApply == null || toApply.length() == 0)
             System.out.println("No changes in server response");
          else
-            System.out.println("Applying server response " + (receiveLanguage == null ? "changes" : receiveLanguage) + ": '" + toApply + "'" + (isReset ? "reset" : "") +"\n");
+            System.out.println("Applying server " + detail + ": " + (receiveLanguage == null ? "changes" : receiveLanguage) + ": '" + toApply + "'" + (isReset ? "reset" : "") +"\n");
       }
       if (receiveLanguage != null && receiveLanguage.equals("js")) {
          DynUtil.evalScript(toApply);
@@ -97,7 +97,7 @@ object ClientSyncDestination extends SyncDestination {
          }
       }
       else {
-         super.applySyncLayer(toApply, receiveLanguage, isReset);
+         super.applySyncLayer(toApply, receiveLanguage, isReset, detail);
       }
    }
 
