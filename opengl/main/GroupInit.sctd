@@ -16,22 +16,25 @@
 <% if (overrideGet) { %>
       set<%=upperClassName%>(<%=lowerClassName%>);
 <% } %>
-     <%=lowerClassName%>.preInit();
-     <%=getDynamicTypeDefinition(lowerClassName, 2)%><%=propertyAssignments%>
-     java.util.List _children = java.util.Arrays.asList(<%=childrenNames%>);
-     for (Object _child:_children) {
-        if (_child instanceof sc.opengl.IRenderNode) {
-           sc.opengl.IRenderNode _jc = (sc.opengl.IRenderNode) _child;
-           <%=lowerClassName%>.addChild(_jc);
-        }
-     }
-     if (doInit) {
-       <%=lowerClassName%>.init();
-       <%=lowerClassName%>.start();
-     }
-     return <%=returnCast%><%=lowerClassName%>;
-  }
-  else return <%=returnCast%><%=lowerClassName%>;
+      <%=lowerClassName%>.preInit();
+      <%=getDynamicTypeDefinition(lowerClassName, 2)%><%=propertyAssignments%>
+      java.util.List _children = java.util.Arrays.asList(<%=childrenNames%>);
+      for (Object _child:_children) {
+         if (_child instanceof sc.opengl.IRenderNode) {
+             sc.opengl.IRenderNode _jc = (sc.opengl.IRenderNode) _child;
+             <%=lowerClassName%>.addChild(_jc);
+         }
+      }
+      if (doInit) {
+         <%=lowerClassName%>.init();
+         <%=lowerClassName%>.start();
+      }
+      return <%=returnCast%><%=lowerClassName%>;
+   }
+   else {
+      <%=variableTypeName%> _<%=lowerClassName%> = <%=lowerClassName%>;<%=accessHook%>
+      return <%=returnCast%><%=lowerClassName%>;
+   }
 }
 @sc.obj.TypeSettings(objectType=true)
 <%=getModifiers%> <%=variableTypeName%> get<%=upperClassName%>() { return <%=returnCast%>get<%=upperClassName%>(true); }

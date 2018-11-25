@@ -211,7 +211,7 @@ class SyncServlet extends HttpServlet {
             }
 
             // Now collect up all changes and write them as the response layer.  TODO: should this be request scoped?
-            SyncResult syncRes = mgr.sendSync(syncGroup, WindowScopeDefinition.scopeId, false, codeUpdates);
+            SyncResult syncRes = mgr.sendSync(syncGroup, WindowScopeDefinition.scopeId, false, codeUpdates, ctx.curScopeCtx.syncTypeFilter);
 
             // If there is nothing to send back to the client now and we have a waitTime supplied, we can wait for changes for "real time" response to the client
             if ((codeUpdates == null || codeUpdates.length() == 0) && waitTime != -1 && !syncRes.anyChanges && syncRes.errorMessage == null) {

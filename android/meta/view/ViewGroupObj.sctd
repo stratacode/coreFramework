@@ -32,7 +32,10 @@
        <%=lowerClassName%>.start();
      }
      return <%=lowerClassName%>;
-  }
-  else return <%=lowerClassName%>;
+   }
+   else {
+      <%=variableTypeName%> _<%=lowerClassName%> = <%=lowerClassName%>;<%=accessHook%>
+      return <%=returnCast%>_<%=lowerClassName%>;
+   }
 }
 <%=getModifiers%> <%=variableTypeName%> get<%=upperClassName%>() { return get<%=upperClassName%>(true); }

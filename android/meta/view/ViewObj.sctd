@@ -24,13 +24,19 @@
 <% } %>
      <%=lowerClassName%>.preInit();
      <%=propertyAssignments%>
-     if (doInit) {
-       <%=lowerClassName%>.init();
-       <%=lowerClassName%>.start();
-     }
-     return <%=lowerClassName%>;
-  }
-  else return <%=lowerClassName%>;
+      if (doInit) {
+         <%=lowerClassName%>.init();
+         <%=lowerClassName%>.start();
+      }
+      return <%=lowerClassName%>;
+   }
+   else {<%=accessHook%>
+      return <%=lowerClassName%>;
+   }
+   else {
+      <%=variableTypeName%> _<%=lowerClassName%> = <%=lowerClassName%>;<%=accessHook%>
+      return <%=returnCast%><%=lowerClassName%>;
+   }
 }
 <%=getModifiers%> <%=variableTypeName%> get<%=upperClassName%>() { 
    return get<%=upperClassName%>(true); 

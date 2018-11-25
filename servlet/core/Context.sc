@@ -1,3 +1,4 @@
+import java.util.Set;
 import java.io.PrintWriter;
 import sc.sync.SyncManager;
 
@@ -38,7 +39,9 @@ class Context {
    ArrayList<ScheduledJob> toInvokeLater = null;
 
    WindowScopeContext windowCtx = null;
-  
+
+   CurrentScopeContext curScopeCtx = null;
+
    /** Set to true when the server is in the midst of a shutdown */
    static boolean shuttingDown = false;
    /** Set this to true when the server will restart */

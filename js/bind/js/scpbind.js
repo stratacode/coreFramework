@@ -107,8 +107,9 @@ sc_PBindUtil_c.addListener = function(obj, prop, listener, eventMask, priority) 
    }
    plist = bls[null]; // "null" key represents listeners on the object itself - ok since null is a keyword and not a valid property name.
 
-   // Check for any listeners on the default property.  If so, notify them.  This is used so any systems listeners, like an on-click handler can be added only when the client is listening for them.
-   if (plist != null) {
+   // Check for any listeners on the default property.  If so, notify them (unless this is the LISTENER_ADDED mask only).
+   // This is used so any systems listeners, like an on-click handler can be added only when the client is listening for them.
+   if (plist != null && ((eventMask & ~sc_IListener_c.LISTENER_ADDED) !== 0)) {
       for (var i = 0; i < plist.length; i++) {
          var defaultEntry = plist[i];
          if (defaultEntry && (defaultEntry.eventMask & sc_IListener_c.LISTENER_ADDED) != 0) {

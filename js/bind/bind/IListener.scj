@@ -31,9 +31,9 @@ public interface IListener {
    void valueRequested(Object obj, Object prop);
    /**
     * Called to notify the listener of a VALUE_CHANGED event on the property srcProp.
-    * The eventDetail may include the new value.   Typically the data binding system works by getting the property
-    * value at the time a binding is evaluated, not using the value which has been propagated since it may have changed
-    * since the event delivery started.
+    * The eventDetail may include the new value but is mainly used for debug logging.
+    * Typically code using or implementing a binding will get the current property rather than rely on the value
+    * propagated in the event since it might have changed since the delivery started.
     * <p>
     * This method returns true if the binding detected that the value had changed.  False if it is detects the binding
     * did not change.  Since most listeners cache the old value, they can tell whether we need to keep processing this

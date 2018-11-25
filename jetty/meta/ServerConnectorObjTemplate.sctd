@@ -6,13 +6,13 @@
    <%=variableTypeName%> <%=lowerClassName%> = super.get<%=upperClassName%>();
 <% } %>
    if (<%=lowerClassName%> == null) {
-      <%=variableTypeName%> _t = <%=lowerClassName%> = <% if (typeIsComponentClass) { %><%=typeClassName%>.new<%=typeBaseName%>(false)<% } else { %>new <%=typeName%>(<%=rootName%>)<% } %>;
+      <%=variableTypeName%> _<%=lowerClassName%> = <%=lowerClassName%> = <% if (typeIsComponentClass) { %><%=typeClassName%>.new<%=typeBaseName%>(false)<% } else { %>new <%=typeName%>(<%=rootName%>)<% } %>;
 <% if (overrideGet) { %>
       set<%=upperClassName%>(<%=lowerClassName%>);
 <% } %>
-     _t._preInit();
-     <%=propertyAssignments%>
-     java.util.List _children = java.util.Arrays.asList(<%=childrenNames%>);
+      _<%=lowerClassName%>._preInit();
+      <%=propertyAssignments%>
+      java.util.List _children = java.util.Arrays.asList(<%=childrenNames%>);
      //for (Object _child:_children) {
         //if (_child instanceof org.eclipse.jetty.server.Connector)
         //   _t.addConnector((org.eclipse.jetty.server.Connector) _child);
@@ -23,19 +23,21 @@
         //else if (_child instanceof org.eclipse.jetty.util.component.LifeCycle)
         //   _t.addLifeCycle((org.eclipse.jetty.util.component.LifeCycle)_child);
      //}
-     if (doInit) {
-       _t._init();
-       try {
-          _t._start();
-          _t.start(); // Call the handler's start method
-       }
-       catch (Exception exc) {
-          throw new IllegalArgumentException(exc);
-       }
-     }
-     return _t;
-  }
-  else 
-     return <%=lowerClassName%>;
+      if (doInit) {
+        _<%=lowerClassName%>._init();
+        try {
+            _<%=lowerClassName%>._start();
+            _<%=lowerClassName%>.start(); // Call the handler's start method
+        }
+         catch (Exception exc) {
+            throw new IllegalArgumentException(exc);
+         }
+      }
+      return _<%=lowerClassName%>;
+   }
+   else {
+      <%=variableTypeName%> _<%=lowerClassName%> = <%=lowerClassName%>;<%=accessHook%>
+      return <%=returnCast%><%=lowerClassName%>;
+   }
 }
 <%=getModifiers%> <%=variableTypeName%> get<%=upperClassName%>() { return get<%=upperClassName%>(true); }

@@ -22,7 +22,11 @@
      }
      return <%=returnCast%><%=lowerClassName%>;
   }
-  else return <%=returnCast%><%=lowerClassName%>;
+  else {
+     <%=variableTypeName%> _<%=lowerClassName%> = <%=lowerClassName%>;
+     <%=accessHook%>
+     return <%=returnCast%>_<%=lowerClassName%>;
+  }
 }
 @sc.obj.TypeSettings(objectType=true)
 <%=getModifiers%> <%=variableTypeName%> get<%=upperClassName%>() { return get<%=upperClassName%>(true); }

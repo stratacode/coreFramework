@@ -6,6 +6,7 @@ import sc.lang.html.HtmlPage;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Date;
 import java.util.Calendar;
 import java.util.Map;
@@ -13,6 +14,7 @@ import java.util.Set;
 import java.util.Collection;
 import java.util.TreeMap;
 import java.util.Iterator;
+import java.util.Arrays;
 
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.Lock;
@@ -112,6 +114,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       boolean doSync; // Set to true during compilation based on whether there's a client/server sync'ing - matching js to java classes
       boolean hasServerTags; // There's no client tag object but there is one or more serverTags in the server version.  Server tags also need sync
       boolean resource;
+      Set<String> syncTypes;
 
       // Stores the list of query parameters (if any) for the given page - created with @QueryParam
       List<QueryParamProperty> queryParamProps;
@@ -130,7 +133,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
     * We are not guaranteed these get called in any order so need to use the priority to decide who gets to listen on that
     * pattern.
     */
-   public static void addPage(String keyName, String pattern, Object pageType, boolean urlPage, boolean doSync, boolean isResource, int priority, String lockScope, List<QueryParamProperty> queryParamProps) {
+   public static void addPage(String keyName, String pattern, Object pageType, boolean urlPage, boolean doSync, boolean isResource, int priority, String lockScope, List<QueryParamProperty> queryParamProps, Set<String> syncTypes) {
       PageEntry ent = new PageEntry();
       ent.keyName = keyName;
       ent.pattern = pattern;
@@ -150,6 +153,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       ent.hasServerTags = !isResource && DynUtil.isAssignableFrom(Element.class, pageType);
       ent.mimeType = getMimeType(pattern);
       ent.queryParamProps = queryParamProps;
+      ent.syncTypes = syncTypes;
       // Used to use the keyName here as the key but really can only have one per pattern anyway and need a precedence so sc.foo.index can override sc.bar.index.
       // TODO: now that we have multiple PageEntry's supporting each URL, should we have an option to support multiple handlers for the same pattern?  patternFilter=true?
       PageEntry oldEnt = pages.get(pattern);
@@ -173,7 +177,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
          String dir = pattern.equals(indexPattern) ? "" : pattern.substring(0,pattern.length() - indexPattern.length());
          if (verbose)
             System.out.println("PageDispatcher: adding index page for: " + (dir.length() == 0 ? "doc root" : dir));
-         addPage(dir + "_index_", dir + "/", pageType, urlPage, doSync, isResource, priority, lockScope, queryParamProps);
+         addPage(dir + "_index_", dir + "/", pageType, urlPage, doSync, isResource, priority, lockScope, queryParamProps, syncTypes);
       }
    }
 
@@ -342,6 +346,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             curScopeCtx.traceInfo = sysLockInfo + ": for" + getCtxTraceInfo(session);
          // Associates this set of locks and scopes with this thread so binding operation know how to get back here if there's a cross-scope binding.
          CurrentScopeContext.pushCurrentScopeContext(curScopeCtx, true);
+         ctx.curScopeCtx = curScopeCtx;
          return curScopeCtx;
       }
       // Static page request or something which doesn't need the scope system or it's locking mechanism
@@ -493,7 +498,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                Element pageElem = ((Element) inst);
 
                // When we are synchronizing changes using server tags
-               if (pageElem.needsRefresh)
+               if (pageElem.refreshBindings)
                   Bind.refreshBindings(pageElem);
 
                //pageElem.validateTags();
@@ -596,8 +601,27 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
       Map<String,ServerTag> serverTags = null;
 
+      boolean origSyncTypes = false;
+
    //LinkedHashSet<String> jsFiles = new LinkedHashSet<String>();
       for (PageEntry pageEnt:pageEnts) {
+
+         // Merge the set of sync types for each of the matching page entries - using the original set for the common case where this is only one
+         // but not creating a new HashSet for 2 and more
+         if (pageEnt.syncTypes != null) {
+            if (ctx.curScopeCtx.syncTypeFilter == null) {
+               ctx.curScopeCtx.syncTypeFilter = pageEnt.syncTypes;
+               origSyncTypes = true;
+            }
+            else {
+               if (origSyncTypes) {
+                  ctx.curScopeCtx.syncTypeFilter = new HashSet<String>(ctx.curScopeCtx.syncTypeFilter);
+                  origSyncTypes = false;
+               }
+               ctx.curScopeCtx.syncTypeFilter.addAll(pageEnt.syncTypes);
+            }
+         }
+
          Object inst = insts.get(i);
          if (inst instanceof Element && pageEnt.urlPage) {
             needsDyn = true;
@@ -645,7 +669,20 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                      bodyElem.outputBody(bodySB);
                }
             }
-            serverTags = page.addServerTags(WindowScopeDefinition, serverTags, false);
+            serverTags = page.addServerTags(WindowScopeDefinition, serverTags, false, ctx.curScopeCtx.syncTypeFilter);
+
+            // If we are filtering the page with a restricted set of syncTypes (ctx.syncTypeFilter != null), need to
+            // add the serverTagIds so that they pass the filter.
+            if (serverTags != null && ctx.curScopeCtx.syncTypeFilter != null) {
+               if (origSyncTypes) {
+                  ctx.curScopeCtx.syncTypeFilter = new HashSet<String>(ctx.curScopeCtx.syncTypeFilter);
+                  origSyncTypes = false;
+               }
+               for (String serverTagId:serverTags.keySet()) {
+                  ctx.curScopeCtx.syncTypeFilter.add(serverTagId);
+               }
+               ctx.curScopeCtx.syncTypeFilter.addAll(Arrays.asList("sc.js.ServerTagManager", "sc.js.ServerTag"));
+            }
 
          /*
          List<String> pageFiles = page.getJSFiles();
@@ -715,7 +752,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
          // TODO: done in HtmlPage!
          sb.append("   var sc_windowId = " + ctx.getWindowId() + ";\n");
          if (doSync) {
-            CharSequence initSync = SyncManager.getInitialSync("jsHttp", WindowScopeDefinition.scopeId, resetSync, "js");
+            CharSequence initSync = SyncManager.getInitialSync("jsHttp", WindowScopeDefinition.scopeId, resetSync, "js", ctx.curScopeCtx.syncTypeFilter);
             // Here are in injecting code into the generated script for debugging - if you enable logging on the server, it's on in the client automatically
             if (SyncManager.trace) {
                sb.append("   if (typeof sc_SyncManager_c != 'undefined') sc_SyncManager_c.trace = true;\n");
@@ -1071,12 +1108,13 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
          String lockScope = (String) DynUtil.getInheritedAnnotationValue(newType, "sc.html.URL", "lockScope");
          String resultSuffix = (String) DynUtil.getInheritedAnnotationValue(newType, "sc.obj.ResultSuffix", "value");
          String templatePathName = ModelUtil.getTemplatePathName(newType);
+         Set<String> syncTypes = needsSync ? ModelUtil.getJSSyncTypes(sys, newType) : null;
          if (pattern == null) {
             pattern = templatePathName;
          }
          System.out.println("*** Adding page type: " + newType);
          addPage(templatePathName, pattern, newType, isURLPage, needsSync, isResource,
-                 DynUtil.getLayerPosition(newType), lockScope, QueryParamProperty.getQueryParamProperties(newType));
+                 DynUtil.getLayerPosition(newType), lockScope, QueryParamProperty.getQueryParamProperties(newType), syncTypes);
       }
    }
 

@@ -20,7 +20,9 @@ function js_HTMLElement() {
    this.serverRepeat = false;
    this.HTMLClass = null;
    this.visible = true;
+   this.parentNode = null;
    this.invisTags = null;
+   this.initState = 0;
 }
 
 
@@ -38,8 +40,8 @@ js_Element_c.globalRefreshScheduled = false;
 js_Element_c.trace = false;
 js_Element_c.verbose = false;
 js_Element_c.verboseRepeat = false;
-js_Element_c.needsRefresh = false;
-js_Element_c.refreshOnInit = true;
+js_Element_c.refreshBindings = false;
+js_Element_c.refreshOnLoad = true;
 js_Element_c.wrap = js_Element_c.bodyOnly = false;
 js_Element_c.pendingType = js_Element_c.pendingEvent = null;
 js_Element_c.isPageElement = function() { return false; }
@@ -224,14 +226,15 @@ js_HTMLElement_c.getPreviousElementSibling = function() {
 js_HTMLElement_c.setVisible = function(vis) {
    if (vis != this.visible) {
       this.visible = vis;
-      // TODO: we used to have code in here to try and avoid an extra invalidate call if we were already invisible and making the element invisible.  But not sure if that really is a worthwhile optimization
-      //var domElem = this.element != null;
-      // When a tag becomes visible or invisible, the parent tag's body needs to be refreshed
-      var enclTag = this.getEnclosingTag();
-      if (enclTag != null)
-         enclTag.invalidateBody();
-      else
-         this.invalidate();
+      // If we have not been initialized yet, don't both invalidating.  This gets set before even 
+      // the id of the element has been defined so too early to decide if we need a refresh.
+      if (this.initState === 1) {
+         var enclTag = this.getEnclosingTag();
+         if (enclTag != null)
+            enclTag.invalidateBody();
+         else
+            this.invalidate();
+      }
       sc_Bind_c.sendEvent(sc_IListener_c.VALUE_CHANGED, this, "visible" , vis);
    }
 }
@@ -423,7 +426,7 @@ function sc_refresh() {
    }
    for (var i = 0; i < sc$rootTagsArray.length; i++) {
       var rootTag = sc$rootTagsArray[i];
-      if (rootTag.needsRefresh) { // When bindings in a tag need to be manually refreshed, you can set 'needsRefresh=true' on the root tag and we'll refresh all bindings on the page
+      if (rootTag.refreshBindings) { // When bindings in a tag need to be manually refreshed, you can set 'refreshBindings=true' on the root tag and we'll refresh all bindings on the page
          sc_Bind_c.refreshBindings(rootTag);
       }
    }
@@ -447,7 +450,7 @@ js_HTMLElement_c.allocUniqueId = function(baseName) {
    return baseName + (suffix == null ? "_" : "") + nextId;
 }
 
-js_HTMLElement_c.updateDOM = function() {
+js_HTMLElement_c.getDOMElement = function() {
    var newElement = null;
    if (this.repeat === null || this.repeat === undefined) {
       if (this.id == null) {
@@ -462,6 +465,13 @@ js_HTMLElement_c.updateDOM = function() {
       else {
          newElement = document.getElementById(this.id);
       }
+   }
+   return newElement;
+}
+
+js_HTMLElement_c.updateDOM = function() {
+   if (this.repeat === null || this.repeat === undefined) {
+      var newElement = this.getDOMElement();
       this.setDOMElement(newElement);
    }
    else {
@@ -502,7 +512,7 @@ js_HTMLElement_c.updateFromDOMElement = js_HTMLElement_c.setDOMElement = functio
       this.domChanged(orig, newElement);
       this.updateChildDOMs();
    }
-
+   this.initState = 1;
 }
 
 js_HTMLElement_c.addAttributeListener = function() {
@@ -1476,12 +1486,14 @@ js_HTMLElement_c.schedRefresh = function() {
 
 js_HTMLElement_c.invalidateBody = function() {
    this.bodyValid = false;
-   this.schedRefresh();
+   if (this.initState === 1)
+      this.schedRefresh();
 }
 
 js_HTMLElement_c.invalidateStartTag = function() {
    this.startValid = false;
-   this.schedRefresh(js_Element_c.refreshStartTags);
+   if (this.initState === 1)
+      this.schedRefresh();
 }
 
 js_HTMLElement_c.invalidateRepeatTags = function() {
@@ -1499,7 +1511,7 @@ js_HTMLElement_c.invalidateRepeatTags = function() {
       this.invalidateBody();
    else {
       this.repeatTagsValid = false;
-      this.schedRefresh(js_Element_c.refreshRepeatTags);
+      this.schedRefresh();
    }
 }
 
@@ -2044,8 +2056,8 @@ function js_Page() {
       }
    }
    // Signal to others not to bother refreshing individually - avoids refreshing individual tags when we are going to do it at the page level anyway
-   if (this.refreshOnInit)
-      js_Element_c.globalRefreshScheduled = true;
+   //if (this.refreshOnLoad)
+   //   js_Element_c.globalRefreshScheduled = true;
    this.makeRoot();
    this.serverTags = {};
 }
@@ -2130,7 +2142,7 @@ js_HtmlPage_c.getServerTagById = function(id) {
 
 js_HtmlPage_c.onPageLoad = js_Page_c.onPageLoad = function() {
    sc_runRunLaterMethods(); // in case these trigger a global refresh
-   if (js_Element_c.globalRefreshScheduled || this.refreshOnInit)
+   if (js_Element_c.globalRefreshScheduled || this.refreshOnLoad)
       this.refresh();
    // If a global refresh is not needed, we'll just update the DOM
    else {
@@ -2144,6 +2156,9 @@ js_HtmlPage_c.onPageLoad = js_Page_c.onPageLoad = function() {
 }
 
 js_HtmlPage_c.refresh = js_Page_c.refresh = function() {
+   // Stop any child tag object refreshes since we are about to do the whole thing anyway
+   js_Element_c.globalRefreshScheduled = true;
+
    // Do this right before we refresh.  That delays them till after the script code in the page
    // has been loaded so all of the dependencies are satisfied.
    sc_runRunLaterMethods();
@@ -2777,6 +2792,7 @@ js_RepeatServerTag_c.updateFromDOMElement = function(newElement) {
          newElement.scObj = this;
       }
    }
+   this.initState = 1;
 }
 
 js_RepeatServerTag_c.setInnerHTML = function(htmlTxt) {
