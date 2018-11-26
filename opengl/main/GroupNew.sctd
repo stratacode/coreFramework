@@ -4,9 +4,10 @@
  */
 <%=fieldModifiers%> <%=variableTypeName%> <%=lowerClassName%>;
 <%=getModifiers%> <%=variableTypeName%> new<%=upperClassName%>(boolean doInit<%=nextConstructorDecls%>) {
-   <%=lowerClassName%> = <% if (typeIsComponentClass) { %><%=typeClassName%>.new<%=typeBaseName%>(false<%=nextConstructorParams%>)<% } else { %>new <%=typeName%>(<%=constructorParams%>)<% } %>;
-   <%=lowerClassName%>.preInit();
-   <%=getDynamicTypeDefinition(lowerClassName, 1)%><%=propertyAssignments%>
+   <%=variableTypeName%> _<%=lowerClassName%> = <% if (typeIsComponentClass) { %><%=typeClassName%>.new<%=typeBaseName%>(false<%=nextConstructorParams%>)<% } else { %>new <%=typeName%>(<%=constructorParams%>)<% } %>;
+   <%=lowerClassName%> = _<%=lowerClassName%>;
+   _<%=lowerClassName%>.preInit();
+   <%=getDynamicTypeDefinition("_" + lowerClassName, 1)%><%=propertyAssignments%>
    java.util.List _children = java.util.Arrays.asList(<%=childrenNames%>);
    for (Object _child:_children) {
       if (_child instanceof sc.opengl.IRenderNode) {
@@ -14,10 +15,10 @@
       }
    }
    if (doInit) {
-      <%=lowerClassName%>.init();
-      <%=lowerClassName%>.start();
+      _<%=lowerClassName%>.init();
+      _<%=lowerClassName%>.start();
    }
-   return <%=lowerClassName%>;
+   return _<%=lowerClassName%>;
 }
 
 <%=getModifiers%> <%=variableTypeName%> new<%=upperClassName%>(<%=constructorDecls%>) { return new<%=upperClassName%>(true<%=nextConstructorParams%>); }
