@@ -4,14 +4,14 @@
  */
 <%=fieldModifiers%> <%=variableTypeName%> <%=lowerClassName%>;
 <%=getModifiers%> <%=variableTypeName%> new<%=upperClassName%>(boolean doInit<%=nextConstructorDecls%>) {
-<%=variableTypeName%> <%=lowerClassName%> = <% if (typeIsComponentClass) { %><%=typeClassName%>.new<%=typeBaseName%>(false<%=nextConstructorParams%>)<% } else { %>new <%=typeName%>(<%=constructorParams%>)<% } %>;
-  <%=lowerClassName%>.preInit();
+<%=variableTypeName%> _<%=lowerClassName%> = <% if (typeIsComponentClass) { %><%=typeClassName%>.new<%=typeBaseName%>(false<%=nextConstructorParams%>)<% } else { %>new <%=typeName%>(<%=constructorParams%>)<% } %>;
+  _<%=lowerClassName%>.preInit();
   <%=propertyAssignments%>
   if (doInit) {
-    <%=lowerClassName%>.init();
-    <%=lowerClassName%>.start();
+    _<%=lowerClassName%>.init();
+    _<%=lowerClassName%>.start();
   }
-  return <%=lowerClassName%>;
+  return _<%=lowerClassName%>;
 }
 
 <%=getModifiers%> <%=variableTypeName%> new<%=upperClassName%>(<%=constructorDecls%>) { return new<%=upperClassName%>(true<%=nextConstructorParams%>); }

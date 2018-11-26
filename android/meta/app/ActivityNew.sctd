@@ -1,6 +1,6 @@
 /** Template for an activity.  Th _init method initializes the sc elements.  It is called first thing in onCreate via CompilerSettings.onInitMethod  */
 private void _init() {
-  <%=typeName%> <%=lowerClassName%> = this;
+  <%=typeName%> _<%=lowerClassName%> = this;
   <%=propertyAssignments%>
   java.util.List _children = java.util.Arrays.asList(<%=childrenNames%>);
   boolean viewSet = false;

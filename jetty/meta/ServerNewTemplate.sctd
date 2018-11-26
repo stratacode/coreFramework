@@ -4,13 +4,13 @@
  */
 <%=fieldModifiers%> <%=variableTypeName%> <%=lowerClassName%>;
 <%=getModifiers%> <%=variableTypeName%> new<%=upperClassName%>(boolean doInit) {
-  <%=variableTypeName%> <%=lowerClassName%> = <% if (typeIsComponentClass) { %><%=typeClassName%>.new<%=typeBaseName%>(false)<% } else { %>new <%=typeName%>()<% } %>;
-  <%=lowerClassName%>._preInit();
+  <%=variableTypeName%> _<%=lowerClassName%> = <% if (typeIsComponentClass) { %><%=typeClassName%>.new<%=typeBaseName%>(false)<% } else { %>new <%=typeName%>()<% } %>;
+  _<%=lowerClassName%>._preInit();
   <%=propertyAssignments%>
   java.util.List _children = java.util.Arrays.asList(<%=childrenNames%>);
   for (Object _child:_children) {
      if (_child instanceof org.eclipse.jetty.server.Connector)
-        <%=lowerClassName%>.addConnector((org.eclipse.jetty.server.Connector) _child);
+        _<%=lowerClassName%>.addConnector((org.eclipse.jetty.server.Connector) _child);
      //else if (_child instanceof org.eclipse.jetty.server.Handler)
      //   System.out.println("*** No handler add"); // <%=lowerClassName%>.addHandler((org.eclipse.jetty.server.Handler)_child);
      //else if (_child instanceof org.eclipse.jetty.security.LoginService)
@@ -19,16 +19,16 @@
      //   <%=lowerClassName%>.addLifeCycle((org.eclipse.jetty.util.component.LifeCycle)_child);
   }
   if (doInit) {
-    <%=lowerClassName%>._init();
+    _<%=lowerClassName%>._init();
     try {
-       <%=lowerClassName%>._start();
-       <%=lowerClassName%>.start(); // Call Jetty's start method
+       _<%=lowerClassName%>._start();
+       _<%=lowerClassName%>.start(); // Call Jetty's start method
     }
     catch (Exception exc) {
        throw new IllegalArgumentException(exc);
     }
   }
-  return <%=lowerClassName%>;
+  return _<%=lowerClassName%>;
 }
 
 <%=getModifiers%> <%=variableTypeName%> new<%=upperClassName%>() { return new<%=upperClassName%>(true); }

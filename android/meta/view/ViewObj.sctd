@@ -13,29 +13,27 @@
    <%=variableTypeName%> <%=lowerClassName%> = super.get<%=upperClassName%>();\
 <% } %>
    if (<%=lowerClassName%> == null) {
-   <%=lowerClassName%> = <% 
+      <%=variableTypeName%> _<%=lowerClassName%> = <% 
       if (typeIsComponentClass) { 
           %><%=typeClassName%>.new<%=typeBaseName%>(false,<%=rootName%>)<% 
       } else { 
           %>new <%=typeName%>(<%=rootName%>)<% 
       } %>;
+      <%=lowerClassName%> = _<%=lowerClassName%>;
 <% if (overrideGet) { %>
-      set<%=upperClassName%>(<%=lowerClassName%>);
+      set<%=upperClassName%>(_<%=lowerClassName%>);
 <% } %>
-     <%=lowerClassName%>.preInit();
+     _<%=lowerClassName%>.preInit();
      <%=propertyAssignments%>
       if (doInit) {
-         <%=lowerClassName%>.init();
-         <%=lowerClassName%>.start();
+         _<%=lowerClassName%>.init();
+         _<%=lowerClassName%>.start();
       }
-      return <%=lowerClassName%>;
-   }
-   else {<%=accessHook%>
-      return <%=lowerClassName%>;
+      return _<%=lowerClassName%>;
    }
    else {
-      <%=variableTypeName%> _<%=lowerClassName%> = <%=lowerClassName%>;<%=accessHook%>
-      return <%=returnCast%><%=lowerClassName%>;
+      <%=variableTypeName%> _<%=lowerClassName%> = <%=returnCast%><%=lowerClassName%>;<%=accessHook%>
+      return <%=lowerClassName%>;
    }
 }
 <%=getModifiers%> <%=variableTypeName%> get<%=upperClassName%>() { 

@@ -3,23 +3,24 @@
  * Accumulates the children objects and adds them.
  */
  <%=getModifiers%> <%=variableTypeName%> new<%=upperClassName%>(boolean doInit<%=nextConstructorDecls%>) {
- <%=variableTypeName%> <%=lowerClassName%> = <% if (typeIsComponentClass) { %><%=typeClassName%>.new<%=typeBaseName%>(false<%=nextConstructorParams%>)<% } else { %>new <%=typeName%>(<%=constructorParams%>)<% } %>;
-  <%=lowerClassName%>.preInit();
+ <%=variableTypeName%> _<%=lowerClassName%> = <% if (typeIsComponentClass) { %><%=typeClassName%>.new<%=typeBaseName%>(false<%=nextConstructorParams%>)<% } else { %>new <%=typeName%>(<%=constructorParams%>)<% } %>;
+ <%=lowerClassName%> = _<%=lowerClassName%>;
+  _<%=lowerClassName%>.preInit();
   <%=propertyAssignments%>
   <% if (numChildren > 0) { %>
   Object[] _children = new Object[] {<%=childrenNames%>};
   for (Object _child:_children) {
      if (_child instanceof android.view.View) {
         android.view.View _cv = (android.view.View) _child;
-        <%=lowerClassName%>.addView(_cv);
+        _<%=lowerClassName%>.addView(_cv);
      }
   }
   <% } %>
   if (doInit) {
-    <%=lowerClassName%>.init();
-    <%=lowerClassName%>.start();
+    _<%=lowerClassName%>.init();
+    _<%=lowerClassName%>.start();
   }
-  return <%=lowerClassName%>;
+  return _<%=lowerClassName%>;
 }
 
 <%=getModifiers%> <%=variableTypeName%> new<%=upperClassName%>(<%=constructorDecls%>) { return new<%=upperClassName%>(true<%=nextConstructorParams%>); }

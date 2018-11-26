@@ -6,7 +6,8 @@
    <%=variableTypeName%> <%=lowerClassName%> = super.get<%=upperClassName%>();
 <% } %>
    if (<%=lowerClassName%> == null) {
-      <%=variableTypeName%> _<%=lowerClassName%> = <%=lowerClassName%> = <% if (typeIsComponentClass) { %><%=typeClassName%>.new<%=typeBaseName%>(false)<% } else { %>new <%=typeName%>(<%=rootName%>)<% } %>;
+      <%=variableTypeName%> _<%=lowerClassName%> = <% if (typeIsComponentClass) { %><%=typeClassName%>.new<%=typeBaseName%>(false)<% } else { %>new <%=typeName%>(<%=rootName%>)<% } %>;
+      <%=lowerClassName%> = _<%=lowerClassName%>;
 <% if (overrideGet) { %>
       set<%=upperClassName%>(<%=lowerClassName%>);
 <% } %>
@@ -25,7 +26,7 @@
         //else if (_child instanceof org.eclipse.jetty.util.component.LifeCycle)
         //   _<%=lowerClassName%>.addLifeCycle((org.eclipse.jetty.util.component.LifeCycle)_child);
      }
-     <%= lowerClassName %>.setHandler(coll);
+     _<%= lowerClassName %>.setHandler(coll);
      if (doInit) {
        _<%=lowerClassName%>._init();
        try {
@@ -39,8 +40,8 @@
        return _<%=lowerClassName%>;
    }
    else {
-      <%=variableTypeName%> _<%=lowerClassName%> = <%=lowerClassName%>;<%=accessHook%>
-      return <%=returnCast%>_<%=lowerClassName%>;
+      <%=variableTypeName%> _<%=lowerClassName%> = <%=returnCast%><%=lowerClassName%>;<%=accessHook%>
+      return _<%=lowerClassName%>;
    }
 }
 <%=getModifiers%> <%=variableTypeName%> get<%=upperClassName%>() { return get<%=upperClassName%>(true); }

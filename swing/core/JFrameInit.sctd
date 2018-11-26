@@ -10,29 +10,29 @@
    <%=variableTypeName%> <%=lowerClassName%> = (<%=variableTypeName%>) super.get<%=upperClassName%>();\
 <% } %>
    if (<%=lowerClassName%> == null) {
-      <%=lowerClassName%> = <% if (typeIsCompiledComponent) { %><%=typeClassName%>.new<%=typeBaseName%>(false)<% } 
+      <%=variableTypeName%> _<%=lowerClassName%> = <% if (typeIsCompiledComponent) { %><%=typeClassName%>.new<%=typeBaseName%>(false)<% } 
                                else { %>new <%=typeName%>()<% } %>;
-
+      <%=lowerClassName%> = _<%=lowerClassName%>;
 <% if (overrideGet) { %>
-      set<%=upperClassName%>(<%=lowerClassName%>);
+      set<%=upperClassName%>(_<%=lowerClassName%>);
 <% } %>
-      <%=lowerClassName%>.preInit();
-      <%=getDynamicTypeDefinition(lowerClassName, 2)%><%=propertyAssignments%>
+      _<%=lowerClassName%>.preInit();
+      <%=getDynamicTypeDefinition("_" + lowerClassName, 2)%><%=propertyAssignments%>
       java.util.List _children = java.util.Arrays.asList(<%=childrenNames%>);
-      javax.swing.JMenuBar mb = <%=lowerClassName%>.getJMenuBar();
+      javax.swing.JMenuBar mb = _<%=lowerClassName%>.getJMenuBar();
       for (Object _child:_children) {
          if (_child instanceof java.awt.Component) {
             java.awt.Component _jc = (java.awt.Component) _child;
             // Don't add the menu bar to the content pane
             if (_jc != mb)
-               <%=lowerClassName%>.getContentPane().add(_jc);
+               _<%=lowerClassName%>.getContentPane().add(_jc);
           }
       }
       if (doInit) {
-         <%=lowerClassName%>.init();
-         <%=lowerClassName%>.start();
+         _<%=lowerClassName%>.init();
+         _<%=lowerClassName%>.start();
       }
-      return <%=returnCast%><%=lowerClassName%>;
+      return <%=returnCast%>_<%=lowerClassName%>;
    }
    else {
       <%=variableTypeName%> _<%=lowerClassName%> = <%=lowerClassName%>;<%=accessHook%>

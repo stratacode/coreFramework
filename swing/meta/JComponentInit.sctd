@@ -10,28 +10,29 @@
    <%=variableTypeName%> <%=lowerClassName%> = (<%=variableTypeName%>) super.get<%=upperClassName%>();
 <% } %>
    if (<%=lowerClassName%> == null) {
-      <%=lowerClassName%> = <% if (typeIsCompiledComponent) { %><%=typeClassName%>.new<%=typeBaseName%>(false)<% } 
+      <%=variableTypeName%> _<%=lowerClassName%> = <% if (typeIsCompiledComponent) { %><%=typeClassName%>.new<%=typeBaseName%>(false)<% } 
                                else { %>new <%=typeName%>()<% } %>;
+      <%=lowerClassName%> = _<%=lowerClassName%>;
       <% if (overrideGet) { %>
-          set<%=upperClassName%>(<%=lowerClassName%>);
+          set<%=upperClassName%>(_<%=lowerClassName%>);
       <% } %>
-      <%=lowerClassName%>.preInit();
-      <%=getDynamicTypeDefinition(lowerClassName, 2)%><%=propertyAssignments%>
-      java.util.List _children = (java.util.List) <%=lowerClassName%>.getClientProperty("sc.children");
+      _<%=lowerClassName%>.preInit();
+      <%=getDynamicTypeDefinition("_" + lowerClassName, 2)%><%=propertyAssignments%>
+      java.util.List _children = (java.util.List) _<%=lowerClassName%>.getClientProperty("sc.children");
       if (_children == null)
          _children = java.util.Arrays.asList(<%=childrenNames%>);
       for (Object _child:_children) {
-         sc.swing.SwingUtil.addChild(<%=lowerClassName%>, _child);
+         sc.swing.SwingUtil.addChild(_<%=lowerClassName%>, _child);
       }
       if (doInit) {
-         <%=lowerClassName%>.init();
-         <%=lowerClassName%>.start();
+         _<%=lowerClassName%>.init();
+         _<%=lowerClassName%>.start();
       }
-      return <%=returnCast%><%=lowerClassName%>;
+      return <%=returnCast%>_<%=lowerClassName%>;
    }
    else {
-      <%=variableTypeName%> _<%=lowerClassName%> = <%=lowerClassName%>;<%=accessHook%>
-      return <%=returnCast%><%=lowerClassName%>;
+      <%=variableTypeName%> _<%=lowerClassName%> = <%=returnCast%><%=lowerClassName%>;<%=accessHook%>
+      return _<%=lowerClassName%>;
    }
 }
 @sc.obj.TypeSettings(objectType=true)
