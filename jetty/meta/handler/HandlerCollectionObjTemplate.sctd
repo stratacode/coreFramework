@@ -6,7 +6,8 @@
    <%=variableTypeName%> <%=lowerClassName%> = super.get<%=upperClassName%>();
 <% } %>
    if (<%=lowerClassName%> == null) {
-   <%=lowerClassName%> = <% if (typeIsComponentClass) { %><%=typeClassName%>.new<%=typeBaseName%>(false)<% } else { %>new <%=typeName%>()<% } %>;
+   <%=variableTypeName%> = _<%=lowerClassName%> = <% if (typeIsComponentClass) { %><%=typeClassName%>.new<%=typeBaseName%>(false)<% } else { %>new <%=typeName%>()<% } %>;
+   <%=lowerClassName%> = _<%=lowerClassName%>;
 <% if (overrideGet) { %>
       set<%=upperClassName%>(<%=lowerClassName%>);
 <% } %>
