@@ -669,18 +669,17 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                      bodyElem.outputBody(bodySB);
                }
             }
-            serverTags = page.addServerTags(WindowScopeDefinition, serverTags, false, ctx.curScopeCtx.syncTypeFilter);
+            HashSet<String> serverTagTypes = ctx.curScopeCtx.syncTypeFilter == null ? null : new HashSet<String>();
+            serverTags = page.addServerTags(WindowScopeDefinition, serverTags, false, serverTagTypes);
 
             // If we are filtering the page with a restricted set of syncTypes (ctx.syncTypeFilter != null), need to
             // add the serverTagIds so that they pass the filter.
-            if (serverTags != null && ctx.curScopeCtx.syncTypeFilter != null) {
+            if (serverTagTypes != null && serverTagTypes.size() > 0) {
                if (origSyncTypes) {
                   ctx.curScopeCtx.syncTypeFilter = new HashSet<String>(ctx.curScopeCtx.syncTypeFilter);
                   origSyncTypes = false;
                }
-               for (String serverTagId:serverTags.keySet()) {
-                  ctx.curScopeCtx.syncTypeFilter.add(serverTagId);
-               }
+               ctx.curScopeCtx.syncTypeFilter.addAll(serverTagTypes);
                ctx.curScopeCtx.syncTypeFilter.addAll(Arrays.asList("sc.js.ServerTagManager", "sc.js.ServerTag"));
             }
 
