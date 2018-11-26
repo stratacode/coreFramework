@@ -6,14 +6,14 @@
    <%=variableTypeName%> <%=lowerClassName%> = super.get<%=upperClassName%>();
 <% } %>
    if (<%=lowerClassName%> == null) {
-   <%=variableTypeName%> = _<%=lowerClassName%> = <% if (typeIsComponentClass) { %><%=typeClassName%>.new<%=typeBaseName%>(false)<% } else { %>new <%=typeName%>()<% } %>;
+   <%=variableTypeName%> _<%=lowerClassName%> = <% if (typeIsComponentClass) { %><%=typeClassName%>.new<%=typeBaseName%>(false)<% } else { %>new <%=typeName%>()<% } %>;
    <%=lowerClassName%> = _<%=lowerClassName%>;
 <% if (overrideGet) { %>
-      set<%=upperClassName%>(<%=lowerClassName%>);
+      set<%=upperClassName%>(_<%=lowerClassName%>);
 <% } %>
-      <%=lowerClassName%>._preInit();
+      _<%=lowerClassName%>._preInit();
       <%=propertyAssignments%>
-      <%=lowerClassName%>.setHandlers(new org.eclipse.jetty.server.Handler[] {<%=childrenNames%>});
+      _<%=lowerClassName%>.setHandlers(new org.eclipse.jetty.server.Handler[] {<%=childrenNames%>});
       if (doInit) {
          <%=lowerClassName%>._init();
          try {

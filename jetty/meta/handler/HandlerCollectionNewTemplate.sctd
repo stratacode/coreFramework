@@ -4,21 +4,21 @@
  */
 <%=fieldModifiers%> <%=variableTypeName%> <%=lowerClassName%>;
 <%=getModifiers%> <%=variableTypeName%> new<%=upperClassName%>(boolean doInit) {
-   <%=variableTypeName%> <%=lowerClassName%> = <% if (typeIsComponentClass) { %><%=typeClassName%>.new<%=typeBaseName%>(false)<% } else { %>new <%=typeName%>()<% } %>;
-   <%=lowerClassName%>._preInit();
+   <%=variableTypeName%> _<%=lowerClassName%> = <% if (typeIsComponentClass) { %><%=typeClassName%>.new<%=typeBaseName%>(false)<% } else { %>new <%=typeName%>()<% } %>;
+   _<%=lowerClassName%>._preInit();
    <%=propertyAssignments%>
    java.util.List _children = java.util.Arrays.asList(<%=childrenNames%>);
    <%=lowerClassName%>.setHandlers(new org.eclipse.jetty.server.Handler[] {<%=childrenNames%>});
    if (doInit) {
-      <%=lowerClassName%>._init();
+      _<%=lowerClassName%>._init();
       try {
-         <%=lowerClassName%>._start();
+         _<%=lowerClassName%>._start();
       }
       catch (Exception exc) {
          throw new IllegalArgumentException();
       }
    }
-   return <%=lowerClassName%>;
+   return _<%=lowerClassName%>;
 }
 
 <%=getModifiers%> <%=variableTypeName%> new<%=upperClassName%>() { return new<%=upperClassName%>(true); }
