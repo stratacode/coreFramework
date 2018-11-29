@@ -2,6 +2,7 @@ import sc.js.ServerTag;
 import sc.js.ServerTagManager;
 import sc.lang.html.Element;
 import sc.lang.html.HtmlPage;
+import sc.lang.html.OutputCtx;
 
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -603,7 +604,10 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
       boolean origSyncTypes = false;
 
-   //LinkedHashSet<String> jsFiles = new LinkedHashSet<String>();
+      OutputCtx outCtx = new OutputCtx();
+      outCtx.validateCache = isPageView;
+
+//LinkedHashSet<String> jsFiles = new LinkedHashSet<String>();
       for (PageEntry pageEnt:pageEnts) {
 
          // Merge the set of sync types for each of the matching page entries - using the original set for the common case where this is only one
@@ -639,7 +643,19 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                ((HtmlPage)page).pageVisitCount++;
 
             if (pageEnts.size() < 2) {
-               sb = page.output();
+               // Using isPageView for the accessBindings and validateCache flag in the OutputCtx for outputing the body.
+               // If we are accessing a tagObject in a parent scope like appSession, from a child scope like window we
+               // and the page has cached it's output we want to avoid a complete refresh, but still access all bindings
+               // in this context so we run accessHook code for the sync system, authentication checks etc.  The accessBindings
+               // call does all of that and more - it will check any bindings for us so using that for now as it's a close
+               // enough fit and should only hide problems we would otherwise have to debug (not sure if that's good or bad)
+               // This will force us to call outputBody on all tag objects and incrementally updated the innerHTML and startTagTxt
+               // properties of children that have changed.  It will also make necessary "accessSyncInst" calls in resolving
+               // child objects of the page.
+               if (isPageView && page.bodyCache != null && page.cacheEnabled)
+                  Bind.accessBindings(page, true);
+
+               sb = page.output(outCtx);
             }
             else {
                Element headElem = (Element) DynUtil.getProperty(page, "head");
@@ -649,14 +665,14 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                   bodySB = new StringBuilder();
                   sb = new StringBuilder();
 
-                  page.outputStartTag(sb);
+                  page.outputStartTag(sb, outCtx);
                   if (headElem != null) {
-                     headElem.outputStartTag(headSB);
-                     headElem.outputBody(headSB);
+                     headElem.outputStartTag(headSB, outCtx);
+                     headElem.outputBody(headSB, outCtx);
                   }
                   if (bodyElem != null) {
-                     bodyElem.outputStartTag(bodySB);
-                     bodyElem.outputBody(bodySB);
+                     bodyElem.outputStartTag(bodySB, outCtx);
+                     bodyElem.outputBody(bodySB, outCtx);
                   }
                   mainPage = page;
                   mainHead = headElem;
@@ -664,9 +680,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                }
                else {
                   if (headElem != null)
-                     headElem.outputBody(headSB);
+                     headElem.outputBody(headSB, outCtx);
                   if (bodyElem != null)
-                     bodyElem.outputBody(bodySB);
+                     bodyElem.outputBody(bodySB, outCtx);
                }
             }
             HashSet<String> serverTagTypes = ctx.curScopeCtx.syncTypeFilter == null ? null : new HashSet<String>();
@@ -703,11 +719,11 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       }
 
       if (mainPage != null) {
-         mainHead.outputEndTag(headSB);
-         mainBody.outputEndTag(bodySB);
+         mainHead.outputEndTag(headSB, outCtx);
+         mainBody.outputEndTag(bodySB, outCtx);
          sb.append(headSB);
          sb.append(bodySB);
-         mainPage.outputEndTag(sb);
+         mainPage.outputEndTag(sb, outCtx);
       }
 
       WindowScopeContext wctx = ctx.getWindowScopeContext(true);
