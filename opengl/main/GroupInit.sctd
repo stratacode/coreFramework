@@ -34,7 +34,7 @@
    }
    else {
       <%=variableTypeName%> _<%=lowerClassName%> = <%=returnCast%><%=lowerClassName%>;<%=accessHook%>
-      return <%=lowerClassName%>;
+      return _<%=lowerClassName%>;
    }
 }
 @sc.obj.TypeSettings(objectType=true)

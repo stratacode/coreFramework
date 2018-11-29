@@ -11,7 +11,7 @@
    java.util.List _children = java.util.Arrays.asList(<%=childrenNames%>);
    for (Object _child:_children) {
       if (_child instanceof sc.opengl.IRenderNode) {
-          <%=lowerClassName%>.addChild((sc.opengl.IRenderNode) _child);
+          _<%=lowerClassName%>.addChild((sc.opengl.IRenderNode) _child);
       }
    }
    if (doInit) {
