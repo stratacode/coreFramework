@@ -113,12 +113,10 @@ js_Element_c.getObjChildren = function(create) {
    return null;
 }
 
-js_Element_c.escAtt = function(input) {
+js_Element_c.escAtt = function(input, s) {
    if (input == null)
       return null;
-   return input
-         .replace(/"/g, "&quot;")
-         .replace(/'/g, "&#039;");
+   return !s ? input.toString().replace(/"/g, "&quot;") : input.toString().replace(/'/g, "&#039;");
 }
 
 js_Element_c.escBody = function(input) {

@@ -895,7 +895,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
                // We don't want to register a command context for the '.css' page - i.e. pageEnt.resource = true
                if (sys != null && isUrlPage && (pageEnt.doSync || pageEnt.hasServerTags || (testMode && !pageEnt.resource))) {
-                  // In test mode only we accept the scopeAlias parameter, so we can attach to a specific request's scope context from the test script
+                  // In test mode only we accept the scopeContextName parameter, so we can attach to a specific request's scope context from the test script
                   String scopeContextName = !sys.options.testMode ? null : request.getParameter("scopeContextName");
                   // If the command line interpreter is enabled, use a scopeContextName so the command line is sync'd up to the scope of the page page we rendered
                   if (scopeContextName == null && sys.commandLineEnabled())
