@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import sc.util.FileUtil;
 import sc.type.PTypeUtil;
 import sc.obj.CurrentScopeContext;
+import sc.obj.ScopeContext;
 import sc.obj.AppGlobalScopeDefinition;
 import java.io.File;
 import sc.dyn.DynUtil;
@@ -171,7 +172,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
                }
             }
             // for the initial page load, we just use the innerHTML which seems accurate and represents the rendered content from the initial page load
-            saveURL(urlPath, pageResultsFile, getClientBodyHTML());
+            saveURL(urlPath, pageResultsFile, getClientBodyHTML(scopeContextName));
          }
       }
       catch (RuntimeException exc) {
@@ -196,8 +197,10 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
    // for server tags, it works because we update both.  For the JS runtime
    // we use the tag objects to generate the HTML output that reflects the 
    // page's current state - i.e. the output_c() method. 
-   public String getClientBodyHTML() {
-      return (String) DynUtil.evalRemoteScript(AppGlobalScopeDefinition.getAppGlobalScope(), "document.body.innerHTML;");
+   public String getClientBodyHTML(String scopeContextName) {
+      ScopeContext scopeContext = scopeContextName == null ? AppGlobalScopeDefinition.getAppGlobalScope() : CurrentScopeContext.get(scopeContextName).getScopeContextByName("window");
+
+      return (String) DynUtil.evalRemoteScript(scopeContext, "document.body.innerHTML;");
    }
 
    public String getClientConsoleLog() {
