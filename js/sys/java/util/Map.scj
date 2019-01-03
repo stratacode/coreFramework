@@ -79,7 +79,7 @@ public interface Map<K,V> {
          * @return object the replaced value of this entry.
          */
         public V setValue(V object);
-    };
+    }
 
     /**
      * Removes all elements from this {@code Map}, leaving it empty.

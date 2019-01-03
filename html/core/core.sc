@@ -135,7 +135,7 @@ html.core extends sys.std {  // Extending sys.std because we override the standa
 
       String openSuffix = system.options.openPattern;
       if (openSuffix == null)
-         openSuffix = system.serverEnabled ? "" : "index.html";;
+         openSuffix = system.serverEnabled ? "" : "index.html";
 
       String webURL = system.getServerURL() + openSuffix;
 
