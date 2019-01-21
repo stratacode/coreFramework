@@ -1,4 +1,6 @@
-<%@ import sc.lang.html.QueryParamProperty; %><%
+<%@ import sc.lang.html.QueryParamProperty;
+    import sc.lang.pattern.Pattern;
+    import sc.lang.html.URLParamProperty; %><%
    Boolean subTypesOnly = (Boolean) getAnnotationValue("sc.html.URL", "subTypesOnly");
    if (!isAbstract && (subTypesOnly == null || !subTypesOnly)) {
       //Boolean isPageObj = (Boolean) getAnnotationValue("sc.html.URL", "page");
@@ -7,10 +9,12 @@
       if (url == null) {
          url = templatePathName;
       }
+      Pattern pattern = Pattern.initURLPattern(objType, url);
 %>
         
 static {
-   sc.lang.html.PageInfo.addPage("<%= typeName %>", "<%= url %>", <%= typeIsDynamic ? "sc.dyn.DynUtil.findType(\"" + typeName + "\")" : typeBaseName + ".class" %>, <%= QueryParamProperty.toValueString(objType) %>);
+   sc.lang.html.PageInfo.addPage("<%= typeName %>", "<%= url %>", <%= typeIsDynamic ? "sc.dyn.DynUtil.findType(\"" + typeName + "\")" : typeBaseName + ".class" %>, <%= QueryParamProperty.toValueString(objType) %>,
+                                  <%= URLParamProperty.toValueString(objType, pattern) %>);
 }
 
 <% } %>

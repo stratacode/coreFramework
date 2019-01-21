@@ -26,6 +26,7 @@ function js_HTMLElement() {
 }
 
 
+js_indexPattern = "/index.html";
 js_Element_c = js_HTMLElement_c = sc_newClass("sc.lang.html.HTMLElement", js_HTMLElement, null, [sc_IChildInit, sc_IStoppable]);
 
 // This is part of the SemanticNode class on the server and so the component code gen uses it even for client code
@@ -2021,10 +2022,17 @@ function js_Page() {
    var url = window.location.href;
    this.pageURL = url;
    var pi = js_PageInfo_c.pages[this.$protoName];
-   if (pi == null)
+   if (pi == null) {
       this.queryParamProperties = null;
-   else
+      this.urlParts = null;
+   }
+   else {
       this.queryParamProperties = pi.queryParamProperties;
+      this.urlParts = pi.urlParts;
+   }
+   if (this.urlParts != null) {
+      this.processURLParams(window.location.pathname, this.urlParts, false);
+   }
    if (this.queryParamProperties != null) {
       var qps = this.queryParamProperties;
       var qix = url.indexOf('?');
@@ -2036,17 +2044,11 @@ function js_Page() {
             var eix = qent.indexOf('=');
             if (eix != -1 && eix < qent.length) {
                var en = qent.substring(0, eix);
-               var ev = qent.substring(eix+1);
-               // TODO: URL decode ev here
+               var ev = decodeURIComponent(qent.substring(eix+1));
                for (var j = 0; j < qps.size(); j++) {
                   var qp = qps.get(j);
                   if (en.equals(qp.paramName)) {
-                     if (qp.propType == Number_c)
-                        ev = Number.parseInt(ev);
-                     else if (qp.propType != String_c) {
-                        console.error("No converter for query param property type: " + qp.propName + ": " + qa.propType);
-                     }
-                     sc_DynUtil_c.setPropertyValue(this, qp.propName, ev);
+                     qp.setPropertyValue(this, ev);
                   }
                }
             }
@@ -2061,7 +2063,6 @@ function js_Page() {
 }
 
 js_Page_c = sc_newClass("sc.lang.html.Page", js_Page, js_HTMLElement, null);
-
 
 function js_Div() {
    js_HTMLElement.call(this);
@@ -2172,6 +2173,89 @@ js_HtmlPage_c.refresh = js_Page_c.refresh = function() {
       sc_runClientInitJobs();
    }
    this.refreshServerTags();
+}
+
+js_HtmlPage_c.processURLParams = js_Page_c.processURLParams = function(url, ups, opt) {
+   var urlNext = url;
+   for (var i = 0; i < ups.size(); i++) {
+      var up = ups.get(i);
+      if (sc_instanceOf(up, String)) {
+         if (urlNext.startsWith(up)) {
+            urlNext = urlNext.substring(up.length);
+         }
+         else if (urlNext === "/" && up.startsWith(js_indexPattern))
+            urlNext = urlNext.substring(js_indexPattern.length);
+         else {
+            if (!opt)
+               console.error("url: " + url + " expected to find: " + up + " but found: " + urlNext);
+            break;
+         }
+      }
+      else if (up.parseletName) { // js_URLParamProperty
+         var val;
+         var ct = 0;
+         if (urlNext.length === 0) {
+            if (!opt)
+               console.error("url: " + url + " does not match pattern");
+            break;
+         }
+         if (up.parseletName === "urlString") {
+            val = "";
+            for (; ct < urlNext.length; ct++) {
+               var c = urlNext.charAt(ct);
+               if (c.match(/[-a-zA-Z0-9$_\+.!\*\(\),]/)) {
+                  val += c;
+               }
+               else
+                  break;
+            }
+         }
+         else if (up.parseletName === "integerLiteral") {
+            if (urlNext.charAt(0) === '-') {
+               val = '-';
+               ct++;
+            }
+            else
+               val = "";
+            for (; ct < urlNext.length; ct++) {
+               var c = urlNext.charAt(ct);
+               if (c.match(/[0-9]/)) {
+                  val += c;
+               }
+               else
+                  break;
+            }
+            val = parseInt(val);
+         }
+         else if (up.parseletName === "identifier") {
+            val = "";
+            var c = urlNext.charAt(0);
+            if (c.match(/[a-zA-Z0-9_]/)) {
+               val += c;
+               ct++;
+            }
+            for (; ct < urlNext.length; ct++) {
+               var c = urlNext.charAt(ct);
+               if (c.match(/[a-zA-Z0-9_]/)) {
+                  val += c;
+               }
+               else
+                  break;
+            }
+         }
+         else
+            console.error("Unrecognized parselet type for url parameter: " + up.parseletName);
+         up.setPropertyValue(this, val);
+         urlNext = urlNext.substring(ct);
+      }
+      else if (up.urlParts) { // js_OptionalURLParam
+         if (urlNext.length === 0) {
+            break;
+         }
+         urlNext = this.processURLParams(urlNext, up.urlParts, true);
+      }
+   }
+   return urlNext;
 }
 
 
@@ -2740,13 +2824,33 @@ js_PageInfo_c = sc_newClass("sc.lang.html.PageInfo", js_PageInfo, null, null);
 
 js_PageInfo_c.pages = {};
 
-js_PageInfo_c.addPage = function(pageTypeName, pattern, pageType, queryParamProperties) {
+js_PageInfo_c.addPage = function(pageTypeName, pattern, pageType, queryParams, urlParts) {
    var pi = new js_PageInfo();
    pi.pageTypeName = pageTypeName;
    pi.pattern = pattern;
    pi.pageType = pageType;
-   pi.queryParamProperties = queryParamProperties;
+   pi.queryParamProperties = queryParams;
+   pi.urlParts = urlParts;
    js_PageInfo_c.pages[pageTypeName] = pi;
+}
+
+function js_BaseURLParamProperty(enclType, propName, propType, req) {
+   this.enclType = enclType;
+   this.propName = propName;
+   this.propType = propType;
+   this.required = req;
+}
+
+js_BaseURLParamProperty_c = sc_newClass("sc.lang.html.BaseURLParamProperty", js_BaseURLParamProperty, null, null);
+
+js_BaseURLParamProperty_c.setPropertyValue = function(pageInst, ev) {
+   if (this.propType == Number_c)
+      ev = Number.parseInt(ev);
+   else if (this.propType != String_c) {
+      console.error("No converter for query param property type: " + this.propName + ": " + this.propType);
+      return;
+   }
+   sc_DynUtil_c.setPropertyValue(pageInst, this.propName, ev);
 }
 
 // Stores the meta-data for each page type
@@ -2755,11 +2859,25 @@ function js_QueryParamProperty(enclType, propName, paramName, propType, req) {
       enclType = propName = paramName = null;
       req = false;
    }
-   this.enclType = enclType;
-   this.propName = propName;
+   js_BaseURLParamProperty.call(this, enclType, propName, propType, req);
    this.paramName = paramName;
-   this.propType = propType;
-   this.required = req;
+}
+
+// Stores the meta-data for each page type
+function js_URLParamProperty(enclType, propName, propType, parseletName, req) {
+   if (arguments.length == 0) {
+      enclType = propName = null;
+      req = false;
+      parseletName = null;
+   }
+   js_BaseURLParamProperty.call(this, enclType, propName, propType, req);
+   this.parseletName = parseletName;
+}
+
+js_URLParamProperty_c = sc_newClass("sc.lang.html.URLParamProperty", js_URLParamProperty, js_BaseURLParamProperty, null);
+
+function js_OptionalURLParam(urlParts) {
+   this.urlParts = urlParts;
 }
 
 function js_RepeatServerTag() {

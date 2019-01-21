@@ -138,10 +138,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       PageEntry ent = new PageEntry();
       ent.keyName = keyName;
       ent.pattern = pattern;
-      Object patternRes = Pattern.initPattern(language, pageType, pattern);
-      if (!(patternRes instanceof Pattern))
-         throw new IllegalArgumentException("Invalid pattern: " + pattern + " error: " + patternRes);
-      ent.urlPattern = (Pattern) patternRes;
+      Pattern patternRes = Pattern.initURLPattern(pageType, pattern);
+      ent.urlPattern = patternRes;
       ent.patternParselet = (Parselet) ent.urlPattern.getParselet(language, pageType);
       ent.pageType = pageType;
       ent.priority = priority;
