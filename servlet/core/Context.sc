@@ -266,7 +266,7 @@ class Context {
          }
          synchronized (ctxList) {
             windowId = ctxList.size();
-            windowCtx = new WindowScopeContext(windowId, Window.createNewWindow(request.getRequestURL().toString(), request.getServerName(), request.getServerPort(), request.getRequestURI(), request.getPathInfo()));
+            windowCtx = new WindowScopeContext(windowId, Window.createNewWindow(request.getRequestURL().toString(), request.getServerName(), request.getServerPort(), request.getRequestURI(), request.getPathInfo(), request.getQueryString()));
             windowCtx.init();
             ctxList.add(windowCtx);
          }

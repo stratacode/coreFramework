@@ -3,6 +3,7 @@ import sc.js.ServerTagManager;
 import sc.lang.html.Element;
 import sc.lang.html.HtmlPage;
 import sc.lang.html.OutputCtx;
+import sc.lang.html.Location;
 
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -124,6 +125,50 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
          if (pattern == null)
             return "<not initialized>";
          return pattern + (pageType == null ? " <no type>" : "(" + DynUtil.getTypeName(pageType, false) + ")");
+      }
+      
+      public boolean isSimplePattern() {
+         return urlPattern.simplePattern && (queryParamProps == null || queryParamProps.size() == 0);
+      }
+
+      /** Returns true if this page entry is valid either with the configured property map or the optional supplied instance */
+      public boolean isPatternValidWithInst(Map<String,Object> otherProps, Object inst) {
+         if (!urlPattern.isPatternValidWithInst(otherProps, inst))
+            return false;
+         if (queryParamProps == null || queryParamProps.size() == 0)
+            return true;
+         for (QueryParamProperty prop:queryParamProps) {
+            if (prop.required && (otherProps == null || otherProps.get(prop.propName) == null) && (inst == null || DynUtil.getProperty(inst, prop.propName) != null))
+               return false;
+         }
+         return true;
+      }
+
+      /** Given an optional page object instance and another optional map of user specified properties that override  */
+      public String evalPatternWithInst(Map<String,Object> otherProps, Object inst) {
+         String baseURL = urlPattern.evalPatternWithInst(otherProps, inst);
+         if (baseURL == null) // not valid pattern
+            return null;
+         if (queryParamProps == null || queryParamProps.size() == 0)
+            return baseURL;
+         StringBuilder sb = new StringBuilder();
+         sb.append(baseURL);
+         sb.append('?');
+         boolean first = true;
+         for (QueryParamProperty prop:queryParamProps) {
+            if (!first)
+               sb.append('&');
+            String propName = prop.propName;
+            Object propVal = otherProps != null ? otherProps.get(propName) : null;
+            if (propVal == null && inst != null)
+               propVal = DynUtil.getProperty(inst, propName);
+            if (propVal != null) {
+               sb.append(propName);
+               sb.append('=');
+               sb.append(propVal.toString());
+            }
+         }
+         return sb.toString();
       }
    }
 
@@ -354,8 +399,19 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
    public Object getCurrentPageInstance(PageEntry pageEnt) {
       PTypeUtil.setAppId(pageEnt.keyName);
-
-      return DynUtil.resolveName(ModelUtil.getTypeName(pageEnt.pageType), false);
+      String typeName = ModelUtil.getTypeName(pageEnt.pageType);
+      ScopeDefinition scopeDef = getScopeDefForPageType(pageEnt.pageType);
+      if (scopeDef != null) {
+         ScopeContext scopeCtx = scopeDef.getScopeContext(true);
+         if (scopeCtx != null) {
+            return scopeCtx.getValue(typeName);
+         }
+         else
+            System.err.println("*** No scope context for pageEnt: " + pageEnt);
+      }
+      else
+         System.err.println("*** No scope for pageEnt: " + pageEnt);
+      return null;
    }
 
    private static String appendLogStr(String orig, String opt) {
@@ -694,7 +750,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
                   origSyncTypes = false;
                }
                ctx.curScopeCtx.syncTypeFilter.addAll(serverTagTypes);
-               ctx.curScopeCtx.syncTypeFilter.addAll(Arrays.asList("sc.js.ServerTagManager", "sc.js.ServerTag"));
+               ctx.curScopeCtx.syncTypeFilter.addAll(Arrays.asList("sc.js.ServerTagManager", "sc.js.ServerTag", "sc.lang.html.Location"));
             }
 
          /*
@@ -732,6 +788,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             mgr = new ServerTagManager();
             wctx.setValue("sc.js.PageServerTagManager", mgr);
             SyncManager.addSyncInst(mgr, false, true, "window", null);
+            // Setting initDefault=false here because the browser's initial version of this object is already set
+            // and trying to change it here would lead to an infinite loop when setting href back onto itself
+            SyncManager.addSyncInst(wctx.window.location, false, false, "window", null);
             mgr.serverTags = serverTags;
          }
          else {
@@ -1049,6 +1108,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
 
       SyncManager.addSyncType(ServerTagManager.class, new SyncProperties(null, null, new Object[] {"serverTags"}, null, SyncOptions.SYNC_INIT_DEFAULT, WindowScopeDefinition.scopeId));
       SyncManager.addSyncType(ServerTag.class, new SyncProperties(null, null, new Object[] {"id", "props"}, null, SyncOptions.SYNC_INIT_DEFAULT, WindowScopeDefinition.scopeId));
+      SyncManager.addSyncType(Location.class, new SyncProperties(null, null, new Object[] {"href", "pathname", "search"}, null, 0, WindowScopeDefinition.scopeId));
       //SyncManager.addSyncType(ServerTag.ServerTagProp.class, new SyncProperties(null, null, new Object[] {"propName"}, null, SyncOptions.SYNC_INIT_DEFAULT, WindowScopeDefinition.scopeId));
    }
 

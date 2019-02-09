@@ -974,7 +974,8 @@ syncMgr = sc_SyncManager_c = {
             var cl = newArgs[1];
             if (cl === "sc.js.ServerTag")
                newServerTags[newArgs[0]] = {name:newArgs[0]};
-            else if (cl !== "sc.js.ServerTagManager")
+            // These map to system objects so no server tag instance
+            else if (cl !== "sc.js.ServerTagManager" && cl !== "sc.lang.html.Location")
                sc_logError("Unrecognized class for $new in stags.js: " + cl);
             continue;
          }
@@ -997,6 +998,14 @@ syncMgr = sc_SyncManager_c = {
                }
                else
                   sc_logError("No ServerTag for modify");
+            }
+            else if (name.startsWith("Location__")) {
+               var lps = cmd[name];
+               var pnames = Object.keys(lps);
+               for (var i = 0; i < pnames.length; i++) {
+                  var pname = pnames[i];
+                  window.location[pname] = lps[pname];
+               }
             }
             // e.g. { "PageServerTagManager":{
             //       "serverTags":{"a":"ref:ServerTag__0","input":"ref:ServerTag__1","input_1":"ref:ServerTag__2","form":"ref:ServerTag__4",..."}

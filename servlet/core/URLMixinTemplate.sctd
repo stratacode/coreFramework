@@ -1,5 +1,5 @@
 <%@ import sc.lang.html.QueryParamProperty; %><%
-   if (!isAbstract) {
+   if (!isAbstract && !isAbstractElement) {
       Boolean isPageObj = (Boolean) getAnnotationValue("sc.html.URL", "page");
       boolean isPage = isPageObj == null || isPageObj;
       Boolean isResourceObj = (Boolean) getAnnotationValue("sc.html.URL", "resource");
@@ -10,7 +10,6 @@
       if (url == null) {
          url = templatePathName;
       }
-
 %>
         
 static {

@@ -2,7 +2,7 @@
     import sc.lang.pattern.Pattern;
     import sc.lang.html.URLParamProperty; %><%
    Boolean subTypesOnly = (Boolean) getAnnotationValue("sc.html.URL", "subTypesOnly");
-   if (!isAbstract && (subTypesOnly == null || !subTypesOnly)) {
+   if (!isAbstract && (subTypesOnly == null || !subTypesOnly) && !isAbstractElement) {
       //Boolean isPageObj = (Boolean) getAnnotationValue("sc.html.URL", "page");
       //Boolean isResourceObj = (Boolean) getAnnotationValue("sc.html.URL", "resource");
       String url = (String) getAnnotationValue("sc.html.URL", "pattern");
