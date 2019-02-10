@@ -163,10 +163,11 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             if (propVal == null && inst != null)
                propVal = DynUtil.getProperty(inst, propName);
             if (propVal != null) {
-               sb.append(propName);
+               sb.append(prop.paramName);
                sb.append('=');
                sb.append(propVal.toString());
             }
+            first = false;
          }
          return sb.toString();
       }
@@ -504,7 +505,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             if (doSync)
                SyncManager.flushSyncQueue();
 
-            if (inst != null) {
+            /** Only set these properties if this is the initial sync. Otherwise, the page object should already have them. */
+            // TODO: need to send the queryParameters in the /sync request when we are doing a reset
+            if (inst != null && initial) {
                hasInst = true;
                // If necessary, parse the URI again but this time set properties as necessary in inst - the pageObject.
                String svClassName = pageEnt.patternParselet.getSemanticValueClassName();

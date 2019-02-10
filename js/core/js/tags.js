@@ -2747,10 +2747,15 @@ function errorCountChanged() {
    sc_Bind_c.sendChangedEvent(js_Window_c.getWindow(), "errorCount");
 }
 
+function getThisPathname() {
+   return this.pathname;
+}
+
 function js_Window() {
    js_Window_c.windowWrapper = this; // avoid recursive infinite loop
    this.document = document;
    this.location = window.location;
+   this.location.getPathname = getThisPathname;
    this.documentTag = new js_Document(document);
    window.sc_errorCountListener = errorCountChanged;
 }
@@ -2955,7 +2960,7 @@ js_RepeatServerTag_c.setId = function(newVal) {
    this.repeatInnerName = js_RepeatServerTag_c.getRepeatInnerName(newVal);
 }
 
-js_QueryParamProperty_c = sc_newClass("sc.lang.html.QueryParamProperty", js_QueryParamProperty, null, null);
+js_QueryParamProperty_c = sc_newClass("sc.lang.html.QueryParamProperty", js_QueryParamProperty, js_BaseURLParamProperty, null);
 
 // Maps tag names to the base class object that implements those tag classes - defaults to js_HTMLElement_c for other tags
 js_HTMLElement_c.tagNameToType = {input:js_Input_c, form:js_Form_c, select:js_Select_c, option:js_Option_c};
