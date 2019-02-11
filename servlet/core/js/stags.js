@@ -999,7 +999,7 @@ syncMgr = sc_SyncManager_c = {
                else
                   sc_logError("No ServerTag for modify");
             }
-            else if (name.startsWith("Location__")) {
+            else if (name == "Location") {
                var lps = cmd[name];
                var pnames = Object.keys(lps);
                for (var i = 0; i < pnames.length; i++) {
