@@ -2186,9 +2186,22 @@ js_HtmlPage_c.processURLParams = js_Page_c.processURLParams = function(url, ups,
          else if (urlNext === "/" && up.startsWith(js_indexPattern))
             urlNext = urlNext.substring(js_indexPattern.length);
          else {
-            if (!opt)
-               console.error("url: " + url + " expected to find: " + up + " but found: " + urlNext);
-            break;
+            var matched = false;
+            // window.location.pathname might be the file system path for a client-only app - if so, 
+            // need to skip the file system path name part in our URL parsing logic
+            if (i === 0) {
+               var path = "web" + up;
+               var ix = urlNext.indexOf(path);
+               if (ix !== -1) {
+                  urlNext = urlNext.substring(ix+1);
+                  matched = true;
+               }
+            }
+            if (!matched) {
+               if (!opt)
+                  console.error("url: " + url + " expected to find: " + up + " but found: " + urlNext);
+               break;
+            }
          }
       }
       else if (up.parseletName) { // js_URLParamProperty

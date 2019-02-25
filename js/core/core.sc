@@ -43,5 +43,11 @@ public js.core extends html.core, js.prebuild, js.sys, js.util, sys.sccore {
       urlProc.inherited = true; // Include any sub-type which has URL in the type group
       urlProc.skipAbstract = true; // Don't include any abstract classes or templates with abstract="true"
       registerAnnotationProcessor("sc.html.URL", urlProc);
+
+      // Only want sh files generated once - using the server's runtime
+      if (system.serverEnabled) {
+         sc.lang.TemplateLanguage scshLang = (sc.lang.TemplateLanguage) system.getFileProcessorForExtension("scsh");
+         scshLang.disableProcessing = true;
+      }
    }
 }

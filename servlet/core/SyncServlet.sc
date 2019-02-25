@@ -6,7 +6,6 @@ import java.util.concurrent.locks.Lock;
 
 import sc.lang.html.Element;
 import sc.lang.SCLanguage;
-import sc.lang.pattern.Pattern;
 import sc.lang.java.ModelUtil;
 import sc.parser.Language;
 import sc.parser.Parselet;

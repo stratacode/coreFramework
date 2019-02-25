@@ -11,10 +11,10 @@
   List<URLPath> paths = sys.buildInfo.getURLPaths();
   if (paths != null) {
      for (URLPath path:paths) {
-         String url = path.cleanURL(!sys.serverEnabled);
-         if (sys.testPatternMatches(path.name) && !url.equals("index.html")) { %>
+         String url = sys.getURLForPath(path);
+         if (url != null && sys.testPatternMatches(path.name) && !url.equals("index.html")) { %>
             sleep 3
-            open <%= FileUtil.concatNormalized(sys.serverURL, url) %>
+            open <%= url %>
          <% } 
      }
   }

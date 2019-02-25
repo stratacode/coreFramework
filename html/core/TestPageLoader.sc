@@ -100,7 +100,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
       return processRes;
    }
 
-   public AsyncProcessHandle loadPage(String name, String scopeContextName) {
+   public URLResult loadPage(String name, String scopeContextName) {
       boolean found = false;
       AsyncProcessHandle res = null;
       URLPath urlPath = findUrlPath(name);
@@ -141,12 +141,21 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
       return FileUtil.concat(sys.options.testResultsDir, "pages", urlPath.name + suffix);
    }
 
-   public AsyncProcessHandle loadURL(URLPath urlPath, String scopeContextName) {
+   static class URLResult {
+      AsyncProcessHandle processHandle;
+      URLResult(AsyncProcessHandle ph) {
+         processHandle = ph;
+      }
+   }
+
+   public URLResult loadURL(URLPath urlPath, String scopeContextName) {
       String pageResultsFile = getPageResultsFile(urlPath, "");
       System.out.println("loadURL: " + urlPath.name + " at: " + urlPath.url);
 
       // Returns file:// or http:// depending on whether the server is enabled.  Also finds the files in the first buildDir where it exists
-      String url = sys.getURLForPath(urlPath.cleanURL(!sys.serverEnabled));
+      String url = sys.getURLForPath(urlPath);
+      if (url == null)
+         return null;
 
       if (scopeContextName != null) {
          url = URLPath.addQueryParam(url, "scopeContextName", scopeContextName);
@@ -182,7 +191,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
          exc.printStackTrace();
          throw exc;
       }
-      return processRes;
+      return new URLResult(processRes);
    }
 
    public void endSession(AsyncProcessHandle processRes) {
@@ -242,7 +251,11 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
             indexSkipped = true;
             continue;
          }
-         AsyncProcessHandle processRes = loadURL(urlPath, null);
+         URLResult processRes = loadURL(urlPath, null);
+         if (processRes == null) {
+            System.out.println("Skipping test for incomplete url: " + urlPath);
+            continue;
+         }
 
          try {
             runPageTest(urlPath);
@@ -250,7 +263,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
             saveClientConsole(urlPath);
          }
          finally {
-            endSession(processRes);
+            endSession(processRes.processHandle);
          }
          numLoaded++;
       }
