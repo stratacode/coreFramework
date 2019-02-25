@@ -47,7 +47,8 @@ public js.core extends html.core, js.prebuild, js.sys, js.util, sys.sccore {
       // Only want sh files generated once - using the server's runtime
       if (system.serverEnabled) {
          sc.lang.TemplateLanguage scshLang = (sc.lang.TemplateLanguage) system.getFileProcessorForExtension("scsh");
-         scshLang.disableProcessing = true;
+         if (schLang != null)
+            scshLang.disableProcessing = true;
       }
    }
 }
