@@ -4,6 +4,7 @@ import sc.sync.SyncManager;
 
 import sc.dyn.DynUtil;
 import sc.dyn.ScheduledJob;
+import sc.dyn.IScheduler;
 import sc.obj.ScopeDefinition;
 import sc.obj.ScopeContext;
 import sc.obj.RequestScopeDefinition;
@@ -64,7 +65,12 @@ class Context {
    HttpSession getSession() {
       if (request == null)
          return session;
-      return request.getSession(true);
+      // TODO: performance - maybe add: if (session !=null) return session;
+      HttpSession sess = request.getSession(true);
+      if (verbose && sess != null && session == null)
+         System.out.println("*** Created session: " + sess.getId() + " for: " + getTraceInfo());
+      session = sess;
+      return sess;
    }
 
    private static ThreadLocal<Context> currentContextStore = new ThreadLocal<Context>();
@@ -151,9 +157,15 @@ class Context {
       }
    }
 
+
    void execLaterJobs() {
+      execLaterJobs(IScheduler.NO_MIN, IScheduler.NO_MAX);
+   }
+
+   void execLaterJobs(int minPriority, int maxPriority) {
       if (toInvokeLater != null) {
          SyncManager.SyncState origState = null;
+         ArrayList<ScheduledJob> toRestore = null;
          try {
             origState = SyncManager.getSyncState();
             // While running any callbacks, we are in the recording state, even if invoking these as part of the
@@ -166,8 +178,20 @@ class Context {
                // we have no more work to do later.
                toInvokeLater = null;
                for (ScheduledJob sj:toRun) {
-                  sj.run();
+                  if (sj.priority > minPriority && sj.priority < maxPriority)
+                     sj.run();
+                  else {
+                     if (toRestore == null)
+                        toRestore = new ArrayList<ScheduledJob>();
+                     toRestore.add(sj);
+                  }
                }
+            }
+            if (toRestore != null) {
+               if (toInvokeLater == null)
+                  toInvokeLater = toRestore;
+               else
+                  toInvokeLater.addAll(toRestore);
             }
          }
          finally {
@@ -269,6 +293,10 @@ class Context {
             windowCtx = new WindowScopeContext(windowId, Window.createNewWindow(request.getRequestURL().toString(), request.getServerName(), request.getServerPort(), request.getRequestURI(), request.getPathInfo(), request.getQueryString()));
             windowCtx.init();
             ctxList.add(windowCtx);
+
+            if (verbose) {
+               System.out.println("Window scope context created with id: " + windowId + " for: " + getTraceInfo());
+            }
          }
          PTypeUtil.setWindowId(windowId);
       }

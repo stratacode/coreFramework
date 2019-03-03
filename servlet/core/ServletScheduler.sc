@@ -24,9 +24,9 @@ class ServletScheduler implements sc.dyn.IScheduler {
       ctx.invokeLater(sj);
    }
 
-   void execLaterJobs() {
+   void execLaterJobs(int minPriority, int maxPriority) {
       Context ctx = Context.getCurrentContext();
-      ctx.execLaterJobs();
+      ctx.execLaterJobs(minPriority, maxPriority);
    }
 
    static void init() {

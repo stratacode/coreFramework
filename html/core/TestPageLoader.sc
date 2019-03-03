@@ -212,8 +212,9 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
       return (String) DynUtil.evalRemoteScript(scopeContext, "document.body.innerHTML;");
    }
 
-   public String getClientConsoleLog() {
-      return (String) DynUtil.evalRemoteScript(AppGlobalScopeDefinition.getAppGlobalScope(), "sc_getConsoleLog();");
+   public String getClientConsoleLog(String scopeContextName) {
+      ScopeContext scopeContext = scopeContextName == null ? AppGlobalScopeDefinition.getAppGlobalScope() : CurrentScopeContext.get(scopeContextName).getScopeContextByName("window");
+      return (String) DynUtil.evalRemoteScript(scopeContext, "sc_getConsoleLog();");
    }
 
    void saveURL(URLPath urlPath, String pageResultsFile, String pageContents) {
@@ -251,7 +252,11 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
             indexSkipped = true;
             continue;
          }
-         URLResult processRes = loadURL(urlPath, null);
+         // If we are syncing to the client, use the unique id for this URL to choose the name of the
+         // 'scope context' (essentially the id of the browser window so we can target the savePage and
+         // saveClientConsole methods at the right window).
+         String scopeContextName = clientSync ? urlPath.keyName : null;
+         URLResult processRes = loadURL(urlPath, scopeContextName);
          if (processRes == null) {
             System.out.println("Skipping test for incomplete url: " + urlPath);
             continue;
@@ -260,7 +265,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
          try {
             runPageTest(urlPath);
 
-            saveClientConsole(urlPath);
+            saveClientConsole(urlPath, scopeContextName);
          }
          finally {
             endSession(processRes.processHandle);
@@ -270,9 +275,9 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
       System.out.println("- Done loading: " + numLoaded + " pages" + (indexSkipped ? " - skipIndexPage set" : ""));
    }
 
-   public void saveClientConsole(URLPath urlPath) {
+   public void saveClientConsole(URLPath urlPath, String scopeContextName) {
       if (clientSync && recordClientOutput) {
-         String consoleLog = getClientConsoleLog();
+         String consoleLog = getClientConsoleLog(scopeContextName);
          String consoleResultsFile = getPageResultsFile(urlPath, ".jsConsole");
          FileUtil.saveStringAsFile(consoleResultsFile, consoleLog, true);
       }

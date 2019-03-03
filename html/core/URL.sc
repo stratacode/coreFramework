@@ -40,4 +40,7 @@ public @interface URL {
    boolean subTypesOnly() default false;
    /** Set to the scope name to be used for locking purposes in the PageDispatcher and Sync requests.  Defaults to the scope of the instance if not set.  Set to none to disable locking.  */
    String lockScope() default "";
+
+   /** Set to a list of URLs to be added to the set which are run for the automatic tests */
+   String[] testURLs() default {};
 }
