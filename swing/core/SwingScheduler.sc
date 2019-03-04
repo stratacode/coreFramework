@@ -12,8 +12,7 @@ public class SwingScheduler implements sc.dyn.IScheduler {
       if (DynUtil.frameworkScheduler == null)
          DynUtil.frameworkScheduler = new SwingScheduler();
    }
-
-   public void execLaterJobs() {
+   public void execLaterJobs(int minPriority, int maxPriority) {
       System.err.println("*** SwingScheduler does not support execLaterJobs");
    }
 
