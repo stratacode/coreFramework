@@ -68,7 +68,7 @@ class Context {
       // TODO: performance - maybe add: if (session !=null) return session;
       HttpSession sess = request.getSession(true);
       if (verbose && sess != null && session == null)
-         System.out.println("*** Created session: " + sess.getId() + " for: " + getTraceInfo());
+         System.out.println("Using session id " + sess.getId() + " with trace id: " + DynUtil.getTraceObjId(sess.getId()) + " on thread: " + DynUtil.getCurrentThreadString());
       session = sess;
       return sess;
    }

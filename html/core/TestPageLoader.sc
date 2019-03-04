@@ -228,7 +228,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
       }
    }
 
-   void runPageTest(URLPath urlPath) {
+   void runPageTest(URLPath urlPath, String scopeContextName) {
       String typeName = sc.type.CTypeUtil.capitalizePropertyName(urlPath.name);
       String testScriptName = "test" + typeName + ".scr";
       if (cmd.exists(testScriptName)) {
@@ -236,7 +236,17 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
             System.out.println("Skipping " + testScriptName + " for type: " + typeName + " - scripts not yet supported for client-only application");
          else {
             System.out.println("--- Running " + testScriptName + " for type: " + typeName);
+            String saveCtxName = null;
+            if (scopeContextName != null) {
+               saveCtxName = cmd.scopeContextName;
+               cmd.scopeContextName = scopeContextName;
+            }
             cmd.include(testScriptName);
+            if (scopeContextName != null) {
+               saveCtxName = saveCtxName;
+               cmd.scopeContextName = scopeContextName;
+            }
+
             System.out.println("- Done: " + testScriptName);
          }
       }
@@ -263,7 +273,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
          }
 
          try {
-            runPageTest(urlPath);
+            runPageTest(urlPath, scopeContextName);
 
             saveClientConsole(urlPath, scopeContextName);
          }

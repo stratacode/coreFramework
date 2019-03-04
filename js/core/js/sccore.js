@@ -31,7 +31,7 @@ function sc_getConsoleLog() {
 
 // So we can track javascript system errors using the same status symbol
 window.onerror = function (errorMsg, url, lineNumber) {
-   sc_logError(errorMsg);
+   sc_logError(errorMsg + " at: " + url + ":" + lineNumber);
 }
 
 var sc$classTable = {};
