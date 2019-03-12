@@ -14,8 +14,14 @@ function js_HTMLElement() {
    this.element = null;
    this.id = null;
    this.repeat = null;
-   this.repeatVar = null;
-   this.repeatIndex = -1;
+   if (arguments.length === 2) {
+      this.repeatVar = arguments[0];
+      this.repeatIndex = arguments[1];
+   }
+   else {
+      this.repeatVar = null;
+      this.repeatIndex = -1;
+   }
    this.repeatVarName = null;
    this.serverRepeat = false;
    this.HTMLClass = null;
@@ -2065,13 +2071,13 @@ function js_Page() {
 js_Page_c = sc_newClass("sc.lang.html.Page", js_Page, js_HTMLElement, null);
 
 function js_Div() {
-   js_HTMLElement.call(this);
+   js_HTMLElement.apply(this, arguments);
    this.tagName = "div";
 }
 js_Div_c = sc_newClass("sc.lang.html.Div", js_Div, js_HTMLElement, null);
 
 function js_Span() {
-   js_HTMLElement.call(this);
+   js_HTMLElement.apply(this, arguments);
    this.tagName = "span";
 }
 js_Span_c = sc_newClass("sc.lang.html.Span", js_Span, js_HTMLElement, null);
