@@ -19,6 +19,7 @@ import sc.layer.AsyncProcessHandle;
 // With default, this class will not be included in the JS runtime for client/server mode - nor can it be run there because some of the dependencies 
 // require it to be in the Java runtime (like the ability to launch a web browser).
 @sc.obj.Exec(runtimes="default")
+// This keeps the class from being included in the actual Javascript since it has dependencies which don't exist there
 @sc.js.JSSettings(jsLibFiles="js/tags.js")
 public class TestPageLoader implements sc.obj.ISystemExitListener {
    AbstractInterpreter cmd;

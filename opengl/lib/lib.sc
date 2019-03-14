@@ -1,5 +1,7 @@
 package sc.opengl;
 
+// TODO: consider porting to use https://www.lwjgl.org/ since jogl seems
+// not to be supported well anymore 
 opengl.lib {
    compiledOnly = true;
    codeType = sc.layer.CodeType.Framework;

@@ -12,34 +12,80 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 
+import java.util.ArrayList;
+import sc.util.ComponentList;
+
 /**
  * Used by the test scripts to eliminate or filter lines in the log file before we check the output
  * For example, if there's a date, build number or error message which has an object id you can choose to
  * either ignore it, or match it by an algorithm, or replace the variable parts with something consistent - i.e. a date with the string 'date'
  */
 public class TestLogFilter {
-   public String[] excludePatterns = {
+   // List of globally applied patterns written using SCLanguage parselets to parse specific chunks of the matched string. If the string matches,
+   // it is discarded from the output.
+   public String[] globalExcludePatterns = {
                                 // chrome error messages - weird errors show up in headless chrome so ignoring - turns out this is probably only needed for the chrome std-out log which hasn't been that helpful so far
                                 "\\[{digits}/{digits}.{digits}:ERROR:{escapedString}",
                                 // scc build stamps for when you run -v
                                 "{whiteSpace}scc version: v{digits}.{digits}.{digits}-{identifier}.b{digits}{whiteSpace}@{whiteSpace}{escapedString}",
-                                "{whiteSpace}/Applications/Google Chrome.app/Contents/Versions/{digits}.{digits}.{digits}.{digits}/Google Chrome Framework.framework/Versions/Current/Libraries/libswiftshader_libGLESv2.dylib: stat() failed with errno=1{whiteSpace}"
+                                "{whiteSpace}/Applications/Google Chrome.app/Contents/Versions/{digits}.{digits}.{digits}.{digits}/Google Chrome Framework.framework/Versions/Current/Libraries/libswiftshader_libGLESv2.dylib: stat() failed with errno=1{whiteSpace}",
+                                // These next four are for errors emited by jogl on the mac - warning/exception due to some method called from the wrong thread
+                                "{whiteSpace}{digits}-{digits}-{digits}{whiteSpace}{digits}:{digits}:{digits}.{digits}{whiteSpace}java{escapedString}",
+                                "{whiteSpace}{digits}{whiteSpace}AppKit{escapedString}",
+                                "{whiteSpace}{digits}{whiteSpace}libnative{escapedString}",
+                                "{whiteSpace}{digits}{whiteSpace}???{escapedString}"
                                     };
 
-   public Parselet[] parseletList;
+   // List of globally applied patterns which are filtered. The output line will look like the input line except that
+   // named variables are replaced with the variable name. e.g. replacing an id with "digits" or a date with {date}.
+  public String[] globalReplacePatterns = {};
+
+   public ArrayList<Pattern> excludePatterns;
+   public ArrayList<Pattern> replacePatterns;
+
+   // List of custom log filters you specify via the logFilterOpts file in the test/valid/testName/logFilterOpts file
+   // TODO: add logFilterLayers - so we can keep the filter code next to the code that adds the log filters
+   object options extends ComponentList<FilterOption> {
+      object replaceWindowId extends FilterOption {
+         optionName = "sc_windowId";
+         replace = true; // We'll replace var sc_windowId = 101 with var_sc_windowId = {windowId} for apps where it might vary
+         patternStrings = {"{whiteSpace}var{whiteSpace}sc_windowId{whiteSpace}={whiteSpace}{windowId=digits};{whiteSpace}"};
+      }
+   }
 
    public Language language = SCLanguage.getSCLanguage();
 
-   public void init() {
-      parseletList = new Parselet[excludePatterns.length];
+   public class FilterOption {
+      String optionName;
+      boolean replace = false;
+      String[] patternStrings;
+   }
 
-      for (int i = 0; i < excludePatterns.length; i++) {
-         Object patObj = Pattern.initPatternParselet(language, null, excludePatterns[i]);
+   public void init(String[] args) {
+      excludePatterns = new ArrayList<Pattern>(globalExcludePatterns.length);
+      appendPatternList(excludePatterns, globalExcludePatterns);
+
+      replacePatterns = new ArrayList<Pattern>(globalReplacePatterns.length);
+      appendPatternList(replacePatterns, globalReplacePatterns);
+
+      for (String arg:args) {
+         for (FilterOption opt:options) {
+            if (arg.startsWith("-") && opt.optionName.equals(arg.substring(1))) {
+               ArrayList<Pattern> patternList = opt.replace ? replacePatterns : excludePatterns;
+               appendPatternList(patternList, opt.patternStrings);
+            }
+         }
+      }
+   }
+
+   public void appendPatternList(ArrayList<Pattern> patternList, String[] patternStrings) {
+      for (int i = 0; i < patternStrings.length; i++) {
+         Object patObj = Pattern.initPattern(language, null, patternStrings[i]);
          if (patObj instanceof ParseError) {
-            System.err.println("*** TestLogFilter - invalid pattern: " + excludePatterns[i] + ": "+ patObj);
+            System.err.println("*** TestLogFilter - invalid replacePattern: " + patternStrings[i] + ": "+ patObj);
          }
          else {
-            parseletList[i] = (Parselet) patObj;
+            patternList.add((Pattern) patObj);
          }
       }
    }
@@ -49,14 +95,20 @@ public class TestLogFilter {
          BufferedReader bufIn = new BufferedReader(new InputStreamReader(in));
          for (String nextLine = bufIn.readLine(); nextLine != null; nextLine = bufIn.readLine()) {
             boolean excluded = false;
-            for (Parselet excludePattern:parseletList) {
-               if (language.matchString(nextLine, excludePattern)) {
+            for (Pattern excludePattern:excludePatterns) {
+               if (excludePattern.matchSimpleString(nextLine)) {
                   excluded = true;
                   break;
                }
             }
-            if (!excluded)
+            if (!excluded) {
+               for (Pattern replacePattern:replacePatterns) {
+                  String replacedString = replacePattern.replaceString(nextLine);
+                  if (replacedString != null)
+                     nextLine = replacedString;
+               }
                out.println(nextLine);
+            }
          }
       }
       catch (IOException exc) {
@@ -67,7 +119,7 @@ public class TestLogFilter {
    @sc.obj.MainSettings
    public static void main(String[] args) {
       TestLogFilter filter = new TestLogFilter();
-      filter.init();
+      filter.init(args);
       filter.doFilter(System.in, System.out);
    }
 }

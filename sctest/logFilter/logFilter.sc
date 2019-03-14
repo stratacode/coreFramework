@@ -1,4 +1,4 @@
 package sc.test;
 
-public sctest.logFilter {
+public sctest.logFilter extends util {
 }
