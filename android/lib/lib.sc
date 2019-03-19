@@ -48,11 +48,11 @@ android.lib extends util {
       registerLanguage(tempLang, "scxml");
 
       sc.lang.TemplateLanguage propLang = new sc.lang.TemplateLanguage();
-      tempLang.processTemplate = true;
-      tempLang.buildPhase = sc.layer.BuildPhase.Prepare;
-      tempLang.resultSuffix = "properties";
-      tempLang.useSrcDir = false;
-      registerLanguage(tempLang, "scproperties");
+      propLang.processTemplate = true;
+      propLang.buildPhase = sc.layer.BuildPhase.Prepare;
+      propLang.resultSuffix = "properties";
+      propLang.useSrcDir = false;
+      registerLanguage(propLang, "scproperties");
 
       // Recognizes android resources - copies them over to the build directory using a layered merging of paths
       sc.layer.LayerFileProcessor resourceFileProcessor = new sc.layer.LayerFileProcessor();
