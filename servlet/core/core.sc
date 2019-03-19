@@ -16,14 +16,17 @@ public servlet.core extends webApp, meta, html.core {
    codeType = sc.layer.CodeType.Framework;
 
    public void init() {
-      // Turns on URL access to the layered system
-      layeredSystem.serverEnabled = true;
-
       // Split this layer and it's sublayers out into a new process using the default 'java' runtime
       addProcess(sc.layer.ProcessDefinition.create("Server", "java", true));
+
+      if (activated) {
+         // Turns on URL access to the layered system - only for the active layer
+         layeredSystem.serverEnabled = true;
+      }
    }
 
    public void start() {
+
       // Like request but where instances are stored in the browser's session
       sc.lang.sc.BasicScopeProcessor sessionScope = new sc.lang.sc.BasicScopeProcessor("session");
       sessionScope.validOnClass = true;

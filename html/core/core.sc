@@ -47,7 +47,7 @@ html.core extends sys.std {  // Extending sys.std because we override the standa
       // GWT requires a separate doc root which got messed up by this scheme so it is not set here.
       //webFileProcessor.templatePrefix = "web";
       useSrcDir = false;
-      // Since jetty does not support path searching, all web files go into the one common buildDir
+      // Since jetty does not support path searching, all web files will be copied into the one common 'web' folder in the buildDir of the final layer
       // and that is where jetty starts.
       //webFileProcessor.useCommonBuildDir = true;
       processInAllLayers = true;
@@ -124,7 +124,6 @@ html.core extends sys.std {  // Extending sys.std because we override the standa
       // the suffix will be .java when compiledTemplate is true and one of process or postBuild template
       //htmlLang.processByUniqueSuffix = true;
       registerLanguage(htmlLang, sc.lang.HTMLLanguage.SC_HTML_SUFFIX);
-
    }
 
    public void start() {
