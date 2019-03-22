@@ -824,7 +824,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
          if (sc.bind.Bind.trace) {
             sb.append("sc_Bind_c.trace = true;\n");
          }
-         // TODO: done in HtmlPage!
+         // TODO: this should probably be put into HtmlPage so it's more configurable
          sb.append("   var sc_windowId = " + ctx.getWindowId() + ";\n");
          if (doSync) {
             CharSequence initSync = SyncManager.getInitialSync("jsHttp", WindowScopeDefinition.scopeId, resetSync, "js", ctx.curScopeCtx.syncTypeFilter);

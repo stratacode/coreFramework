@@ -138,21 +138,23 @@ html.core extends sys.std {  // Extending sys.std because we override the standa
 
       String webURL = system.getServerURL() + openSuffix;
 
-      // Open up to the index page for this layer or use the -o URL option to open a specific page.
-      if (system.options.openPageAtStartup)
-         system.addRunCommand("open",  webURL);
+      if (activated) {
+         // Open up to the index page for this layer or use the -o URL option to open a specific page.
+         if (system.options.openPageAtStartup)
+            system.addRunCommand("open",  webURL);
 
-      // Use the -ts <script-name> option to specify a test script - if not specified, we default to testScript.scr
-      if (system.options.testScriptName == null)
-         system.options.testScriptName = "testScript.scr";
+         // Use the -ts <script-name> option to specify a test script - if not specified, we default to testScript.scr
+         if (system.options.testScriptName == null)
+            system.options.testScriptName = "testScript.scr";
 
-      // Add a shell script to use with the -t option and another to
-      // use with -vt (test verify mode)
-      //system.addTestCommand(system.options.testVerifyMode ? "./autoTest.sh" : "./runTest.sh");
+         // Add a shell script to use with the -t option and another to
+         // use with -vt (test verify mode)
+         //system.addTestCommand(system.options.testVerifyMode ? "./autoTest.sh" : "./runTest.sh");
 
-      // Warn the user if there's no upstream layer for either javascript or a server implementation
-      if (activated && system.getLayerByDirName("js.allInOne") == null && system.getLayerByDirName("servlet.schtml") == null && system.getLayerByDirName("wicket.core") == null && system.getLayerByDirName("html.schtml") == null && system.getLayerByDirName("js.schtml") == null) {
-         System.err.println("*** Warning: html.core layer included without html.schtml, js.schtml, servlet.schtml, and js.allInOne.  Include js.schtml for a client, servlet.schtml for a server or both for a synchronized implementation. Use js.allInOne for building a single JS app - all in one file. By itself, html.core provides an API for HTML generation but does not even generate a default HTML file.");
+         // Warn the user if there's no upstream layer for either javascript or a server implementation
+         if (system.getLayerByDirName("js.allInOne") == null && system.getLayerByDirName("servlet.schtml") == null && system.getLayerByDirName("wicket.core") == null && system.getLayerByDirName("html.schtml") == null && system.getLayerByDirName("js.schtml") == null) {
+            System.err.println("*** Warning: html.core layer included without html.schtml, js.schtml, servlet.schtml, and js.allInOne.  Include js.schtml for a client, servlet.schtml for a server or both for a synchronized implementation. Use js.allInOne for building a single JS app - all in one file. By itself, html.core provides an API for HTML generation but does not even generate a default HTML file.");
+         }
       }
 
       sc.lang.DefaultAnnotationProcessor urlProc = new sc.lang.DefaultAnnotationProcessor();
@@ -175,9 +177,11 @@ html.core extends sys.std {  // Extending sys.std because we override the standa
       mainInitProc.subTypesOnly = true; // Don't include the Html and Page types which set the annotation
       registerAnnotationProcessor("sc.html.MainInit", mainInitProc);
 
-      // When either of these type groups change, we need to regenerate the runTest script
-      addTypeGroupDependency("runTest.scsh", "runTest", "mainInit");
-      addTypeGroupDependency("runTest.scsh", "runTest", "urlTypes");
+      if (activated) {
+         // When either of these type groups change, we need to regenerate the runTest script
+         addTypeGroupDependency("runTest.scsh", "runTest", "mainInit");
+         addTypeGroupDependency("runTest.scsh", "runTest", "urlTypes");
+      }
    }
 
 }
