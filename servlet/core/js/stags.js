@@ -14,6 +14,7 @@ function sc_newClass(typeName, newConstr, extendsConstr) {
    newConstr.prototype.$typeName = typeName;
    return newConstr.prototype;
 }
+var sc$propNameTable = {};
 var sc$nextid = 1;
 function sc_id(o) {
    if (!sc_hasProp(o, "sc$id"))
@@ -331,7 +332,7 @@ js_HTMLElement_c.processEvent = function(elem, event, listener) {
 
       // Add this as a separate field so we can use the exposed parts of the DOM api from Java consistently
       event.currentTag = scObj;
-      var eventValue;
+      var eventValue, otherEventValue;
 
       if (listener.alias != null) {
          // e.g. innerWidth or hovered - properties computed from other DOM events
@@ -345,6 +346,8 @@ js_HTMLElement_c.processEvent = function(elem, event, listener) {
          }
          // Access this for logs and so getHovered is called to cache the value of "hovered"
          eventValue = sc_DynUtil_c.getPropertyValue(scObj, listener.propName);
+         if (listener.otherPropName)
+            otherEventValue = sc_DynUtil_c.getPropertyValue(scObj, listener.otherPropName);
 
          if (computed) {
             scObj[listener.scEventName] = null;
@@ -364,6 +367,8 @@ js_HTMLElement_c.processEvent = function(elem, event, listener) {
       if (js_Element_c.trace && listener.scEventName != "mouseMoveEvent")
          sc_log("tag event: " + listener.propName + ": " + listener.scEventName + " = " + eventValue);
       sc_Bind_c.sendChangedEvent(scObj, listener.propName, eventValue);
+      if (listener.otherPropName)
+         sc_Bind_c.sendChangedEvent(scObj, listener.otherPropName, otherEventValue);
 
       // TODO: for event properties should we delete the property here or set it to null?  flush the queue of events if somehow a queue is enabled here?
    }
@@ -466,8 +471,11 @@ js_HTMLElement_c.domChanged = function(origElem, newElem) {
                if (this[listener.propName] === undefined)
                   this[listener.propName] = null; // set the event property to null initially the first time we have someone listening on it.  this is too late but do we want to initialize all of these fields to null on every tag object just so they are null, not undefined?   Just do not override an existing value or refreshBinding fires when we do not want it to
             }
-            else // Now that we know the value of the aliased property (e.g. innerHeight) we need to send a change event cause it changes once we have an element.
+            else {// Now that we know the value of the aliased property (e.g. innerHeight) we need to send a change event cause it changes once we have an element.
                sc_Bind_c.sendChangedEvent(this, listener.propName, sc_DynUtil_c.getPropertyValue(this, listener.propName));
+               if (listener.otherPropName)
+                  sc_Bind_c.sendChangedEvent(this, listener.otherPropName, sc_DynUtil_c.getPropertyValue(this, listener.otherPropName));
+            }
 
             // Only IE supports the resize event on objects other than the window.
             if (listener.eventName == "resize" && !newElem.attachEvent) {
@@ -494,6 +502,9 @@ js_HTMLElement_c.initDOMListener = function(listener, prop, scEventName) {
    listener.scEventName = scEventName;
    listener.propName = prop;
    listener.callback = sc_newEventArgListener(js_HTMLElement_c.eventHandler, listener);
+   // For resizeEvent we have two properties innerWidth and the other property innerHeight - both set from the same event and listener
+   if (listener.aliases && listener.aliases.length === 2)
+      listener.otherPropName = listener.aliases[1];
 }
 
 function js_initDOMListener(listener, prop, eventName, res) {
@@ -854,12 +865,7 @@ function sc_SyncListener(anyChanges) {
 sc_SyncListener_c = sc_newClass("SyncListener", sc_SyncListener, null);
 
 sc_SyncListener_c.completeSync = function() {
-   if (this.anyChanges) {
-      syncMgr.numSendsInProgress--;
-   }
-   else {
-      syncMgr.numWaitsInProgress--;
-   }
+   syncMgr.pendingSends.pop();
 }
 
 sc_SyncListener_c.response = function(responseText) {
@@ -909,25 +915,28 @@ sc_SyncListener_c.response = function(responseText) {
 
 sc_SyncListener_c.error = function(code, text) {
    sc_log("in error handler");
-   this.completeSync();
+   var errReq = syncMgr.pendingSends.pop(); 
    if (code === 205) { // session on server has expired
-      // TODO: need to do initial sync code here.  We'll collect all of the changes we want the server to have
-      // - writeToDestination(initSyncJSON, null, this, "reset=true", null);
-      // accumulating probably input.value, selectedIndex, etc. but not changeEvent.  Send that to the server
-      // part of the reset (SyncDestination.SyncListener)
-      sc_logError("*** Server session - expired - reset not yet implemented for server-only client");
+      // TODO: need to do initial sync code here.  Currently for server tags, we don't synchronize the model
+      // types - only the specific properties of DOM elements. To implement a clean server tags session reset
+      // we still need to partially synchronize the model and collect the initial sync for
+      // all state it needs to restore the session.  We can send that over as changes occur and have stags just
+      // accumulate the changes, then send then here in addition to any changes we needed to send as part of the
+      // last request in pendingSends.
+      sc_logError("*** Server session lost - sending empty reset");
+      syncMgr.writeToDestination(errReq,"&reset=true");
    }
    else if (code === 410) { // server shutdown
       syncMgr.connected = false;
-      syncMgr.realTime = false;
-      sc_logError("*** Server shutdown");
+      syncMgr.syncDestination.realTime = false;
+      sc_logError("*** Server shutdown - aborting request: " + errReq);
    }
    else if (code === 500 || code === 0) {
       syncMgr.connected = false;
-      sc_logError("*** Server reported error code: " + code);
+      sc_logError("*** Server reported error code: " + code + " aborting sync: " + errReq);
    }
    else
-      sc_logError("*** Unrecognized server error: " + code);
+      sc_logError("*** Unrecognized server error: " + code + " aborting sync: " + errReq);
    syncMgr.postCompleteSync();
 };
 
@@ -939,14 +948,14 @@ syncMgr = sc_SyncManager_c = {
    pendingChanges:[],
    syncScheduled:false,
    eventIndex:0,
-   realTime:true,
+   syncDestination:{realTime:true},
    waitTime:1200000, // TODO: make this configurable in the page or URL?
    pollTime: 500,
-   numSendsInProgress: 0,
-   numWaitsInProgress: 0,
+   pendingSends:[],
    autoSyncScheduled: false,
    connected: true,
    refreshTagsScheduled: false,
+   windowSyncProps: null,
    applySyncLayer: function(lang,json,detail) {
       if (sc_SyncManager_c.trace) {
          sc_log("Sync applying server changes (from: " + (detail ? detail : "init") + " request): " + json);
@@ -1193,6 +1202,9 @@ syncMgr = sc_SyncManager_c = {
             tagObj.updateFromDOMElement(element);
          }
       }
+      else if (id === "window") {
+         syncMgr.initWindowSync(serverTag.props);
+      }
       else {
          if (tagObj != null) {
             if (js_Element_c.verbose)
@@ -1274,14 +1286,14 @@ syncMgr = sc_SyncManager_c = {
 
       var jObj = {sync:jsArr};
       var jStr = JSON.stringify(jObj, null, 3);
-      syncMgr.writeToDestination(jStr);
+      syncMgr.writeToDestination(jStr, "");
 
       syncMgr.pendingChanges = [];
       // Allow another sync since this one has gone out
       syncMgr.syncScheduled = false; // TODO: add configuration option to allow more than one send at a time (and set this in the SyncListener response/error instead)
    },
-   writeToDestination:function(json) {
-      var url = "/sync?url=" + encodeURI(window.location.pathname) + "&windowId=" + sc_windowId;
+   writeToDestination:function(json,paramStr) {
+      var url = "/sync?url=" + encodeURI(window.location.pathname) + "&windowId=" + sc_windowId + paramStr;
 
       var anyChanges = json.length !== 0;
 
@@ -1289,35 +1301,37 @@ syncMgr = sc_SyncManager_c = {
          url += "&waitTime=" + syncMgr.waitTime;
       }
       if (!anyChanges) {
-         syncMgr.numWaitsInProgress++;
          if (sc_SyncManager_c.trace)
             sc_log("Sending sync wait request: " + (syncMgr.waitTime === -1 ? "(no wait)" : "wait: " + syncMgr.waitTime));
       }
       else {
-         syncMgr.numSendsInProgress++;
          if (sc_SyncManager_c.trace)
             sc_log("Sending sync: " + json);
       }
-
+      syncMgr.pendingSends.push(json);
       sc_PTypeUtil_c.postHttpRequest(url, json, "text/plain", new sc_SyncListener(anyChanges));
    },
    autoSync:function() {
-      if (syncMgr.numSendsInProgress === 0 && syncMgr.numWaitsInProgress === 0) {
+      if (syncMgr.pendingSends.length == 0) {
          sc_log("autoSync - writing to destination");
-         syncMgr.writeToDestination("");
+         syncMgr.writeToDestination("", "");
       }
       else
          sc_log("autoSync - not writing to destination");
       syncMgr.autoSyncScheduled = false;
    },
    postCompleteSync:function() {
-      if (syncMgr.pollTime !== -1 && syncMgr.numSendsInProgress === 0 && syncMgr.numWaitsInProgress === 0 && syncMgr.connected && !syncMgr.autoSyncScheduled) {
-         sc_log("Post complete sync: scheduling autoSync with:  numSends: " + syncMgr.numSendsInProgress + " numWaits: " + syncMgr.numWaitsInProgress)
+      if (syncMgr.syncDestination.realTime && syncMgr.pollTime !== -1 && syncMgr.pendingSends.length == 0 && syncMgr.connected && !syncMgr.autoSyncScheduled) {
+         sc_log("Post complete sync: scheduling autoSync with: " + syncMgr.pendingSends.length + " pending requests");
          syncMgr.autoSyncScheduled = true;
          setTimeout(syncMgr.autoSync, syncMgr.pollTime);
       }
-      else
-         sc_log("Post complete sync: not scheduling autoSync with:  numSends: " + syncMgr.numSendsInProgress + " numWaits: " + syncMgr.numWaitsInProgress)
+      else if (!syncMgr.syncDestination.realTime) {
+         sc_log("Post complete sync: realTime disabled");
+      }
+      else {
+         sc_log("Post complete sync: not scheduling autoSync with: " + syncMgr.pendingSends.length + " pending requests");
+      }
    },
    // For readability in the logs, flexibility in code-gen and efficiency in rendering we send the start tag txt all at once so
    // there's work here in parsing it and updating the DOM.
@@ -1488,5 +1502,43 @@ syncMgr = sc_SyncManager_c = {
       }
    },
    beginSync:function() {},
-   endSync:function(){}
+   endSync:function(){},
+   windowWrap:{
+      getId:function() { return "window"; }
+   },
+   sendWindowSizeEvents:function(wp) {
+      for (var i = 0; i < wp.length; i++) {
+         sc_Bind_c.sendChangedEvent(syncMgr.windowWrap, wp[i] , window[wp[i]]);
+      }
+   },
+   initWindowSync:function(props) {
+      var np;
+      var op = syncMgr.windowSyncProps;
+      if (op) {
+         np = [];
+         for (var i = 0; i < op.length; i++) {
+            var j;
+            for (j = 0; j < props.length; j++) {
+               if (props[j] === op[i])
+                  break;
+            }
+            if (j === props.length)
+               np.push(op[i]);
+         }
+         syncMgr.windowSyncProps = op.concat(np);
+      }
+      else {
+         np = props;
+         syncMgr.windowSyncProps = np;
+      }
+
+      if (np.length) {
+         syncMgr.sendWindowSizeEvents(np); // send changes for new properties right away since they are not on the server
+         if (!op) { // first time need to add the listener
+            sc_addEventListener(window, "resize", function(event) {
+               syncMgr.sendWindowSizeEvents(syncMgr.windowSyncProps);
+            });
+         }
+      }
+   }
 };

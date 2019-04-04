@@ -153,7 +153,7 @@ class Context {
       currentContextStore.set(null);
       ScopeContext requestCtx = RequestScopeDefinition.getRequestScopeDefinition().getScopeContext(false);
       if (requestCtx != null) {
-         requestCtx.scopeDestroyed();
+         requestCtx.scopeDestroyed(null);
       }
    }
 
@@ -226,7 +226,7 @@ class Context {
       ArrayList<WindowScopeContext> ctxList = (ArrayList<WindowScopeContext>) session.getAttribute("_windowContexts");
       if (ctxList != null) {
          for (WindowScopeContext winScope:ctxList) {
-            winScope.scopeDestroyed();
+            winScope.scopeDestroyed(null);
             String scopeContextName = (String) winScope.getValue("scopeContextName");
             if (scopeContextName != null) {
                if (!CurrentScopeContext.remove(scopeContextName))
@@ -240,6 +240,9 @@ class Context {
 
    public static void destroyContext(HttpSession session) {
       Context ctx = Context.initContext(session);
+
+      if (verbose)
+         System.out.println("Session invalidated: " + ctx.getTraceInfo());
 
       // Now do the attributes in the session
       try {
@@ -262,7 +265,7 @@ class Context {
          // before the attributes above, we dipose objects twice
          SessionScopeContext scopeCtx = (SessionScopeContext) session.getAttribute("_sessionScopeContext");
          if (scopeCtx != null)
-            scopeCtx.scopeDestroyed();
+            scopeCtx.scopeDestroyed(null);
       }
       finally {
          Context.clearContext();
@@ -293,6 +296,8 @@ class Context {
             windowCtx = new WindowScopeContext(windowId, Window.createNewWindow(request.getRequestURL().toString(), request.getServerName(), request.getServerPort(), request.getRequestURI(), request.getPathInfo(), request.getQueryString()));
             windowCtx.init();
             ctxList.add(windowCtx);
+
+            SyncManager.addSyncInst(windowCtx.window, true, false, "window", null);
 
             if (verbose) {
                System.out.println("Window scope context created with id: " + windowId + " for: " + getTraceInfo());

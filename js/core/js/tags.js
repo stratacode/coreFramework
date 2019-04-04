@@ -582,14 +582,18 @@ js_HTMLElement_c.domChanged = function(origElem, newElem) {
                if (this[listener.propName] === undefined)
                   this[listener.propName] = null; // set the event property to null initially the first time we have someone listening on it.  this is too late but do we want to initialize all of these fields to null on every tag object just so they are null, not undefined?   Just do not override an existing value or refreshBinding fires when we do not want it to
             }
-            else // Now that we know the value of the aliased property (e.g. innerHeight) we need to send a change event cause it changes once we have an element.
+            else {// Now that we know the value of the aliased property (e.g. innerHeight) we need to send a change event cause it changes once we have an element.
                sc_Bind_c.sendChangedEvent(this, listener.propName);
+               if (listener.otherPropName)
+                  sc_Bind_c.sendChangedEvent(this, listener.otherPropName);
+            }
 
             // Only IE supports the resize event on objects other than the window.
-            if (listener.eventName == "resize" && !newElem.attachEvent) {
+            if (listener.eventName === "resize" && !newElem.attachEvent) {
                sc_addEventListener(window, listener.eventName,
                    function(evt) {
-                       js_HTMLElement_c.processEvent.call(window, newElem, evt, listener);
+                      if (newElem.scObj) // If not yet attached to the DOM don't bother with this call
+                         js_HTMLElement_c.processEvent.call(window, newElem, evt, listener);
                    }
                );
             }
@@ -614,6 +618,9 @@ js_HTMLElement_c.initDOMListener = function(listener, prop, scEventName) {
    listener.scEventName = scEventName;
    listener.propName = prop;
    listener.callback = sc_newEventArgListener(js_HTMLElement_c.eventHandler, listener);
+   // For resizeEvent we have two properties innerWidth and the other property innerHeight - both set from the same event and listener
+   if (listener.aliases && listener.aliases.length === 2)
+      listener.otherPropName = listener.aliases[1];
 }
 
 function js_initDOMListener(listener, prop, eventName, res) {
@@ -1565,20 +1572,24 @@ js_HTMLElement_c.processEvent = function(elem, event, listener) {
 
       // Add this as a separate field so we can use the exposed parts of the DOM api from Java consistently
       event.currentTag = scObj;
-      var eventValue;
+      var eventValue, otherEventValue = null;
 
       // e.g. innerWidth or hovered - properties computed from other DOM events
       if (listener.alias != null) {
          // e.g. hovered which depends on mouseOut/In - just fire the change event as the property is changed in the DOM api
          var computed = listener.computed;
-         var origValue = null;  
+         var origValue = null;
+         var otherOrigValue = null;
          if (computed) {
             origValue = sc_DynUtil_c.getPropertyValue(scObj, listener.propName);
             // The getX method (e.g. getHovered) needs the info from the event to compute it's value properly
             scObj[listener.scEventName] = event;
+            // Not checking otherPropName here because we never have computed and more than one alias
          }
          // Access this for logs and so getHovered is called to cache the value of "hovered"
          eventValue = sc_DynUtil_c.getPropertyValue(scObj, listener.propName);
+         if (listener.otherPropName)
+            otherEventValue = sc_DynUtil_c.getPropertyValue(scObj, listener.otherPropName);
 
          if (computed) {
             scObj[listener.scEventName] = null;
@@ -1595,9 +1606,11 @@ js_HTMLElement_c.processEvent = function(elem, event, listener) {
          scObj[listener.propName] = event;
       }
 
-      if (js_Element_c.trace && listener.scEventName != "mouseMoveEvent")
+      if (js_Element_c.trace && listener.scEventName !== "mouseMoveEvent")
          console.log("tag event: " + listener.propName + ": " + listener.scEventName + " = " + eventValue);
       sc_Bind_c.sendEvent(sc_IListener_c.VALUE_CHANGED, scObj, listener.propName, eventValue);
+      if (listener.otherPropName)
+         sc_Bind_c.sendEvent(sc_IListener_c.VALUE_CHANGED, scObj, listener.otherPropName, otherEventValue);
 
       // TODO: for event properties should we delete the property here or set it to null?  flush the queue of events if somehow a queue is enabled here?
    }

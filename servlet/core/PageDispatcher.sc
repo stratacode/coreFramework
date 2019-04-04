@@ -744,6 +744,15 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             }
             HashSet<String> serverTagTypes = ctx.curScopeCtx.syncTypeFilter == null ? null : new HashSet<String>();
             serverTags = page.addServerTags(WindowScopeDefinition, serverTags, false, serverTagTypes);
+            if (page.serverTag) {
+               ServerTag windowServerTag = ctx.windowCtx.window.getServerTagInfo();
+               if (windowServerTag != null) {
+                  if (serverTags == null) {
+                     serverTags = new LinkedHashMap<String,ServerTag>();
+                  }
+                  serverTags.put("window", windowServerTag);
+               }
+            }
 
             // If we are filtering the page with a restricted set of syncTypes (ctx.syncTypeFilter != null), need to
             // add the serverTagIds so that they pass the filter.
@@ -827,7 +836,11 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
          // TODO: this should probably be put into HtmlPage so it's more configurable
          sb.append("   var sc_windowId = " + ctx.getWindowId() + ";\n");
          if (doSync) {
-            CharSequence initSync = SyncManager.getInitialSync("jsHttp", WindowScopeDefinition.scopeId, resetSync, "js", ctx.curScopeCtx.syncTypeFilter);
+            SyncManager syncMgr = SyncManager.getSyncManager("jsHttp");
+            if (!syncMgr.syncDestination.realTime)
+               sb.append("   if (typeof sc_SyncManager_c != 'undefined') sc_SyncManager_c.syncDestination.realTime = false;\n");
+
+            CharSequence initSync = syncMgr.getInitialSync(WindowScopeDefinition.scopeId, resetSync, "js", ctx.curScopeCtx.syncTypeFilter);
             // Here are in injecting code into the generated script for debugging - if you enable logging on the server, it's on in the client automatically
             if (SyncManager.trace) {
                sb.append("   if (typeof sc_SyncManager_c != 'undefined') sc_SyncManager_c.trace = true;\n");

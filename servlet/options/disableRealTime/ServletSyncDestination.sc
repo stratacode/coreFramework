@@ -1,0 +1,3 @@
+ServletSyncDestination {
+  realTime = false;
+}

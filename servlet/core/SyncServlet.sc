@@ -81,9 +81,12 @@ class SyncServlet extends HttpServlet {
       if (verbosePage)
          startTime = System.currentTimeMillis();
 
+      boolean newSession = false;
       // Resetting the session - need to create it!
-      if (session == null)
+      if (session == null) {
          session = request.getSession(true);
+         newSession = true;
+      }
 
       // Just mark this session as a sync session for now.  TODO: the client should maybe have a client-id and sequence number
       // so we can recognize out of sequence or conflicting requests for the same session.   That should probably come in as part of the
@@ -212,8 +215,8 @@ class SyncServlet extends HttpServlet {
             // Now collect up all changes and write them as the response layer.  TODO: should this be request scoped?
             SyncResult syncRes = mgr.sendSync(syncGroup, WindowScopeDefinition.scopeId, false, codeUpdates, ctx.curScopeCtx.syncTypeFilter);
 
-            // If there is nothing to send back to the client now and we have a waitTime supplied, we can wait for changes for "real time" response to the client
-            if ((codeUpdates == null || codeUpdates.length() == 0) && waitTime != -1 && !syncRes.anyChanges && syncRes.errorMessage == null) {
+            // If there is nothing to send back to the client now, we have a waitTime supplied, and we do not have to send back the session cookie we can wait for changes for "real time" response to the client
+            if ((codeUpdates == null || codeUpdates.length() == 0) && waitTime != -1 && !syncRes.anyChanges && syncRes.errorMessage == null && !newSession) {
                windowCtx.waitingListener = listener;
                windowCtx.addChangeListener(listener);
 
