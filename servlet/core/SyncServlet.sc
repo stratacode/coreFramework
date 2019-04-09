@@ -125,6 +125,7 @@ class SyncServlet extends HttpServlet {
 
          sc.type.PTypeUtil.setAppId(pageEnt.keyName);
 
+         // This sets up the Context object that wraps the request, response, session and find the existing window scope
          ctx = Context.initContext(request, response, null);
 
          if (verbosePage) 

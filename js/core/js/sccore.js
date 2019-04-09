@@ -118,12 +118,20 @@ function sc_newInnerClass(typeName, newConstr, outerClass, extendsClass, implArr
    return newProto;
 }
 
-function sc_newArray(arrayClass) {
-   return sc_initArray(null, arrayClass, arguments, 0);
+// Called with variable number of dim args at the end like: sc_initArray(String_c, [["a","b"], ["c", "d"], ["e", "f"]], 3, 2) for a [3][2] array
+function sc_initArray(arrayClass, ndim, arr) { 
+   arr._class = arrayClass;
+   arr._ndim = ndim - 1;
+   return arr;
 }
 
-// TODO: right now dim is 0 based - so a 1D array is dim = 0 - see also BinaryExpression and JSTypeParameters for the places to fix this
-function sc_initArray(array, arrayClass, args, dim) {
+// Called like sc_newArray(arrayClass, dim0Len, ... dimNLen)
+function sc_newArray(arrayClass) {
+   return sc_initArrDim(null, arrayClass, arguments, 0);
+}
+
+// Note that dim is 0 based - so a 1D array has dim = 0 (as per logic in BinaryExpression, JSTypeParameters, and NewExpression)
+function sc_initArrDim(array, arrayClass, args, dim) {
    var len = Math.floor(args[1 + dim]);  // skipping original arrayClass arg - len converted to an int just in case it needs to be...
    var ndim = args.length - 2 - dim;
    if (dim == 0) {
@@ -140,7 +148,7 @@ function sc_initArray(array, arrayClass, args, dim) {
    }
    else if (ndim > 0) {
       for (var i = 0; i < len; i++) {
-         array[i] = sc_initArray(array, arrayClass, args, ++dim);
+         array[i] = sc_initArrDim(array, arrayClass, args, ++dim);
       }
    }
    return array;

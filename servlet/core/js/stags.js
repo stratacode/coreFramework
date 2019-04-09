@@ -16,6 +16,7 @@ function sc_newClass(typeName, newConstr, extendsConstr) {
 }
 var sc$propNameTable = {};
 var sc$nextid = 1;
+var sc$dynStyles = {};
 function sc_id(o) {
    if (!sc_hasProp(o, "sc$id"))
       o.sc$id = sc$nextid++;
@@ -996,52 +997,75 @@ syncMgr = sc_SyncManager_c = {
          var keys = Object.keys(cmd);
          if (keys.length === 1) {
             var name = keys[0];
-            if (name.startsWith("ServerTag__")) {
-               var st = newServerTags[name];
-               if (!st)
-                  st = syncMgr.serverTags[name];
-               var stProps = cmd[name];
-               if (st) {
-                  st.id = stProps.id; 
-                  st.props = stProps.props;
+            if (curPkg === "sc.js") {
+               if (name.startsWith("ServerTag__")) {
+                  var st = newServerTags[name];
+                  if (!st)
+                     st = syncMgr.serverTags[name];
+                  var stProps = cmd[name];
+                  if (st) {
+                     st.id = stProps.id;
+                     st.props = stProps.props;
+                  }
+                  else
+                     sc_logError("No ServerTag for modify");
                }
-               else
-                  sc_logError("No ServerTag for modify");
+               else if (name === "PageServerTagManager") {
+                  // Some changes being made to the server tag manager.  Now, when any changes are made, we send the entire new list
+                  // so that means we can clean up old tag objects associated with server tags we no longer need to listen (or that may no longer exist)
+                  serverTagsChanged = true;
+                  var stObj = cmd[name].serverTags;
+                  // TODO: loop over keys of the stObj - lookup st in either existing or new serverTags list.  Set newServerTagList.
+                  var elemIds = Object.keys(stObj);
+                  for (var elIx = 0; elIx < elemIds.length; elIx++) {
+                     var elemId = elemIds[elIx];
+                     var stId = stObj[elemId];
+                     if (stId.startsWith("ref:")) {
+                        stId = stId.substring("ref:".length);
+                        var refServerTag = newServerTags[stId];
+                        if (!refServerTag)
+                           refServerTag = syncMgr.serverTags[stId];
+                        if (!refServerTag)
+                           sc_logError("Server tag reference not found");
+                        else {
+                           newServerTagList.push(refServerTag);
+                           activeServerTags[stId] = refServerTag;
+                        }
+                     }
+                     else
+                        sc_logError("Invalid serverTag ref");
+                  }
+               }
             }
-            else if (name == "Location") {
+            // Dynamic style sheet updated on the server - uses innerHTML for the new CSS content
+            else if (curPkg === "_css") {
+               var newStyleBody = cmd[name].innerHTML;
+               var cssId = "_css." + name;
+               var style = document.getElementById(cssId);
+               if (style == null) {
+                  var heads = document.getElementsByTagName("head");
+                  if (heads == null) {
+                     console.error("No head tag for dynamic css");
+                  }
+                  else {
+                     style = document.createElement("style");
+                     style.id = cssId; // So we can find this style again if the parent has to refresh
+                     style.type = "text/css";
+                     style.innerHTML = newStyleBody;
+                     heads[0].appendChild(style);
+                  }
+               }
+               else {
+                  style.innerHTML = newStyleBody;
+               }
+
+            }
+            else if (name === "Location") {
                var lps = cmd[name];
                var pnames = Object.keys(lps);
                for (var i = 0; i < pnames.length; i++) {
                   var pname = pnames[i];
                   window.location[pname] = lps[pname];
-               }
-            }
-            // e.g. { "PageServerTagManager":{
-            //       "serverTags":{"a":"ref:ServerTag__0","input":"ref:ServerTag__1","input_1":"ref:ServerTag__2","form":"ref:ServerTag__4",..."}
-            else if (name === "PageServerTagManager") {
-               // Some changes being made to the server tag manager.  Now, when any changes are made, we send the entire new list
-               // so that means we can clean up old tag objects associated with server tags we no longer need to listen (or that may no longer exist)
-               serverTagsChanged = true;
-               var stObj = cmd[name].serverTags;
-               // TODO: loop over keys of the stObj - lookup st in either existing or new serverTags list.  Set newServerTagList.
-               var elemIds = Object.keys(stObj);
-               for (var elIx = 0; elIx < elemIds.length; elIx++) {
-                  var elemId = elemIds[elIx];
-                  var stId = stObj[elemId];
-                  if (stId.startsWith("ref:")) {
-                     stId = stId.substring("ref:".length);
-                     var refServerTag = newServerTags[stId];
-                     if (!refServerTag)
-                        refServerTag = syncMgr.serverTags[stId];
-                     if (!refServerTag)
-                        sc_logError("Server tag reference not found");
-                     else {
-                        newServerTagList.push(refServerTag);
-                        activeServerTags[stId] = refServerTag;
-                     }
-                  }
-                  else
-                     sc_logError("Invalid serverTag ref");
                }
             }
             else if (name === "DynUtil") { // Support some select remote methods for testing
@@ -1118,6 +1142,10 @@ syncMgr = sc_SyncManager_c = {
          for (var j = 0; j < newServerTagList.length; j++) {
             newSt = newServerTagList[j];
             var id = newSt.id;
+            if (!id) {
+               console.log("no id for server tag!")
+               continue;
+            }
             var oldSt = serverTags[newSt.name];
             var curTagObj = tagObjects[id];
 
@@ -1153,6 +1181,10 @@ syncMgr = sc_SyncManager_c = {
       for (var j = 0; j < serverTagList.length; j++) {
          var st = serverTagList[j];
          var id = st.id;
+         if (!id) {
+            console.log("Null id for server tag in refresh!");
+            continue;
+         }
          var curTagObj = tagObjects[id];
          syncMgr.updateServerTag(curTagObj, id, st);
       }

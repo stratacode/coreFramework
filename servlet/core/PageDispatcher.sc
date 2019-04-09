@@ -4,6 +4,8 @@ import sc.lang.html.Element;
 import sc.lang.html.HtmlPage;
 import sc.lang.html.OutputCtx;
 import sc.lang.html.Location;
+import sc.lang.html.IPageDispatcher;
+import sc.lang.html.IPageEntry;
 
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -85,7 +87,7 @@ import javax.servlet.ServletResponse;
  * attempts to merge the page objects.  Ideally we'd recursively merge all matching tags with ids but I haven't found a use case for that yet.
  */
 @sc.servlet.PathServletFilter(path="/*")
-class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener {
+class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener, IPageDispatcher {
    static LinkedHashMap<String,PageEntry> pages = new LinkedHashMap<String,PageEntry>();
 
    static Language language = sc.lang.pattern.URLPatternLanguage.getURLPatternLanguage();
@@ -103,7 +105,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
    public static final int PAGE_FLAG_URL = 1;
    public static final int PAGE_FLAG_SYNC = 2;
 
-   static class PageEntry {
+   static class PageEntry implements IPageEntry {
       String keyName;
       String pattern;
       Parselet patternParselet;
@@ -170,6 +172,27 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             first = false;
          }
          return sb.toString();
+      }
+
+      public Object getPageType() {
+         return pageType;
+      }
+
+      public Object getCurrentInstance() {
+         boolean isObject = ModelUtil.isObjectType(pageType);
+         if (!isObject) {
+            String typeName = ModelUtil.getTypeName(pageType);
+            ScopeDefinition scopeDef = getScopeDefForPageType(pageType);
+            if (scopeDef != null) {
+               ScopeContext scopeCtx = scopeDef.getScopeContext(true);
+               if (scopeCtx != null) {
+                  return scopeCtx.getValue(typeName);
+               }
+            }
+            return null;
+         }
+         else
+            return ModelUtil.getAndRegisterGlobalObjectInstance(pageType);
       }
    }
 
@@ -575,10 +598,13 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
    }
 
    public void initPageInst(Element pageObj) {
-      // TODO: should this be settable someplace?  This could be set into the HtmlPage's class but that seems less
+      // TODO: should the page object's cache mode be settable someplace?  This could be set into the HtmlPage's class but that seems less
       // flexible.   Might want to control this with a startup option?
       if (defaultPageCache)
          pageObj.cache = sc.lang.html.CacheMode.Enabled;
+      if (pageObj instanceof HtmlPage) {
+         ((HtmlPage) pageObj).pageDispatcher = this;
+      }
    }
 
    static String getRuntimeString(long startTime) {
@@ -744,6 +770,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
             }
             HashSet<String> serverTagTypes = ctx.curScopeCtx.syncTypeFilter == null ? null : new HashSet<String>();
             serverTags = page.addServerTags(WindowScopeDefinition, serverTags, false, serverTagTypes);
+
+            // For server tag pages, if there are listeners on the window object properties like innerWidth/Height, add a ServerTag for that object too
             if (page.serverTag) {
                ServerTag windowServerTag = ctx.windowCtx.window.getServerTagInfo();
                if (windowServerTag != null) {
@@ -1232,4 +1260,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener 
       return res;
    }
 
+   /** Hook to allow tag objects to find the page type for a given URL at runtime */
+   public IPageEntry lookupPageType(String url) {
+      return pages.get(url);
+   }
 }

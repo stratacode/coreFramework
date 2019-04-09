@@ -14,14 +14,17 @@ function js_HTMLElement() {
    this.element = null;
    this.id = null;
    this.repeat = null;
-   if (arguments.length === 2) {
-      this.repeatVar = arguments[0];
-      this.repeatIndex = arguments[1];
+   if (arguments.length === 3) {
+      this.parentNode = arguments[0];
+      this.repeatVar = arguments[1];
+      this.repeatIndex = arguments[2];
    }
-   else {
+   else if (arguments.length === 0) {
       this.repeatVar = null;
       this.repeatIndex = -1;
    }
+   else
+      console.error("Unrecognized constructor for tag object");
    this.repeatVarName = null;
    this.serverRepeat = false;
    this.HTMLClass = null;
