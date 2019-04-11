@@ -1,0 +1,139 @@
+<%@
+   import sc.lang.pattern.OptionalPattern;
+   import sc.lang.pattern.PatternVariable;
+   import sc.lang.html.QueryParamProperty;
+   import sc.parser.PString;
+   import java.util.TreeMap;
+   import java.util.Map;
+
+   @sc.obj.Scope(name="appSession")
+%>
+<html>
+   <body>
+      <div id="indexBody" class="appFrame">
+         Default index page, replace by adding an index.schtml or index.html file to your project.
+         <div id="pathDisplay" serverContent="true">
+            <%! PageDispatcher pageDispatcher = PageDispatcher.getPageDispatcher(); %>
+
+            <span abstract="true" id="PageURLElementRepeat" implements="sc.lang.html.IRepeatWrapper">
+               <%!
+                  Object patternInst;
+                  Map<String,Object> otherProps;
+                  Element createElement(Object value, int ix, Element oldTag) {
+                     if (PString.isString(value)) {
+                        ConstStringURLElement elem = new ConstStringURLElement();
+                        elem.strVal = value.toString();
+                        elem.patternInst = patternInst;
+                        elem.otherProps = otherProps;
+                        return elem;
+                     }
+                     else if (value instanceof OptionalPattern) {
+                        OptionalPatternElem elem = new OptionalPatternElem();
+                        elem.pattern = (OptionalPattern) value;
+                        elem.patternInst = patternInst;
+                        elem.otherProps = otherProps;
+                        return elem;
+                     }
+                     else if (value instanceof PatternVariable) {
+                        PatternVariable patVar = (PatternVariable) value;
+                        VarPageURLElement elem;
+                        if (patVar.parseletName.equals("urlString") || patVar.parseletName.equals("identifier")) {
+                           elem = new StringVarPageURLElement();
+                        }
+                        else if (patVar.parseletName.equals("integer") || patVar.parseletName.equals("integerLiteral")) {
+                           elem = new IntVarPageURLElement();
+                        }
+                        else
+                           throw new IllegalArgumentException("Unsupported pattern parselet: " + patVar.parseletName);
+                        elem.propName = patVar.propertyName;
+                        elem.patternInst = patternInst;
+                        elem.otherProps = otherProps;
+                        return elem;
+                     }
+                     else if (value instanceof QueryParamProperty) {
+                        QueryParamProperty qpp = (QueryParamProperty) value;
+                        VarPageURLElement elem;
+                        if (DynUtil.isAssignableFrom(String.class, qpp.propType)) {
+                           elem = new StringVarPageURLElement();
+                        }
+                        else if (DynUtil.isAssignableFrom(Integer.class, qpp.propType) || DynUtil.isAssignableFrom(Integer.TYPE, qpp.propType)) {
+                           elem = new IntVarPageURLElement();
+                        }
+                        else
+                           throw new IllegalArgumentException("Unsupported query param type: " + qpp.propType);
+                        elem.propName = qpp.propName;
+                        elem.patternInst = patternInst;
+                        elem.otherProps = otherProps;
+                        return elem;
+                     }
+                     throw new IllegalArgumentException("Unrecognized value for pattern element: " + value);
+                  }
+
+                  void updateElementIndexes(int fromIx) {
+                  }
+               %>
+            </span>
+            <span abstract="true" id="PageURLElement">
+               <%!
+                  Object patternInst;
+                  Map<String,Object> otherProps;
+               %>
+            </span>
+            <span abstract="true" id="ConstStringURLElement" extends="PageURLElement"><%! String strVal; %><%= strVal %></span>
+            <span abstract="true" id="OptionalPatternElem" extends="PageURLElement">
+               <%! OptionalPattern pattern; %>
+               [ <span id="optList" repeat="= pattern.elements" repeatVarName="optElem" repeatWrapper="PageURLElementRepeat"
+                       patternInst="= OptionalPatternElem.this.patternInst" otherProps="= OptionalPatternElem.this.otherProps"/> ]
+            </span>
+            <span abstract="true" id="VarPageURLElement" extends="PageURLElement">
+               <%!
+                  String propName;
+                  String getElementValue() {
+                     Object propVal = otherProps == null ? null : otherProps.get(propName);
+                     if (propVal == null && patternInst != null)
+                        propVal = DynUtil.getProperty(patternInst, propName);
+
+                     if (propVal == null)
+                        return "";
+                     return propVal.toString();
+                  }
+               %>
+               <%= propName %>
+            </span>
+            <span abstract="true" id="StringVarPageURLElement" extends="VarPageURLElement">
+               <input type="text" id="stringVar" value='= getElementValue()' changeEvent="=: otherProps.put(propName, value)"/>
+            </span>
+            <span abstract="true" id="IntVarPageURLElement" extends="VarPageURLElement">
+               <input type="text" id="intVar" value='= getElementValue()' changeEvent="=: otherProps.put(propName, value)"/>
+            </span>
+
+            <div>
+               <p/>
+               Template pages in this project:
+               <div>
+                  <span repeat="= pageDispatcher.allPageEntries" repeatVarName="pageEnt">
+                     <span id="pageEntView" visible="= !pageEnt.simplePattern">
+                        <%!
+                           Object pageInst := pageDispatcher.getCurrentPageInstance(pageEnt);
+                           TreeMap<String,Object> urlPropValues = new TreeMap<String,Object>(); // Stores values set here in the page
+                        %>
+                        <span id="patternLink">
+                           <span id="patternElement" repeat="= pageEnt.urlPattern.elements" repeatVarName="elem" repeatWrapper="PageURLElementRepeat" patternInst="= pageInst" otherProps="= urlPropValues"/>
+                           <span visible=":= pageEnt.queryParamProps != null" id="queryParamSegment">
+                              ? <span id="queryParamElement" repeat="= pageEnt.queryParamProps" repeatWrapper="PageURLElementRepeat" patternInst="= pageInst" otherProps="= urlPropValues"/>
+                           </span>
+                           <input type="button" value="Go" disabled=":= !pageEnt.isPatternValidWithInst(urlPropValues, pageInst)" clickEvent='=: Window.window.location.href = pageEnt.evalPatternWithInst(urlPropValues, pageInst)'/>
+                        </span>
+                        <span id="alt">
+                           <a href=':= pageEnt.pattern'><%= pageEnt.keyName %></a>
+                        </span>
+                        <br/>
+                     </span>
+                  </span>
+               </div>
+            </div>
+            All pages with html tags are by default listed here.  Set the @URL annotation to define the URLs of classes and template pages.
+         </div>
+      </div>
+   </body>
+</html>
