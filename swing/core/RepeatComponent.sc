@@ -37,11 +37,16 @@ public abstract class RepeatComponent<T> implements IChildContainer, sc.dyn.IObj
          //removeForm();
          valid = false;
 
+         //System.out.println("*** Invalidating list: " + repeat + " on thread: " + PTypeUtil.getThreadName());
+
          SwingUtilities.invokeLater(new Runnable() {
             public void run() {
+               //System.out.println("*** Refreshing list: " + repeat + " on thread: " + PTypeUtil.getThreadName());
                if (refreshList())
                   listChanged();
-               }});
+               //System.out.println("*** Done refreshing list: " + repeat + " on thread: " + PTypeUtil.getThreadName());
+            }
+         });
 
       }
    }
