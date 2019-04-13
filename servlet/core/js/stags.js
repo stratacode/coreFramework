@@ -835,21 +835,17 @@ js_RepeatTag_c.updateFromDOMElement = function(newElement) {
 }
 
 js_RepeatTag_c.isRepeatId = function(id) {
-   return js_RepeatTag_c.getRepeatInnerName(id) != null;
+   var ix = id.indexOf('_Repeat');
+   if (ix === -1 || ix !== id.length - '_Repeat'.length)
+      return false;
+   return true;
 }
 
-js_RepeatTag_c.getRepeatInnerName = function(id) {
-   // Check if this is a 'repeat' element based on it's id name scheme and compute the id prefix for it's children
-   var ix = id.indexOf('_Repeat');
-   var repeatInnerName = null;
-   if (ix != -1) {
-      var rlen = '_Repeat'.length
-      if (ix + rlen == id.length)
-         repeatInnerName = id.substring(0, ix);
-      else if (id.charAt(ix+rlen) == '_') // TODO: if it is like foo_repeat_3 we need to do foo_3 right?
-         repeatInnerName = id.substring(0, ix) + id.substring(ix + rlen);
-   }
-   return repeatInnerName;
+js_RepeatTag_c.isRepeatEndId = function(id) {
+   var ix = id.indexOf('_Repeat_end');
+   if (ix === -1 || ix !== id.length - '_Repeat_end'.length)
+      return false;
+   return true;
 }
 
 js_HTMLElement_c.tagNameToType = {input:js_Input, form:js_Form, select:js_Select, option:js_Option};
@@ -1004,8 +1000,10 @@ syncMgr = sc_SyncManager_c = {
                      st = syncMgr.serverTags[name];
                   var stProps = cmd[name];
                   if (st) {
-                     st.id = stProps.id;
-                     st.props = stProps.props;
+                     if (stProps.id)
+                        st.id = stProps.id;
+                     if (stProps.props)
+                        st.props = stProps.props;
                   }
                   else
                      sc_logError("No ServerTag for modify");
@@ -1091,18 +1089,14 @@ syncMgr = sc_SyncManager_c = {
                         syncMgr.setStartTagTxt(chElem, val);
                      }
                      else if (prop === "innerHTML") {
-                        var repeatInnerName = js_RepeatTag_c.getRepeatInnerName(name);
-                        if (repeatInnerName != null) { // repeat tag needs special processing - remove all 'repeat children', then insert the innerHTML after the marker element
+                        if (js_RepeatTag_c.isRepeatId(name)) { // repeat tag needs special processing - remove all 'repeat children', then insert the innerHTML after the marker element
                            do {
                               var next = chElem.nextElementSibling;
-                              if (next == null)
+                              if (next == null) {
+                                 console.error("Failed to find _Repeat_end tag for replacing repeat body");
                                  break;
-                              var nextId = next.id;
-                              if (nextId == null)
-                                 break;
-                              var ix = nextId.indexOf(repeatInnerName);
-                              // continue removing elements while the nextId is either == name or name_1, name_2, etc.
-                              if (ix !== 0 || (nextId.length !== repeatInnerName.length && !/_\d/.test(nextId.substr(repeatInnerName.length))))
+                              }
+                              if (js_RepeatTag_c.isRepeatEndId(next.id))
                                  break;
                               chElem.parentNode.removeChild(next);
                            } while (true);
