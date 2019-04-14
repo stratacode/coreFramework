@@ -845,10 +845,13 @@ sc_PTypeUtil_c.postHttpRequest = function(url, postData, contentType, listener) 
       }
    }
    httpReq.onreadystatechange = function (evt) {
-      if (httpReq.readyState == 4) {
+      if (httpReq.readyState === 4) {
          var stat = httpReq.status;
-         if(stat != 200 && stat != 205) {
-            sc_logError("Return status: " + stat + " for: " + url);
+         if(stat !== 200 && stat !== 205) {
+            if (stat !== 0)
+               sc_logError("Return status: " + stat + " for: " + url);
+            else
+               sc_log("Request failed for: " + url);
             listener.error(httpReq.status, httpReq.statusText);
          }
       }

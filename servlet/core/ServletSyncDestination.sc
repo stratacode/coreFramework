@@ -94,8 +94,7 @@ object ServletSyncDestination extends SyncDestination {
       }
    }
 
-   // TODO: Probably need to refactor this for the real time so it takes some context parameter or maybe it needs thread-local?
-   public boolean isSendingSync() {
+   public boolean isClient() {
       return false;
    }
 }

@@ -17,6 +17,7 @@ function sc_newClass(typeName, newConstr, extendsConstr) {
 var sc$propNameTable = {};
 var sc$nextid = 1;
 var sc$dynStyles = {};
+var sc$resetState = {}; // any sync'd state that does not correspond to the DOM is stored here - to be sent back when we need to reset the server's session
 function sc_id(o) {
    if (!sc_hasProp(o, "sc$id"))
       o.sc$id = sc$nextid++;
@@ -209,7 +210,7 @@ sc_PTypeUtil_c = {
          if (stat == 200)
             listener.response(httpReq.responseText);
          else {
-            if (stat != 205) // This is the sync reset response
+            if (stat != 205) // 205 is the sync reset response
                sc_logError("server session lost");
             // This may be the 'reset' request which is not an error
             //sc_logError("Non status='200' response to POST: status=" + httpReq.status + ": " + httpReq.statusText + " response: " + httpReq.responseText);
@@ -786,7 +787,7 @@ function js_Option() {
    this.selected = false;
 }
 js_Option_c = sc_newClass("Option", js_Option, js_HTMLElement);
-js_Option_c.eventAttNames = js_HTMLElement_c.eventAttNames.concat["selected", "optionData"];
+js_Option_c.eventAttNames = js_HTMLElement_c.eventAttNames.concat(["selected", "optionData"]);
 
 js_Option_c.setOptionData = function(dv) {
    this.optionData = dv;
@@ -836,9 +837,12 @@ js_RepeatTag_c.updateFromDOMElement = function(newElement) {
 
 js_RepeatTag_c.isRepeatId = function(id) {
    var ix = id.indexOf('_Repeat');
-   if (ix === -1 || ix !== id.length - '_Repeat'.length)
+   if (ix === -1)
       return false;
-   return true;
+   var eix = ix + '_Repeat'.length;
+   if (eix === id.length)
+      return true;
+   return id.charAt(eix) === '_';
 }
 
 js_RepeatTag_c.isRepeatEndId = function(id) {
@@ -913,15 +917,9 @@ sc_SyncListener_c.response = function(responseText) {
 sc_SyncListener_c.error = function(code, text) {
    sc_log("in error handler");
    var errReq = syncMgr.pendingSends.pop(); 
-   if (code === 205) { // session on server has expired
-      // TODO: need to do initial sync code here.  Currently for server tags, we don't synchronize the model
-      // types - only the specific properties of DOM elements. To implement a clean server tags session reset
-      // we still need to partially synchronize the model and collect the initial sync for
-      // all state it needs to restore the session.  We can send that over as changes occur and have stags just
-      // accumulate the changes, then send then here in addition to any changes we needed to send as part of the
-      // last request in pendingSends.
+   if (code === 205) { // session on server has expired - send the reset state and the original error request to be reapplied
       sc_logError("*** Server session lost - sending empty reset");
-      syncMgr.writeToDestination(errReq,"&reset=true");
+      syncMgr.writeToDestination(sc$resetState + " " + errReq,"&reset=true");
    }
    else if (code === 410) { // server shutdown
       syncMgr.connected = false;
@@ -1121,8 +1119,11 @@ syncMgr = sc_SyncManager_c = {
                         sc_logError("Unrecognized property in stags sync layer: " + prop);
                   }
                }
-               else
-                  sc_logError("Unable to find DOM element to match id: " + name);
+               else {
+                  if (js_Element_c.verbose)
+                     sc_log("Recording reset state: " + prop + ": " + val);
+                  sc$resetState[prop] = val;
+               }
             }
          }
          else {
@@ -1262,10 +1263,22 @@ syncMgr = sc_SyncManager_c = {
          if (v != null) {
             if (v.constructor !== String && v.constructor !== Number && v.constructor !== Date && v.constructor !== Boolean) {
                var evName;
+               var exProps = null;
+               var idProps = null;
                if (v.constructor === Event)
                   evName = "Event";
-               else if (v.constructor === MouseEvent)
+               else if (v.constructor === MouseEvent) {
                   evName = "MouseEvent";
+                  exProps = ["button", "clientX", "clientY", "screenX", "screenY", "altKey", "metaKey", "shiftKey", "ctrlKey"];
+               }
+               else if (v.constructor === KeyboardEvent) {
+                  evName = "KeyboardEvent";
+                  exProps = ["key", "repeat", "altKey", "metaKey", "shiftKey", "ctrlKey"];
+               }
+               else if (v.constructor === FocusEvent) {
+                  evName = "FocusEvent";
+                  idProps = ["relatedTarget"];
+               }
                else {
                   sc_logError("Property: " + change.p + " no serializer for: " + v);
                   evName = null;
@@ -1281,7 +1294,20 @@ syncMgr = sc_SyncManager_c = {
                   var evId = pp + evBaseId;
                   jsArr.push({$new: [evBaseId, pp + evName, null]});
                   var evDef = {};
-                  evDef[evBaseId] = {type: v.type, currentTag:"ref:" + v.currentTag.getId(), timeStamp:v.timeStamp};
+                  var eval ={type: v.type, currentTag:"ref:" + v.currentTag.getId(), timeStamp:v.timeStamp};
+                  if (exProps) {
+                     for (var p = 0; p < exProps.length; p++) {
+                        eval[p] = v[p];
+                     }
+                  }
+                  if (idProps) {
+                     for (var p = 0; p < idProps.length; p++) {
+                        var vp = v[p];
+                        if (vp)
+                           idProps[p] = "ref:" + vp.getId();
+                     }
+                  }
+                  evDef[evBaseId] = eval;
                   jsArr.push(evDef);
                   jsArr.push({$pkg:""});
                   v = "ref:" + evId;

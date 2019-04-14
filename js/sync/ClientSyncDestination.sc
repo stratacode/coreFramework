@@ -125,7 +125,7 @@ object ClientSyncDestination extends SyncDestination {
       return SyncPropOptions.SYNC_CLIENT;
    }
 
-   public boolean isSendingSync() {
+   public boolean isClient() {
       return true;
    }
 
