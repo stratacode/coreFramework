@@ -620,7 +620,7 @@ js_HTMLElement_c.initDOMListener = function(listener, prop, scEventName) {
    else
       listener.alias = true; // This is like clientWidth which is mapped to a separate resizeEvent
    // Convert from the sc event name, e.g. clickEvent to click
-   var jsEventName = scEventName.substring(0, scEventName.indexOf("Event")).toLowerCase();
+   var jsEventName = scEventName === "mouseDownMoveUp" ? "mousedown" : scEventName.substring(0, scEventName.indexOf("Event")).toLowerCase();
    listener.eventName = jsEventName;
    listener.scEventName = scEventName;
    listener.propName = prop;
@@ -1542,7 +1542,7 @@ js_HTMLElement_c.invalidateRepeatTags = function() {
 }
 
 // Specifies the standard DOM events - each event can specify a set of alias properties.  A 'callback' function is lazily added to each domEvent entry the first time we need to listen for that DOM event on an object
-js_HTMLElement_c.domEvents = {clickEvent:{}, dblClickEvent:{}, mouseDownEvent:{}, mouseMoveEvent:{}, 
+js_HTMLElement_c.domEvents = {clickEvent:{}, dblClickEvent:{}, mouseDownEvent:{}, mouseMoveEvent:{}, mouseDownMoveUp:{},
                                mouseOverEvent:{aliases:["hovered"], computed:true}, mouseOutEvent:{aliases:["hovered"], computed:true}, 
                                mouseUpEvent:{}, keyDownEvent:{}, keyPressEvent:{}, keyUpEvent:{}, submitEvent:{}, changeEvent:{}, blurEvent:{}, focusEvent:{}, 
                                resizeEvent:{aliases:["clientWidth","clientHeight","offsetWidth","offsetHeight"]}};
@@ -1581,6 +1581,9 @@ function js_findCurrentTargetSimple(elem, prop) {
 
 js_HTMLElement_c.eventHandler = function(event, listener) {
    var elem = event.currentTarget ? event.currentTarget : js_findCurrentTarget(event.srcElement, listener.propName);
+   if (elem === document && listener.mouseDownElem) {
+      elem = listener.mouseDownElem;
+   }
    js_HTMLElement_c.processEvent(elem, event, listener);
 }
 
@@ -1635,6 +1638,21 @@ js_HTMLElement_c.processEvent = function(elem, event, listener) {
          for (opi = 0; opi < ops.length; opi++) {
             sc_Bind_c.sendEvent(sc_IListener_c.VALUE_CHANGED, scObj, ops[opi], otherEventValues[opi]);
          }
+      }
+
+      if (listener.scEventName === "mouseDownMoveUp") {
+         if (event.type === "mousedown") {
+            listener.mouseDownElem = elem;
+            sc_addEventListener(document, "mousemove", listener.callback);
+            sc_addEventListener(document, "mouseup", listener.callback);
+         }
+         else if (event.type === "mouseup") {
+            sc_removeEventListener(document, "mousemove", listener.callback);
+            sc_removeEventListener(document, "mouseup", listener.callback);
+            delete listener.mouseDownElem;
+         }
+         else if (event.type !== "mousemove")
+            console.error("unrecognized event type!");
       }
       // TODO: for event properties should we delete the property here or set it to null?  flush the queue of events if somehow a queue is enabled here?
    }
