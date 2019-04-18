@@ -50,8 +50,8 @@ import sc.lang.html.QueryParamProperty;
 import sc.js.URLPath;
 
 import sc.sync.SyncManager;
-import sc.sync.SyncOptions;
 import sc.sync.SyncProperties;
+import sc.sync.SyncPropOptions;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterConfig;
@@ -783,15 +783,10 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             HashSet<String> serverTagTypes = ctx.curScopeCtx.syncTypeFilter == null ? null : new HashSet<String>();
             serverTags = page.addServerTags(WindowScopeDefinition, serverTags, false, serverTagTypes);
 
-            // For server tag pages, if there are listeners on the window object properties like innerWidth/Height, add a ServerTag for that object too
+            // For server tag pages, if there are listeners on the window object properties like innerWidth/Height or document properties, add ServerTags for
+            // window and document too
             if (page.serverTag) {
-               ServerTag windowServerTag = ctx.windowCtx.window.getServerTagInfo();
-               if (windowServerTag != null) {
-                  if (serverTags == null) {
-                     serverTags = new LinkedHashMap<String,ServerTag>();
-                  }
-                  serverTags.put("window", windowServerTag);
-               }
+               serverTags = ctx.windowCtx.window.addServerTags(WindowScopeDefinition, serverTags, false, serverTagTypes);
             }
 
             // If we are filtering the page with a restricted set of syncTypes (ctx.syncTypeFilter != null), need to
@@ -843,6 +838,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             // Setting initDefault=false here because the browser's initial version of this object is already set
             // and trying to change it here would lead to an infinite loop when setting href back onto itself
             SyncManager.addSyncInst(wctx.window.location, false, false, "window", null);
+            SyncManager.addSyncInst(wctx.window.document, false, false, "window", null);
             mgr.serverTags = serverTags;
          }
          else {
@@ -1162,10 +1158,10 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
 
       Element.initSync();
 
-      SyncManager.addSyncType(ServerTagManager.class, new SyncProperties(null, null, new Object[] {"serverTags"}, null, SyncOptions.SYNC_INIT_DEFAULT, WindowScopeDefinition.scopeId));
-      SyncManager.addSyncType(ServerTag.class, new SyncProperties(null, null, new Object[] {"id", "props"}, null, SyncOptions.SYNC_INIT_DEFAULT, WindowScopeDefinition.scopeId));
+      SyncManager.addSyncType(ServerTagManager.class, new SyncProperties(null, null, new Object[] {"serverTags"}, null, SyncPropOptions.SYNC_INIT, WindowScopeDefinition.scopeId));
+      SyncManager.addSyncType(ServerTag.class, new SyncProperties(null, null, new Object[] {"id", "props"}, null, SyncPropOptions.SYNC_INIT, WindowScopeDefinition.scopeId));
       SyncManager.addSyncType(Location.class, new SyncProperties(null, null, new Object[] {"href", "pathname", "search"}, null, 0, WindowScopeDefinition.scopeId));
-      //SyncManager.addSyncType(ServerTag.ServerTagProp.class, new SyncProperties(null, null, new Object[] {"propName"}, null, SyncOptions.SYNC_INIT_DEFAULT, WindowScopeDefinition.scopeId));
+      //SyncManager.addSyncType(ServerTag.ServerTagProp.class, new SyncProperties(null, null, new Object[] {"propName"}, null, SyncPropOptions.SYNC_INIT, WindowScopeDefinition.scopeId));
    }
 
    public List<PageDispatcher.PageEntry> getPageEntriesOrError(Context ctx, String url) {

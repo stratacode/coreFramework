@@ -835,7 +835,10 @@ sc_PTypeUtil_c.postHttpRequest = function(url, postData, contentType, listener) 
       if (stat == 200) 
          listener.response(httpReq.responseText);
       else {
-         if (stat != 205) // This is the sync reset response
+         // 205 - sync reset session
+         // 410 - server shutting down
+         // 0 - server gone
+         if (stat != 205 && stat != 410 && stat != 0)
             sc_logError("server session lost");
          // This may be the 'reset' request which is not an error
          //console.error("Non status='200' response to POST: status=" + httpReq.status + ": " + httpReq.statusText + " response: " + httpReq.responseText);
@@ -848,7 +851,7 @@ sc_PTypeUtil_c.postHttpRequest = function(url, postData, contentType, listener) 
       if (httpReq.readyState === 4) {
          var stat = httpReq.status;
          if(stat !== 200 && stat !== 205) {
-            if (stat !== 0)
+            if (stat !== 0 && stat !== 410)
                sc_logError("Return status: " + stat + " for: " + url);
             else
                sc_log("Request failed for: " + url);

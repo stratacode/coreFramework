@@ -587,8 +587,12 @@ js_HTMLElement_c.domChanged = function(origElem, newElem) {
             }
             else {// Now that we know the value of the aliased property (e.g. innerHeight) we need to send a change event cause it changes once we have an element.
                sc_Bind_c.sendChangedEvent(this, listener.propName);
-               if (listener.otherPropName)
-                  sc_Bind_c.sendChangedEvent(this, listener.otherPropName);
+               var ops = listener.otherProps;
+               if (ops) {
+                  for (var opi = 0; opi < ops.length; opi++) {
+                     sc_Bind_c.sendChangedEvent(this, ops[opi]);
+                  }
+               }
             }
 
             // Only IE supports the resize event on objects other than the window.
@@ -614,16 +618,23 @@ js_HTMLElement_c.initDOMListener = function(listener, prop, scEventName) {
    if (scEventName == null)
       scEventName = prop;
    else
-      listener.alias = true; // This is like innerWidth which is mapped to a separate resizeEvent
+      listener.alias = true; // This is like clientWidth which is mapped to a separate resizeEvent
    // Convert from the sc event name, e.g. clickEvent to click
    var jsEventName = scEventName.substring(0, scEventName.indexOf("Event")).toLowerCase();
    listener.eventName = jsEventName;
    listener.scEventName = scEventName;
    listener.propName = prop;
    listener.callback = sc_newEventArgListener(js_HTMLElement_c.eventHandler, listener);
-   // For resizeEvent we have two properties innerWidth and the other property innerHeight - both set from the same event and listener
-   if (listener.aliases && listener.aliases.length === 2)
-      listener.otherPropName = listener.aliases[1];
+   // For resizeEvent we have four properties clientWidth and the other property clientHeight - both set from the same event and listener
+   var als = listener.aliases;
+   if (als && als.length > 1) {
+      var ops = [];
+      for (var i = 0; i < als.length; i++) {
+         if (als[i] !== prop)
+            ops.push(als[i]);
+      }
+      listener.otherProps = ops;
+   }
 }
 
 function js_initDOMListener(listener, prop, eventName, res) {
@@ -1531,9 +1542,13 @@ js_HTMLElement_c.invalidateRepeatTags = function() {
 }
 
 // Specifies the standard DOM events - each event can specify a set of alias properties.  A 'callback' function is lazily added to each domEvent entry the first time we need to listen for that DOM event on an object
-js_HTMLElement_c.domEvents = {clickEvent:{}, dblClickEvent:{}, mouseDownEvent:{}, mouseMoveEvent:{}, mouseOverEvent:{aliases:["hovered"], computed:true}, mouseOutEvent:{aliases:["hovered"], computed:true}, mouseUpEvent:{}, keyDownEvent:{}, keyPressEvent:{}, keyUpEvent:{}, submitEvent:{}, changeEvent:{}, blurEvent:{}, focusEvent:{}, resizeEvent:{aliases:["innerWidth","innerHeight"]}};
+js_HTMLElement_c.domEvents = {clickEvent:{}, dblClickEvent:{}, mouseDownEvent:{}, mouseMoveEvent:{}, 
+                               mouseOverEvent:{aliases:["hovered"], computed:true}, mouseOutEvent:{aliases:["hovered"], computed:true}, 
+                               mouseUpEvent:{}, keyDownEvent:{}, keyPressEvent:{}, keyUpEvent:{}, submitEvent:{}, changeEvent:{}, blurEvent:{}, focusEvent:{}, 
+                               resizeEvent:{aliases:["clientWidth","clientHeight","offsetWidth","offsetHeight"]}};
 // the reverse direction for the aliases field of the domEvent entry
-js_HTMLElement_c.domAliases = {innerWidth:"resizeEvent", innerHeight:"resizeEvent", hovered:["mouseOverEvent","mouseOutEvent"]};
+js_HTMLElement_c.domAliases = {clientWidth:"resizeEvent", clientHeight:"resizeEvent", offsetWidth:"resizeEvent", offsetHeight:"resizeEvent", 
+                               hovered:["mouseOverEvent","mouseOutEvent"]};
 
 // Initialize the domEvent properties as null at the class level so we do not have to maintain them for each tag instance.
 var domEvents = js_HTMLElement_c.domEvents;
@@ -1572,12 +1587,13 @@ js_HTMLElement_c.eventHandler = function(event, listener) {
 js_HTMLElement_c.processEvent = function(elem, event, listener) {
    var scObj = elem.scObj;
    if (scObj !== undefined) {
+      var ops = listener.otherProps;
 
       // Add this as a separate field so we can use the exposed parts of the DOM api from Java consistently
       event.currentTag = scObj;
-      var eventValue, otherEventValue = null;
+      var eventValue, otherEventValues = null;
 
-      // e.g. innerWidth or hovered - properties computed from other DOM events
+      // e.g. clientWidth or hovered - properties computed from other DOM events
       if (listener.alias != null) {
          // e.g. hovered which depends on mouseOut/In - just fire the change event as the property is changed in the DOM api
          var computed = listener.computed;
@@ -1591,8 +1607,11 @@ js_HTMLElement_c.processEvent = function(elem, event, listener) {
          }
          // Access this for logs and so getHovered is called to cache the value of "hovered"
          eventValue = sc_DynUtil_c.getPropertyValue(scObj, listener.propName);
-         if (listener.otherPropName)
-            otherEventValue = sc_DynUtil_c.getPropertyValue(scObj, listener.otherPropName);
+         if (ops) {
+            otherEventValues = [];
+            for (var opi = 0; opi < ops.length; opi++)
+               otherEventValues.push(sc_DynUtil_c.getPropertyValue(scObj, ops[opi]));
+         }
 
          if (computed) {
             scObj[listener.scEventName] = null;
@@ -1612,22 +1631,36 @@ js_HTMLElement_c.processEvent = function(elem, event, listener) {
       if (js_Element_c.trace && listener.scEventName !== "mouseMoveEvent")
          console.log("tag event: " + listener.propName + ": " + listener.scEventName + " = " + eventValue);
       sc_Bind_c.sendEvent(sc_IListener_c.VALUE_CHANGED, scObj, listener.propName, eventValue);
-      if (listener.otherPropName)
-         sc_Bind_c.sendEvent(sc_IListener_c.VALUE_CHANGED, scObj, listener.otherPropName, otherEventValue);
-
+      if (ops) {
+         for (opi = 0; opi < ops.length; opi++) {
+            sc_Bind_c.sendEvent(sc_IListener_c.VALUE_CHANGED, scObj, ops[opi], otherEventValues[opi]);
+         }
+      }
       // TODO: for event properties should we delete the property here or set it to null?  flush the queue of events if somehow a queue is enabled here?
    }
    else 
       console.log("Unable to find scObject to update in eventHandler");
 }
 
-js_HTMLElement_c.getInnerWidth = function() {
+js_HTMLElement_c.getOffsetWidth = function() {
+   if (this.element == null)
+      return 0;
+   return this.element.offsetWidth;
+}
+
+js_HTMLElement_c.getOffsetHeight = function() {
+   if (this.element == null)
+      return 0;
+   return this.element.offsetHeight;
+}
+
+js_HTMLElement_c.getClientWidth = function() {
    if (this.element == null)
       return 0;
    return this.element.clientWidth;
 }
 
-js_HTMLElement_c.getInnerHeight = function() {
+js_HTMLElement_c.getClientHeight = function() {
    if (this.element == null)
       return 0;
    return this.element.clientHeight;
@@ -3008,5 +3041,5 @@ js_MouseEvent_c = sc_newClass("sc.lang.html.MouseEvent", MouseEvent, Event, null
 Event.prototype.currentTag = null;
 
 if (typeof sc_SyncManager_c != "undefined") {
-   sc_SyncManager_c.addSyncType(js_Event_c, null, ["type", "currentTag", "timeStamp"], null, sc_clInit(sc_SyncOptions_c).SYNC_INIT_DEFAULT);
+   sc_SyncManager_c.addSyncType(js_Event_c, null, ["type", "currentTag", "timeStamp"], null, sc_clInit(sc_SyncPropOptions_c).SYNC_INIT);
 }

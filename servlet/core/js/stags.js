@@ -162,6 +162,33 @@ function sc_hasProp(obj, prop) {
    return obj[prop] !== undefined;
 }
 
+// e.g. mouseDownEvent -> mousedown
+function sc_cvtEventPropToName(eventPropName) {
+   return eventPropName.substring(0, eventPropName.indexOf("Event")).toLowerCase();
+}
+
+function sc_updatePlist(plist, props) {
+   var op = syncMgr[plist];
+   if (op) {
+      np = [];
+      for (var i = 0; i < op.length; i++) {
+         var j;
+         for (j = 0; j < props.length; j++) {
+            if (props[j] === op[i])
+               break;
+         }
+         if (j === props.length)
+            np.push(op[i]);
+      }
+      syncMgr[plist] = op.concat(np);
+   }
+   else {
+      np = props;
+      syncMgr[plist] = np;
+   }
+   return np;
+}
+
 function sc_refresh() { // Called at the end of loading a page - in case autoSync is turned on, kick off the first autoSync
    sc_log("sc_refresh() called");
    syncMgr.postCompleteSync();
@@ -210,7 +237,10 @@ sc_PTypeUtil_c = {
          if (stat == 200)
             listener.response(httpReq.responseText);
          else {
-            if (stat != 205) // 205 is the sync reset response
+            // 205 - sync reset
+            // 410 - server shutting down - stop polling
+            // 0 - server is gone already
+            if (stat != 205 && stat != 410 && stat != 0)
                sc_logError("server session lost");
             // This may be the 'reset' request which is not an error
             //sc_logError("Non status='200' response to POST: status=" + httpReq.status + ": " + httpReq.statusText + " response: " + httpReq.responseText);
@@ -223,7 +253,10 @@ sc_PTypeUtil_c = {
          if (httpReq.readyState == 4) {
             var stat = httpReq.status;
             if(stat != 200 && stat != 205) {
-               sc_logError("Return status: " + stat + " for: " + url);
+               if (stat !== 410 && stat !== 0)
+                  sc_logError("Return status: " + stat + " for: " + url);
+               else
+                  sc_log("Return status: " + stat + " for: " + url);
                listener.error(httpReq.status, httpReq.statusText);
             }
          }
@@ -307,10 +340,14 @@ js_HTMLElement_c.removeOnEmpty = {};
 js_HTMLElement_c.trace = true;
 
 // Specifies the standard DOM events - each event can specify a set of alias properties.  A 'callback' function is lazily added to each domEvent entry the first time we need to listen for that DOM event on an object
-js_HTMLElement_c.domEvents = {clickEvent:{}, dblClickEvent:{}, mouseDownEvent:{}, mouseMoveEvent:{}, mouseOverEvent:{aliases:["hovered"], computed:true}, mouseOutEvent:{aliases:["hovered"], computed:true}, mouseUpEvent:{}, keyDownEvent:{}, keyPressEvent:{}, keyUpEvent:{}, submitEvent:{}, changeEvent:{}, blurEvent:{}, focusEvent:{}, resizeEvent:{aliases:["innerWidth","innerHeight"]}};
+js_HTMLElement_c.domEvents = {clickEvent:{}, dblClickEvent:{}, mouseDownEvent:{}, mouseMoveEvent:{}, 
+                              mouseOverEvent:{aliases:["hovered"], computed:true}, mouseOutEvent:{aliases:["hovered"], computed:true}, 
+                              mouseUpEvent:{}, keyDownEvent:{}, keyPressEvent:{}, keyUpEvent:{}, submitEvent:{}, changeEvent:{}, blurEvent:{}, focusEvent:{}, 
+                              resizeEvent:{aliases:["clientWidth","clientHeight","offsetWidth","offsetHeight"]}};
 
 // the reverse direction for the aliases field of the domEvent entry
-js_HTMLElement_c.domAliases = {innerWidth:"resizeEvent", innerHeight:"resizeEvent", hovered:["mouseOverEvent","mouseOutEvent"]};
+js_HTMLElement_c.domAliases = {clientWidth:"resizeEvent", clientHeight:"resizeEvent", offsetWidth:"resizeEvent", offsetHeight:"resizeEvent", 
+                               hovered:["mouseOverEvent","mouseOutEvent"]};
 // Initialize the domEvent properties as null at the class level so we do not have to maintain them for each tag instance.
 var domEvents = js_HTMLElement_c.domEvents;
 for (var prop in domEvents) {
@@ -330,14 +367,15 @@ js_HTMLElement_c.eventHandler = function(event, listener) {
 
 js_HTMLElement_c.processEvent = function(elem, event, listener) {
    var scObj = elem.scObj;
+   var ops = listener.otherProps;
    if (scObj !== undefined) {
 
       // Add this as a separate field so we can use the exposed parts of the DOM api from Java consistently
       event.currentTag = scObj;
-      var eventValue, otherEventValue;
+      var eventValue, otherEventValues;
 
       if (listener.alias != null) {
-         // e.g. innerWidth or hovered - properties computed from other DOM events
+         // e.g. clientWidth or hovered - properties computed from other DOM events
          // hovered depends on mouseOut/In - so we fire the change event here as necessary to reflect the proper state
          var computed = listener.computed;
          var origValue = null;
@@ -348,8 +386,12 @@ js_HTMLElement_c.processEvent = function(elem, event, listener) {
          }
          // Access this for logs and so getHovered is called to cache the value of "hovered"
          eventValue = sc_DynUtil_c.getPropertyValue(scObj, listener.propName);
-         if (listener.otherPropName)
-            otherEventValue = sc_DynUtil_c.getPropertyValue(scObj, listener.otherPropName);
+         if (ops) {
+            otherEventValues = [];
+            for (var opi = 0; opi < ops.length; opi++) {
+               otherEventValues.push(sc_DynUtil_c.getPropertyValue(scObj, ops[opi]));
+            }
+         }
 
          if (computed) {
             scObj[listener.scEventName] = null;
@@ -369,8 +411,11 @@ js_HTMLElement_c.processEvent = function(elem, event, listener) {
       if (js_Element_c.trace && listener.scEventName != "mouseMoveEvent")
          sc_log("tag event: " + listener.propName + ": " + listener.scEventName + " = " + eventValue);
       sc_Bind_c.sendChangedEvent(scObj, listener.propName, eventValue);
-      if (listener.otherPropName)
-         sc_Bind_c.sendChangedEvent(scObj, listener.otherPropName, otherEventValue);
+      if (ops) {
+         for (opi = 0; opi < ops.length; opi++) {
+            sc_Bind_c.sendChangedEvent(scObj, ops[opi], otherEventValues[opi]);
+         }
+      }
 
       // TODO: for event properties should we delete the property here or set it to null?  flush the queue of events if somehow a queue is enabled here?
    }
@@ -378,13 +423,25 @@ js_HTMLElement_c.processEvent = function(elem, event, listener) {
       sc_log("Unable to find scObject to update in eventHandler");
 };
 
-js_HTMLElement_c.getInnerWidth = function() {
+js_HTMLElement_c.getOffsetWidth = function() {
+   if (this.element == null)
+      return 0;
+   return this.element.offsetWidth;
+};
+
+js_HTMLElement_c.getOffsetHeight = function() {
+   if (this.element == null)
+      return 0;
+   return this.element.offsetHeight;
+};
+
+js_HTMLElement_c.getClientWidth = function() {
    if (this.element == null)
       return 0;
    return this.element.clientWidth;
 };
 
-js_HTMLElement_c.getInnerHeight = function() {
+js_HTMLElement_c.getClientHeight = function() {
    if (this.element == null)
       return 0;
    return this.element.clientHeight;
@@ -475,8 +532,12 @@ js_HTMLElement_c.domChanged = function(origElem, newElem) {
             }
             else {// Now that we know the value of the aliased property (e.g. innerHeight) we need to send a change event cause it changes once we have an element.
                sc_Bind_c.sendChangedEvent(this, listener.propName, sc_DynUtil_c.getPropertyValue(this, listener.propName));
-               if (listener.otherPropName)
-                  sc_Bind_c.sendChangedEvent(this, listener.otherPropName, sc_DynUtil_c.getPropertyValue(this, listener.otherPropName));
+               var ops = listener.otherProps;
+               if (ops) {
+                  for (var opi = 0; opi < ops.length; opi++) {
+                     sc_Bind_c.sendChangedEvent(this, ops[opi], sc_DynUtil_c.getPropertyValue(this, ops[opi]));
+                  }
+               }
             }
 
             // Only IE supports the resize event on objects other than the window.
@@ -494,19 +555,26 @@ js_HTMLElement_c.domChanged = function(origElem, newElem) {
    }
 }
 
-js_HTMLElement_c.initDOMListener = function(listener, prop, scEventName) {
-   if (scEventName == null)
-      scEventName = prop;
+js_HTMLElement_c.initDOMListener = function(listener, prop, eventPropName) {
+   if (eventPropName == null)
+      eventPropName = prop;
    else
-      listener.alias = true; // This is like innerWidth which is mapped to a separate resizeEvent
+      listener.alias = true; // This is like clientWidth which is mapped to a separate resizeEvent
    // Convert from the sc event name, e.g. clickEvent to click
-   listener.eventName = scEventName.substring(0, scEventName.indexOf("Event")).toLowerCase();
-   listener.scEventName = scEventName;
+   listener.eventName = sc_cvtEventPropToName(eventPropName);
+   listener.scEventName = eventPropName;
    listener.propName = prop;
    listener.callback = sc_newEventArgListener(js_HTMLElement_c.eventHandler, listener);
-   // For resizeEvent we have two properties innerWidth and the other property innerHeight - both set from the same event and listener
-   if (listener.aliases && listener.aliases.length === 2)
-      listener.otherPropName = listener.aliases[1];
+   // For resizeEvent we have four properties clientWidth, clientHeight, outerWidth, outerHeight all set from the same event and listener
+   var als = listener.aliases;
+   if (als && als.length > 1) {
+      var ops = [];
+      for (var i = 0; i < als.length; i++) {
+         if (als[i] !== prop)
+            ops.push(als[i]);
+      }
+      listener.otherProps = ops;
+   }
 }
 
 function js_initDOMListener(listener, prop, eventName, res) {
@@ -520,10 +588,9 @@ function js_initDOMListener(listener, prop, eventName, res) {
    return res;
 }
 
-// For the given HTMLElement instance, return the array of dom event listeners (dom listeners).  The domEvents like clickEvent, are converted to properties
-// of the tag object.  We do this lazily in the browser for speed, and only create and set the properties for the events which someone is listening to.
-// This means we do need to listen for the 'addListener' binding event so when a new listener is added, we can start listening on the appropriate dom
-// DOM event property.
+// For the given server tag instance, which has a set of 'listenerProps' - i.e. those domEvents which are used in bindings on the
+// server - return the array of dom event listeners.  The domEvents like clickEvent, are converted to properties
+// of the server tag object and sent over on the next sync.
 js_HTMLElement_c.getDOMEventListeners = function() {
    var listenerProps = this.listenerProps;
    var res = null;
@@ -852,6 +919,16 @@ js_RepeatTag_c.isRepeatEndId = function(id) {
    return true;
 }
 
+function js_Document() {
+   this.element = document;
+   document.scObj = this;
+}
+js_Document_c = sc_newClass("Document", js_Document, js_HTMLElement);
+
+js_Document_c.getId = function() {
+   return "document";
+};
+
 js_HTMLElement_c.tagNameToType = {input:js_Input, form:js_Form, select:js_Select, option:js_Option};
 js_ServerTag_c = {
    equals: function(s1,s2) {
@@ -951,6 +1028,7 @@ syncMgr = sc_SyncManager_c = {
    connected: true,
    refreshTagsScheduled: false,
    windowSyncProps: null,
+   documentSyncProps: null,
    applySyncLayer: function(lang,json,detail) {
       if (sc_SyncManager_c.trace) {
          sc_log("Sync applying server changes (from: " + (detail ? detail : "init") + " request): " + json);
@@ -1232,6 +1310,9 @@ syncMgr = sc_SyncManager_c = {
       else if (id === "window") {
          syncMgr.initWindowSync(serverTag.props);
       }
+      else if (id === "document") {
+         syncMgr.initDocumentSync(serverTag.props);
+      }
       else {
          if (tagObj != null) {
             if (js_Element_c.verbose)
@@ -1295,13 +1376,16 @@ syncMgr = sc_SyncManager_c = {
                   jsArr.push({$new: [evBaseId, pp + evName, null]});
                   var evDef = {};
                   var eval ={type: v.type, currentTag:"ref:" + v.currentTag.getId(), timeStamp:v.timeStamp};
+                  var pi, p;
                   if (exProps) {
-                     for (var p = 0; p < exProps.length; p++) {
+                     for (pi = 0; pi < exProps.length; pi++) {
+                        p = exProps[pi];
                         eval[p] = v[p];
                      }
                   }
                   if (idProps) {
-                     for (var p = 0; p < idProps.length; p++) {
+                     for (pi = 0; pi < idProps.length; pi++) {
+                        p = idProps[pi];
                         var vp = v[p];
                         if (vp)
                            idProps[p] = "ref:" + vp.getId();
@@ -1555,6 +1639,7 @@ syncMgr = sc_SyncManager_c = {
    },
    beginSync:function() {},
    endSync:function(){},
+   documentTag:new js_Document(),
    windowWrap:{
       getId:function() { return "window"; }
    },
@@ -1563,30 +1648,26 @@ syncMgr = sc_SyncManager_c = {
          sc_Bind_c.sendChangedEvent(syncMgr.windowWrap, wp[i] , window[wp[i]]);
       }
    },
-   initWindowSync:function(props) {
-      var np;
-      var op = syncMgr.windowSyncProps;
-      if (op) {
-         np = [];
-         for (var i = 0; i < op.length; i++) {
-            var j;
-            for (j = 0; j < props.length; j++) {
-               if (props[j] === op[i])
-                  break;
+   initDocumentSync:function(props) {
+      var first = !syncMgr.documentSyncProps;
+      var np = sc_updatePlist("documentSyncProps", props);
+      if (np.length) {
+         for (var i = 0; i < np.length; i++) {
+            var propName = np[i];
+            var listener = domEvents[propName];
+            if (listener.callback == null) {
+               js_HTMLElement_c.initDOMListener(listener, propName, null);
             }
-            if (j === props.length)
-               np.push(op[i]);
+            sc_addEventListener(document, listener.eventName, listener.callback);
          }
-         syncMgr.windowSyncProps = op.concat(np);
       }
-      else {
-         np = props;
-         syncMgr.windowSyncProps = np;
-      }
-
+   },
+   initWindowSync:function(props) {
+      var first = !syncMgr.windowSyncProps;
+      var np = sc_updatePlist("windowSyncProps", props);
       if (np.length) {
          syncMgr.sendWindowSizeEvents(np); // send changes for new properties right away since they are not on the server
-         if (!op) { // first time need to add the listener
+         if (!first) { // first time need to add the listener
             sc_addEventListener(window, "resize", function(event) {
                syncMgr.sendWindowSizeEvents(syncMgr.windowSyncProps);
             });
