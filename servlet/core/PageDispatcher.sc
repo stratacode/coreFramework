@@ -1,5 +1,6 @@
 import sc.js.ServerTag;
 import sc.js.ServerTagManager;
+import sc.js.ServerTagContext;
 import sc.lang.html.Element;
 import sc.lang.html.HtmlPage;
 import sc.lang.html.OutputCtx;
@@ -683,14 +684,15 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       Element mainPage = null, mainHead = null, mainBody = null;
       boolean doSync = false;
 
-      Map<String,ServerTag> serverTags = null;
-
       boolean origSyncTypes = false;
 
       OutputCtx outCtx = new OutputCtx();
       outCtx.validateCache = isPageView;
 
-//LinkedHashSet<String> jsFiles = new LinkedHashSet<String>();
+      WindowScopeContext wctx = ctx.getWindowScopeContext(true);
+      ServerTagManager mgr = (ServerTagManager) wctx.getValue("sc.js.PageServerTagManager");
+      ServerTagContext stCtx = new ServerTagContext(mgr);
+
       for (PageEntry pageEnt:pageEnts) {
 
          // Merge the set of sync types for each of the matching page entries - using the original set for the common case where this is only one
@@ -780,23 +782,29 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                      bodyElem.outputBody(bodySB, outCtx);
                }
             }
-            HashSet<String> serverTagTypes = ctx.curScopeCtx.syncTypeFilter == null ? null : new HashSet<String>();
-            serverTags = page.addServerTags(WindowScopeDefinition, serverTags, false, serverTagTypes);
+            // If this page has specified a fixed list of sync types, we need to make sure we add to this list
+            // when building up the sync tags.
+            if (stCtx.serverTagTypes == null && ctx.curScopeCtx.syncTypeFilter != null) {
+               // Null serverTagTypes will not collect the server tag sync types. But if we are using a filter we need to collect them.
+               stCtx.serverTagTypes = new HashSet<String>();
+            }
+            page.addServerTags(WindowScopeDefinition, stCtx, false);
 
             // For server tag pages, if there are listeners on the window object properties like innerWidth/Height or document properties, add ServerTags for
             // window and document too
             if (page.serverTag) {
-               serverTags = ctx.windowCtx.window.addServerTags(WindowScopeDefinition, serverTags, false, serverTagTypes);
+               ctx.windowCtx.window.addServerTags(stCtx);
             }
+            stCtx.removeUnused();
 
             // If we are filtering the page with a restricted set of syncTypes (ctx.syncTypeFilter != null), need to
             // add the serverTagIds so that they pass the filter.
-            if (serverTagTypes != null && serverTagTypes.size() > 0) {
+            if (stCtx.serverTagTypes != null && stCtx.serverTagTypes.size() > 0) {
                if (origSyncTypes) {
                   ctx.curScopeCtx.syncTypeFilter = new HashSet<String>(ctx.curScopeCtx.syncTypeFilter);
                   origSyncTypes = false;
                }
-               ctx.curScopeCtx.syncTypeFilter.addAll(serverTagTypes);
+               ctx.curScopeCtx.syncTypeFilter.addAll(stCtx.serverTagTypes);
                ctx.curScopeCtx.syncTypeFilter.addAll(Arrays.asList("sc.js.ServerTagManager", "sc.js.ServerTag", "sc.lang.html.Location"));
             }
 
@@ -827,27 +835,24 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          mainPage.outputEndTag(sb, outCtx);
       }
 
-      WindowScopeContext wctx = ctx.getWindowScopeContext(true);
-
-      ServerTagManager mgr = (ServerTagManager) wctx.getValue("sc.js.PageServerTagManager");
-      if (serverTags != null && serverTags.size() > 0) {
+      if (stCtx.serverTags != null && stCtx.serverTags.size() > 0) {
          if (mgr == null) {
             mgr = new ServerTagManager();
             wctx.setValue("sc.js.PageServerTagManager", mgr);
+            mgr.serverTags = stCtx.serverTags;
             SyncManager.addSyncInst(mgr, false, true, "window", null);
             // Setting initDefault=false here because the browser's initial version of this object is already set
             // and trying to change it here would lead to an infinite loop when setting href back onto itself
             SyncManager.addSyncInst(wctx.window.location, false, false, "window", null);
             SyncManager.addSyncInst(wctx.window.document, false, false, "window", null);
-            mgr.serverTags = serverTags;
          }
          else {
-            mgr.updateServerTags(serverTags);
+            mgr.updateServerTags(stCtx);
          }
       }
       else {
          if (mgr != null)
-            mgr.updateServerTags(null);
+            mgr.updateServerTags(stCtx);
       }
 
       int pageBodySize = sb == null ? 0 : sb.length();
@@ -1158,7 +1163,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
 
       Element.initSync();
 
-      SyncManager.addSyncType(ServerTagManager.class, new SyncProperties(null, null, new Object[] {"serverTags"}, null, SyncPropOptions.SYNC_INIT, WindowScopeDefinition.scopeId));
+      // TODO: right now we don't have a SEND_ONLY option for properties - instead, we just don't add them on the client side. Nonetheless, these are
+      // send only properties.
+      SyncManager.addSyncType(ServerTagManager.class, new SyncProperties(null, null, new Object[] {"serverTags", "newServerTags", "removedServerTags"}, null, SyncPropOptions.SYNC_INIT, WindowScopeDefinition.scopeId));
       SyncManager.addSyncType(ServerTag.class, new SyncProperties(null, null, new Object[] {"id", "props"}, null, SyncPropOptions.SYNC_INIT, WindowScopeDefinition.scopeId));
       SyncManager.addSyncType(Location.class, new SyncProperties(null, null, new Object[] {"href", "pathname", "search"}, null, 0, WindowScopeDefinition.scopeId));
       //SyncManager.addSyncType(ServerTag.ServerTagProp.class, new SyncProperties(null, null, new Object[] {"propName"}, null, SyncPropOptions.SYNC_INIT, WindowScopeDefinition.scopeId));

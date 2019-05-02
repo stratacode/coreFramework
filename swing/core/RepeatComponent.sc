@@ -8,10 +8,8 @@ public abstract class RepeatComponent<T> implements IChildContainer, sc.dyn.IObj
    /** Either Object[] or List[] */
    public Object repeat;
 
-   /** Either java.awt.Component or IChildContainers of swing components.  Whatever is returned by createRepeatElement */
+   /** Either java.awt.Component or IChildContainers of swing components.  Whatever is returned by createRepeatElement. */
    public List<T> repeatComponents = new ArrayList<T>();
-
-   public List<Object> lastValues;
 
    public boolean disableRefresh = false;
    public boolean valid = true; // start out true so the first invalidate triggers the refresh
@@ -27,6 +25,12 @@ public abstract class RepeatComponent<T> implements IChildContainer, sc.dyn.IObj
    // TODO: by default we could define a separate class from the children of this component using an IChildContainer
    // this could create an instance of that generated class.  This is similar to how repeat works in schtml.
    abstract public T createRepeatElement(Object val, int index, Object oldComp);
+
+   // Implement this method to return the repeat value from the repeatComponent.
+   abstract public Object getRepeatVar(T repeatComponent);
+
+   // Called when the component's order in the list has changed
+   abstract public void setRepeatIndex(T repeatComponent, int ix);
 
    public void listChanged() {
    }
@@ -51,10 +55,11 @@ public abstract class RepeatComponent<T> implements IChildContainer, sc.dyn.IObj
       }
    }
 
-   private int repeatElementIndexOf(Object repeat, int startIx, Object repeatVar) {
-      int sz = PTypeUtil.getArrayLength(repeat);
+   private int repeatElementIndexOf(Object repeatComps, int startIx, Object repeatVar) {
+      int sz = PTypeUtil.getArrayLength(repeatComps);
       for (int i = startIx; i < sz; i++) {
-         Object arrayVal = DynUtil.getArrayElement(repeat, i);
+         T repeatComp = (T) DynUtil.getArrayElement(repeatComps, i);
+         Object arrayVal = getRepeatVar(repeatComp);
          if (arrayVal == repeatVar || (arrayVal != null && arrayVal.equals(repeatVar)))
             return i;
       }
@@ -110,14 +115,14 @@ public abstract class RepeatComponent<T> implements IChildContainer, sc.dyn.IObj
                   if (i >= components.size())
                      System.out.println("*** Internal error in sync repeat tags!");
                   T oldElem = components.get(i);
-                  Object oldArrayVal = lastValues == null || i > lastValues.size() ? null : lastValues.get(i);
+                  Object oldArrayVal = getRepeatVar(oldElem);
                   // The guy in this spot is not our guy.
                   if (oldArrayVal != arrayVal && (oldArrayVal == null || !oldArrayVal.equals(arrayVal))) {
                      anyChanges = true;
                      // The current guy is new to the list
                      if (curIx == -1) {
                         // Either replace or insert a row
-                        int curNewIx = repeatElementIndexOf(repeatVal, i, oldArrayVal);
+                        int curNewIx = repeatElementIndexOf(repeatComponents, i, oldArrayVal);
                         if (curNewIx == -1) {
                            T newElem = createRepeatElement(arrayVal, i, oldElem);
                            if (oldElem == newElem) {
@@ -144,14 +149,16 @@ public abstract class RepeatComponent<T> implements IChildContainer, sc.dyn.IObj
                      }
                      // The current guy is in the list but later on
                      else {
+                        if (curIx >= components.size())
+                           System.out.println("***");
                         T elemToMove = components.remove(curIx);
                         // Try to delete our way to the old guy so this stays incremental.  But at this point we also delete all the way to the old guy so the move is as short as possible (and to batch the removes in case this ever is used with transitions)
                         int delIx;
                         boolean needsMove = false;
                         for (delIx = i; delIx < curIx; delIx++) {
                            T delElem = components.get(i);
-                           Object delArrayVal = lastValues == null || i > lastValues.size() ? null : lastValues.get(i);
-                           int curNewIx = repeatElementIndexOf(repeatVal, i, delArrayVal);
+                           Object delArrayVal = getRepeatVar(delElem);
+                           int curNewIx = repeatElementIndexOf(repeatComponents, i, delArrayVal);
                            if (curNewIx == -1) {
                               T toRem = components.remove(delIx);
                               removeElement(toRem, delIx);
@@ -192,8 +199,11 @@ public abstract class RepeatComponent<T> implements IChildContainer, sc.dyn.IObj
                anyChanges = true;
             }
          }
-
-         lastValues = cloneRepeatList(repeat);
+         if (anyChanges) {
+            for (int i = 0; i < components.size(); i++) {
+               setRepeatIndex(components.get(i), i);
+            }
+         }
       }
       finally {
          //SyncManager.setSyncState(oldSyncState);

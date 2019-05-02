@@ -932,8 +932,9 @@ js_RepeatTag_c.isRepeatId = function(id) {
 }
 
 js_RepeatTag_c.isRepeatEndId = function(id) {
-   var ix = id.indexOf('_Repeat_end');
-   if (ix === -1 || ix !== id.length - '_Repeat_end'.length)
+   var ix = id.indexOf('_Repeat')
+   var ex = id.indexOf('_end');
+   if (ix === -1 || ex === -1) 
       return false;
    return true;
 }
@@ -1015,7 +1016,8 @@ sc_SyncListener_c.error = function(code, text) {
    var errReq = syncMgr.pendingSends.pop(); 
    if (code === 205) { // session on server has expired - send the reset state and the original error request to be reapplied
       sc_logError("*** Server session lost - sending empty reset");
-      syncMgr.writeToDestination(sc$resetState + " " + errReq,"&reset=true");
+      var resetJ = {sync:sc$resetState};
+      syncMgr.writeToDestination(JSON.stringify(resetJ, null, 3) + " " + errReq,"&reset=true");
    }
    else if (code === 410) { // server shutdown
       syncMgr.connected = false;
@@ -1064,9 +1066,11 @@ syncMgr = sc_SyncManager_c = {
       }
       var curPkg = "";
       var newServerTags = {}; // created in this apply call
-      var activeServerTags = {}; // when the list of server tags has changed, contains the new serverTags
+      var updatedServerTags = {}; // when the list of server tags has changed, contains the new serverTags
       var newServerTagList = [];
+      var removedServerTagIds = {};
       var serverTagsChanged = false; // has the list of serverTags changed
+      var serverTagsReset = false; // Is this a brand new set of server tags or updates to the existing list
       var needsTagRefresh = false; // has the body of any element changed which might contain serverTags requiring a refresh
       for (var i = 0; i < sl.length; i++) {
          var cmd = sl[i];
@@ -1089,7 +1093,7 @@ syncMgr = sc_SyncManager_c = {
          if (keys.length === 1) {
             var name = keys[0];
             if (curPkg === "sc.js") {
-               if (name.startsWith("ServerTag__")) {
+               if (name.startsWith("st_")) {
                   var st = newServerTags[name];
                   if (!st)
                      st = syncMgr.serverTags[name];
@@ -1107,26 +1111,43 @@ syncMgr = sc_SyncManager_c = {
                   // Some changes being made to the server tag manager.  Now, when any changes are made, we send the entire new list
                   // so that means we can clean up old tag objects associated with server tags we no longer need to listen (or that may no longer exist)
                   serverTagsChanged = true;
-                  var stObj = cmd[name].serverTags;
-                  // TODO: loop over keys of the stObj - lookup st in either existing or new serverTags list.  Set newServerTagList.
-                  var elemIds = Object.keys(stObj);
-                  for (var elIx = 0; elIx < elemIds.length; elIx++) {
-                     var elemId = elemIds[elIx];
-                     var stId = stObj[elemId];
-                     if (stId.startsWith("ref:")) {
-                        stId = stId.substring("ref:".length);
-                        var refServerTag = newServerTags[stId];
-                        if (!refServerTag)
-                           refServerTag = syncMgr.serverTags[stId];
-                        if (!refServerTag)
-                           sc_logError("Server tag reference not found");
-                        else {
-                           newServerTagList.push(refServerTag);
-                           activeServerTags[stId] = refServerTag;
+                  var pstm = cmd[name];
+                  var stObj = pstm.serverTags;
+                  if (stObj)
+                     serverTagsReset = true;
+                  else
+                     stObj = pstm.newServerTags;
+                  if (stObj) {
+                     // TODO: loop over keys of the stObj - lookup st in either existing or new serverTags list.  Set newServerTagList.
+                     var elemIds = Object.keys(stObj);
+                     for (var elIx = 0; elIx < elemIds.length; elIx++) {
+                        var elemId = elemIds[elIx];
+                        var stId = stObj[elemId];
+                        if (stId.startsWith("ref:")) {
+                           stId = stId.substring("ref:".length);
+                           var refServerTag = newServerTags[stId];
+                           if (!refServerTag)
+                              refServerTag = syncMgr.serverTags[stId];
+                           if (!refServerTag)
+                              sc_logError("Server tag reference not found");
+                           else {
+                              newServerTagList.push(refServerTag);
+                              updatedServerTags[stId] = refServerTag;
+                           }
+                        }
+                        else
+                           sc_logError("Invalid serverTag ref");
+                     }
+                  }
+                  if (!serverTagsReset) {
+                     var remIds = pstm.removedServerTags;
+                     if (remIds) {
+                        var remArr = Object.keys(remIds);
+                        for (var rmIx = 0; rmIx < remArr.length; rmIx++) {
+                           var remId = remIds[elIx];
+                           removedServerTagIds[remId] = true;
                         }
                      }
-                     else
-                        sc_logError("Invalid serverTag ref");
                   }
                }
             }
@@ -1174,6 +1195,12 @@ syncMgr = sc_SyncManager_c = {
             }
             else {
                var chElem = document.getElementById(name);
+               if (chElem === null) {
+                  if (name === "body")
+                     chElem = document.body;
+                  else if (name === "head")
+                     chElem = document.head;
+               }
                if (chElem) {
                   var chObj = cmd[name];
                   var props = Object.keys(chObj);
@@ -1250,7 +1277,7 @@ syncMgr = sc_SyncManager_c = {
          for (var k = 0; k < oldServerTagList.length; k++) {
             var oldSt = oldServerTagList[k];
             var id = oldSt.id;
-            if (!activeServerTags[oldSt.name]) {
+            if (removedServerTagIds[id] || (serverTagsReset && !updatedServerTags[oldSt.name])) {
                var oldTagObj = tagObjects[id];
                if (oldTagObj != null) {
                   delete tagObjects[id];
@@ -1258,10 +1285,16 @@ syncMgr = sc_SyncManager_c = {
                }
             }
          }
-         syncMgr.serverTags = activeServerTags;
-         syncMgr.serverTagList = newServerTagList;
+         if (serverTagsReset) {
+            syncMgr.serverTagList = newServerTagList;
+            syncMgr.serverTags = updatedServerTags;
+         }
+         else {
+            syncMgr.serverTagList = syncMgr.serverTagList.concat(newServerTagList);
+            Object.assign(syncMgr.serverTags, updatedServerTags);
+         }
       }
-      else if (needsTagRefresh)
+      if (needsTagRefresh)
          syncMgr.schedRefreshTags();
    },
    // Called when the DOM body has changed - we might need to update the 'element' attached to one or more tagObject
@@ -1407,7 +1440,7 @@ syncMgr = sc_SyncManager_c = {
                         p = idProps[pi];
                         var vp = v[p];
                         if (vp)
-                           idProps[p] = "ref:" + vp.getId();
+                           idProps[p] = "ref:" + vp.id;
                      }
                   }
                   evDef[evBaseId] = eval;

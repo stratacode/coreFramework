@@ -2132,7 +2132,9 @@ function js_Page() {
    //if (this.refreshOnLoad)
    //   js_Element_c.globalRefreshScheduled = true;
    this.makeRoot();
-   this.serverTags = {};
+   this.serverTags = {}; // element id as the key pointing to the ServerTag instance received from the server
+   this.serverTagObjs = {}; // stores wrapper server tag objects using element id as the key.
+   this.stInit = false;
 }
 
 js_Page_c = sc_newClass("sc.lang.html.Page", js_Page, js_HTMLElement, null);
@@ -2362,7 +2364,7 @@ js_Element_c.updateServerTag = function(tagObj, id, serverTag, addSync) {
          if (tagClass == null)
             tagClass = js_HTMLElement_c;
          if (tagClass != null) {
-            tagObj = sc_DynUtil_c.createInstance(tagClass, null, null);
+            tagObj = sc_DynUtil_c.createInstance(tagClass, null);
             tagObj.parentNode = this;
             tagObj.setId(id);
             tagObj.serverContent = true;
@@ -2384,13 +2386,11 @@ js_Element_c.updateServerTag = function(tagObj, id, serverTag, addSync) {
          }
       }
       // DOM element has changed
-      else if (tagObj.element != element) {
+      else if (tagObj.element !== element) {
          if (js_Element_c.verbose)
             console.log("updating DOM element for tagObject with " + id);
          tagObj.updateFromDOMElement(element);
-         if (serverTag != null && serverTag.props != null) {
-            console.error("Unimplemented case: serverTag props change!"); // Need to adjust the sync properties we are listening on if they have changed
-         }
+         // TODO: if the props in serverTag have changed we should update them here
       }
    }
    else {
@@ -2587,44 +2587,71 @@ js_Element_c.setInnerHTML = function(htmlTxt) {
 }
 
 js_HtmlPage_c.refreshServerTags = js_Page_c.refreshServerTags = function() {
-    if (typeof sc_SyncManager_c != "undefined") {
-        // The sc.js.ServerTagManager object gets created by the sync layer but it's not synchronized itself.  Instead, just resolve it from the dyn system 
-        //var serverTagMgr = sc_DynUtil_c.resolveName("sc.js.ServerTagManager", false, false);
-        var serverTagMgr = sc_SyncManager_c.getSyncInst("sc.js.PageServerTagManager");
-        if (serverTagMgr != null) {
-            var oldServerTags = this.serverTags;
-            var newServerTags = serverTagMgr.serverTags;
+   if (typeof sc_SyncManager_c !== "undefined") {
+      // The sc.js.ServerTagManager object gets created by the sync layer but it's not synchronized itself.  Instead, just resolve it from the dyn system
+      //var serverTagMgr = sc_DynUtil_c.resolveName("sc.js.ServerTagManager", false, false);
+      var serverTagMgr = sc_SyncManager_c.getSyncInst("sc.js.PageServerTagManager");
+      if (serverTagMgr != null) {
+         var serverTags = this.serverTags;
+         var newServerTags = serverTagMgr.newServerTags;
+         if (newServerTags) {
+            Object.assign(serverTags, newServerTags);
+            serverTagMgr.newServerTags = null;
+         }
+         else if (!this.stInit) {
+            newServerTags = serverTagMgr.serverTags;
+            this.stInit = true;
+         }
+         if (newServerTags) {
             var it = newServerTags.entrySet().iterator();
-
-            var oldSyncState = sc_SyncManager_c.getSyncState();
-            sc_SyncManager_c.setSyncState(sc_clInit(sc_SyncManager_SyncState_c).Initializing);
-
-            try {
-                while (it.hasNext()) {
-                   var ent = it.next();
-                   var id = ent.getKey();
-                   var serverTag = ent.getValue();
-                   var tagObj = oldServerTags == null ? null : oldServerTags[id];
-                   var newTagObj = js_HtmlPage_c.updateServerTag(tagObj, id, serverTag, true);
-                   if (newTagObj != tagObj) {
-                      if (newTagObj != null) {
-                         if (oldServerTags == null)
-                            oldServerTags = this.serverTags = {};
-                         oldServerTags[id] = newTagObj;
-                      }
-                      else if (newTagObj == null && oldServerTags != null) {
-                         // already disposed in updateServerTag
-                         delete oldServerTags[id];
-                      }
-                   }
+            var id, serverTag;
+            while (it.hasNext()) {
+               var ent = it.next();
+               id = ent.getKey();
+               serverTag = ent.getValue();
+               serverTags[id] = serverTag;
+            }
+         }
+         var oldSyncState = sc_SyncManager_c.getSyncState();
+         sc_SyncManager_c.setSyncState(sc_clInit(sc_SyncManager_SyncState_c).Initializing);
+         try {
+            var tagIds = Object.keys(serverTags);
+            for (var i = 0; i < tagIds.length; i++) {
+               id = tagIds[i];
+               serverTag = serverTags[id];
+               var tagObj = this.serverTagObjs[id];
+               var newTagObj = js_HtmlPage_c.updateServerTag(tagObj, id, serverTag, true);
+               if (newTagObj !== tagObj) {
+                  if (newTagObj != null) {
+                     this.serverTagObjs[id] = newTagObj;
+                  }
+                  else if (newTagObj === null) {
+                     delete this.serverTagObjs[id];
+                  }
                }
             }
-            finally {
-                sc_SyncManager_c.setSyncState(oldSyncState);
+            var rmTags = serverTagMgr.removedServerTags;
+            if (rmTags) {
+               for (var ri = 0; ri < rmTags.length; ri++) {
+                  var rmId = rmTags[ri];
+                  var rmSt = serverTags[rmId];
+                  if (rmSt) {
+                     rmTag = this.serverTagObjs[rmTag];
+                     if (js_Element_c.verbose)
+                        console.log("Removing serverTag object " + rmTag + ": removed from server");
+                     sc_DynUtil_c.dispose(rmTag);
+                     delete serverTags[rmId];
+                     delete this.serverTagObjs[rmId];
+                  }
+               }
+               serverTagMgr.removedServerTags = null;
             }
-            // TODO: remove oldServerTags that are not in newServerTags
-        }
-    }
+         }
+         finally {
+            sc_SyncManager_c.setSyncState(oldSyncState);
+         }
+      }
+   }
    js_HtmlPage_c.refreshServerTagsScheduled = false;
 }
 
@@ -3006,15 +3033,11 @@ js_RepeatServerTag_c.setInnerHTML = function(htmlTxt) {
    if (this.element != null) {
       do {
          var next = this.element.nextElementSibling;
-         if (next == null)
+         if (next == null) {
+            console.error("Failed to find _Repeat_end tag for replacing repeat body");
             break;
-         var nextId = next.id;
-         if (nextId == null)
-            break;
-         var repeatInnerName = this.repeatInnerName;
-         var ix = nextId.indexOf(this.repeatInnerName);
-         // continue removing elements while the nextId is either == name or name_1, name_2, etc.
-         if (ix != 0 || (nextId.length != repeatInnerName.length && !/_\d/.test(nextId.substr(repeatInnerName.length))))
+         }
+         if (js_RepeatServerTag_c.isRepeatEndId(next.id))
             break;
          this.element.parentNode.removeChild(next);
       } while (true);
@@ -3027,23 +3050,26 @@ js_RepeatServerTag_c.isRepeatId = function(id) {
    return js_RepeatServerTag_c.getRepeatInnerName(id) != null;
 }
 
-js_RepeatServerTag_c.getRepeatInnerName = function(id) {
-   // Check if this is a 'repeat' element based on it's id name scheme and compute the id prefix for it's children
+js_RepeatServerTag_c.isRepeatId = function(id) {
    var ix = id.indexOf('_Repeat');
-   var repeatInnerName = null;
-   if (ix != -1) {
-      var rlen = '_Repeat'.length
-      if (ix + rlen == id.length)
-         repeatInnerName = id.substring(0, ix);
-      else if (id.charAt(ix+rlen) == '_') // TODO: if it is like foo_repeat_3 we need to do foo_3 right?
-         repeatInnerName = id.substring(0, ix) + id.substring(ix + rlen);
-   }
-   return repeatInnerName;
+   if (ix === -1)
+      return false;
+   var eix = ix + '_Repeat'.length;
+   if (eix === id.length)
+      return true;
+   return id.charAt(eix) === '_';
+}
+
+js_RepeatServerTag_c.isRepeatEndId = function(id) {
+   var ix = id.indexOf('_Repeat')
+   var ex = id.indexOf('_end');
+   if (ix === -1 || ex === -1)
+      return false;
+   return true;
 }
 
 js_RepeatServerTag_c.setId = function(newVal) {
    this.id = newVal;
-   this.repeatInnerName = js_RepeatServerTag_c.getRepeatInnerName(newVal);
 }
 
 js_QueryParamProperty_c = sc_newClass("sc.lang.html.QueryParamProperty", js_QueryParamProperty, js_BaseURLParamProperty, null);

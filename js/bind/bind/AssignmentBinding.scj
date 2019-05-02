@@ -426,4 +426,8 @@ public class AssignmentBinding extends DestinationListener {
       boundValue = val;
       lhsBinding.applyReverseBinding(srcObj, val, this);
    }
+
+   protected Object getBoundValueForChild(IBinding child) {
+      return UNSET_VALUE_SENTINEL;
+   }
 }

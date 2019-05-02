@@ -71,6 +71,8 @@ public abstract class DestinationListener extends AbstractListener implements IB
    protected void applyPendingChildValue(Object val, IBinding src) {
    }
 
+   protected abstract Object getBoundValueForChild(IBinding child);
+
    public boolean getTrace() {
       return (flags & Bind.TRACE) != 0;
    }

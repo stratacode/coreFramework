@@ -565,6 +565,28 @@ sc_DynUtil_c.setAndReturn = function(obj, prop, val) {
    return val;
 }
 
+sc_DynUtil_c.getPropertyNames = function(type) {
+   var pns = type._PN;
+   var ext = sc_DynUtil_c.getExtendsType(type);
+   if (ext) {
+      var extPns = sc_DynUtil_c.getPropertyNames(ext);
+      if (extPns) {
+         if (pns) {
+            pns = extPns.concat(pns);
+         }
+         else
+            pns = extPns;
+      }
+   }
+   else if (type === jv_Object_c)
+      return null;
+   if (!pns) {
+      console.error("No property names defined for type - use @CompilerSettings(needsPropertyNames=true): " + sc_DynUtil_c.getTypeName(type));
+      return null;
+   }
+   return pns;
+}
+
 sc_DynUtil_c.getInnerTypeName = function(type) {
    var typeName = sc_DynUtil_c.getTypeName(type, false);
    if (type.$outerClass == null)

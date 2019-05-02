@@ -2,7 +2,8 @@ import java.text.DecimalFormat;
 
 @sc.js.JSSettings(jsLibFiles="js/util.js", prefixAlias="sc_")
 public class TextUtil {
-   public static String format(String format, double number) {
+   // Accepts any Number including BigDecimal for symmetric formatting on server and client
+   public static String format(String format, Object number) {
       DecimalFormat df = new DecimalFormat(format);
       return df.format(number);
    }

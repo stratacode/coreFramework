@@ -146,7 +146,7 @@ public abstract class AbstractMethodBinding extends DestinationListener {
       return direction.doReverse() && !direction.doForward() && null != dstProp;
    }
 
-   public Object getPropertyValue(Object object) {
+   public Object getPropertyValue(Object obj) {
       // Do not cache results when it's a reverse only binding.  We're not listening on our parameters in
       // that case so we can't rely on being notified.
       if (!valid || !direction.doForward()) {
@@ -154,14 +154,14 @@ public abstract class AbstractMethodBinding extends DestinationListener {
             boundValue = null;
          }
          else {
-            boundValue = invokeMethod(object);
+            boundValue = invokeMethod(obj);
             if (isDefinedObject(boundValue))
                valid = true;
          }
          // If we were set with an explicit method object, always use that one.  Otherwise, we'll use
          // the one from the previous binding in the chain.
          if (!methObjSet)
-            setMethObj(object);
+            setMethObj(obj);
       }
       return boundValue;
    }
@@ -240,10 +240,18 @@ public abstract class AbstractMethodBinding extends DestinationListener {
 
       if (activated) {
          try {
+            // Before we apply this method, if there's a parent binding we need to make sure it's valid and that we have the up-to-date version of the current object for this binding (the methObj).
+            if (needsMethodObj() && null == dstProp) {
+               Object newMethObj = ((DestinationListener) dstObj).getBoundValueForChild(this);
+               if (newMethObj != UNSET_VALUE_SENTINEL)
+                  setMethObj(newMethObj);
+            }
+
             // When we don't have a method object and there is no current value, we can't apply the method
             // or it will get an RTE.
-            if (obj == null && (needsMethodObj() && methObj == null))
-               newBoundValue = null;
+            if (obj == null && (needsMethodObj() && methObj == null)) {
+               newBoundValue = UNSET_VALUE_SENTINEL;
+            }
             else
                newBoundValue = activated ? invokeMethod(obj == null ? methObj : obj) : null;
          }
@@ -335,7 +343,7 @@ public abstract class AbstractMethodBinding extends DestinationListener {
       else if (direction.doReverse()) {
          if ((dstObj == srcObject && dstProp != null && PBindUtil.equalProps(dstProp,srcProp))) {
             Object currentValue = PBindUtil.getPropertyValue(srcObject, dstProp);
-            if (!equalObjects(currentValue, boundValue)) {
+            if (!equalObjects(currentValue, boundValue) || boundValue instanceof IChangeable) {
 
                if (useReverseListener()) {
                   // We also listen for any events this object sends on itself if it is marked with IChangeable
@@ -382,7 +390,7 @@ public abstract class AbstractMethodBinding extends DestinationListener {
       else if (direction.doReverse()) {
          if ((dstObj == srcObject && dstProp != null && PBindUtil.equalProps(dstProp,srcProp))) {
             Object currentValue = PBindUtil.getPropertyValue(srcObject, srcProp);
-            if (!equalObjects(currentValue, boundValue)) {
+            if (!equalObjects(currentValue, boundValue) || boundValue instanceof IChangeable) {
                return true;
             }
          }
@@ -475,6 +483,10 @@ public abstract class AbstractMethodBinding extends DestinationListener {
             break;
          }
       }
+   }
+
+   protected Object getBoundValueForChild(IBinding child) {
+      return UNSET_VALUE_SENTINEL;  // In this case, the methObj in the child should have been set to the this object when it was created.
    }
 
    protected boolean hasPendingParams() {

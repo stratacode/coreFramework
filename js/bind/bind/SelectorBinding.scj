@@ -314,13 +314,17 @@ public class SelectorBinding extends DestinationListener {
       boundValues[i] = newValue;
    }
 
-   /** Used after reactivating... because we do not accurately track change events when deactivated we need to just do a re-validate.  It is also a nice operation to have for lazier evaluation schemes down the road. */
    private boolean validateBinding(Object obj) {
+      return validateBinding(obj, boundProps.length);
+   }
+
+   /** Used after reactivating... because we do not accurately track change events when deactivated we need to just do a re-validate.  It is also a nice operation to have for lazier evaluation schemes down the road. */
+   private boolean validateBinding(Object obj, int validateTo) {
       if (direction.doForward() && !valid && activated) {
          Object bindingParent = boundValues[0];
          Object lastParent = obj;
          boolean changed = false;
-         for (int i = 0; i < boundProps.length; i++) {
+         for (int i = 0; i < validateTo; i++) {
             Object newValue = !isValidObject(bindingParent) ? UNSET_VALUE_SENTINEL : PBindUtil.getPropertyValue(lastParent, boundProps[i]);
 
             if (!DynUtil.equalObjects(newValue, boundValues[i])) {
@@ -330,7 +334,8 @@ public class SelectorBinding extends DestinationListener {
             lastParent = bindingParent;
             bindingParent = boundValues[i];
          }
-         valid = true;
+         if (validateTo == boundProps.length)
+            valid = true;
          return changed;
       }
       return false;
@@ -556,5 +561,20 @@ public class SelectorBinding extends DestinationListener {
 
    public boolean isReversible() {
       return true;
+   }
+
+   protected Object getBoundValueForChild(IBinding child) {
+      int childCt = 0;
+      for (; childCt < boundProps.length; childCt++) {
+         if (boundProps[childCt] == child)
+            break;
+      }
+
+      if (!valid)
+         validateBinding(dstObj == dstProp ? null : dstObj, childCt);
+
+      if (childCt == 0)
+         return dstObj == dstProp ? null : dstObj;
+      return boundValues[childCt-1];
    }
 }

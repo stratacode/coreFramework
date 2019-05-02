@@ -570,26 +570,7 @@ public class Bind {
          ctx.queueEvent(event, obj, prop, listener, eventDetail); 
          return;
       }
-      ThreadState bindState = (ThreadState) PTypeUtil.getThreadLocal("bindingState");
-      if (bindState == null) {
-         bindState = new ThreadState();
-         PTypeUtil.setThreadLocal("bindingState", bindState);
-      }
-      bindState.nestedLevel++;
-      bindState.obj = obj;
-      bindState.prop = prop;
-      if (bindState.nestedLevel >= RecursionDetectionThreadhold) {
-         if (bindState.recurseFrames == null)
-            bindState.recurseFrames = new ArrayList<BindFrame>();
-         BindFrame bf = new BindFrame();
-         bf.obj = obj;
-         bf.prop = prop;
-         bf.listener = listener;
-         if (bindState.recurseFrames.contains(bf) || bindState.recurseFrames.size() > 100) {
-            throw new BindingLoopException(bindState.recurseFrames);
-         }
-         bindState.recurseFrames.add(bf);
-      }
+      ThreadState bindState = initThreadState(obj, prop, listener);
       // TODO: insert check for nestedLevel > some threshold.  Turn on recursion detection.  When that's on, we add: obj, prop, listener, eventDetail? to a list.  Keep recording until we find a matching list already in the list.  Then gather up the list, format it into a nice error message.
       try {
          switch (event) {
@@ -643,6 +624,29 @@ public class Bind {
    }
 */
 
+   private static ThreadState initThreadState(Object obj, Object prop, IListener listener) {
+      ThreadState bindState = (ThreadState) PTypeUtil.getThreadLocal("bindingState");
+      if (bindState == null) {
+         bindState = new ThreadState();
+         PTypeUtil.setThreadLocal("bindingState", bindState);
+      }
+      bindState.nestedLevel++;
+      bindState.obj = obj;
+      bindState.prop = prop;
+      if (bindState.nestedLevel >= RecursionDetectionThreadhold) {
+         if (bindState.recurseFrames == null)
+            bindState.recurseFrames = new ArrayList<BindFrame>();
+         BindFrame bf = new BindFrame();
+         bf.obj = obj;
+         bf.prop = prop;
+         bf.listener = listener;
+         if (bindState.recurseFrames.contains(bf) || bindState.recurseFrames.size() > 100) {
+            throw new BindingLoopException(bindState.recurseFrames);
+         }
+         bindState.recurseFrames.add(bf);
+      }
+      return bindState;
+   }
 
    public static DestinationListener getBinding(Object dstObj, String dstProp) {
       List<DestinationListener> bindings;
