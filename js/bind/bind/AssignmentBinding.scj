@@ -430,4 +430,12 @@ public class AssignmentBinding extends DestinationListener {
    protected Object getBoundValueForChild(IBinding child) {
       return UNSET_VALUE_SENTINEL;
    }
+
+   protected void initFlagsOnChildren(int flags) {
+      super.initFlagsOnChildren(flags);
+      if (lhsBinding != null)
+         lhsBinding.initFlagsOnChildren(flags);
+      if (rhsBinding instanceof DestinationListener)
+         ((DestinationListener)rhsBinding).initFlagsOnChildren(flags);
+   }
 }

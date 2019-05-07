@@ -1135,6 +1135,11 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          if (sys.options.testMode)
             testMode = true;
 
+         if (sys.options.testDebugMode) {
+            // Increase the timeout for using the debugger
+            ServletSyncDestination.defaultTimeout = 60*60*24*3*1000;
+         }
+
          defaultPageCache = sys.options.defaultPageCache;
 
          if (Element.trace) {

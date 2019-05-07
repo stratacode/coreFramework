@@ -496,4 +496,13 @@ public abstract class AbstractMethodBinding extends DestinationListener {
       }
       return false;
    }
+
+   protected void initFlagsOnChildren(int flags) {
+      super.initFlagsOnChildren(flags);
+      if (boundParams != null) {
+         for (IBinding bp:boundParams)
+            if (bp instanceof DestinationListener)
+               ((DestinationListener) bp).initFlagsOnChildren(flags);
+      }
+   }
 }

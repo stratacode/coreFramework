@@ -518,8 +518,8 @@ js_HTMLElement_c.updateFromDOMElement = js_HTMLElement_c.setDOMElement = functio
          newElement.scObj = this;
       }
       this.domChanged(orig, newElement);
-      this.updateChildDOMs();
    }
+   this.updateChildDOMs();
    this.initState = 1;
 }
 
@@ -700,11 +700,20 @@ js_HTMLElement_c.click = function() {
 }
 
 js_HTMLElement_c.setRepeat = function(r) {
+   var oldR = this.repeat;
+   if (oldR === r)
+      return;
+   if (this.repeatListener && sc_instanceOf(oldR, sc_IChangeable)) {
+      sc_Bind_c.removeListener(oldR, null, this.repeatListener, sc_IListener_c.VALUE_CHANGED);
+   }
    if (r !== null) {
       if (this.repeatListener === undefined) {
          this.repeatListener = new js_RepeatListener(this);
          sc_Bind_c.addListener(this, "repeat", this.repeatListener, sc_IListener_c.VALUE_VALIDATED);
       }
+
+      if (sc_instanceOf(r, sc_IChangeable))
+         sc_Bind_c.addListener(r, null, this.repeatListener, sc_IListener_c.VALUE_CHANGED);
    }
    this.repeat = r;
    if (r !== null && this.repeatTags === undefined) {

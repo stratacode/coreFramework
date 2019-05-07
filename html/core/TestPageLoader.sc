@@ -242,11 +242,13 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
             if (scopeContextName != null) {
                saveCtxName = cmd.scopeContextName;
                cmd.scopeContextName = scopeContextName;
+               cmd.targetScopeName = "window";
             }
             cmd.include(testScriptName);
             if (scopeContextName != null) {
                saveCtxName = saveCtxName;
                cmd.scopeContextName = scopeContextName;
+               cmd.targetScopeName = null;
             }
 
             System.out.println("- Done: " + testScriptName);
@@ -264,6 +266,10 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
             indexSkipped = true;
             continue;
          }
+
+         if (!sys.testPatternMatches(urlPath.name))
+            continue;
+
          // If we are syncing to the client, use the unique id for this URL to choose the name of the
          // 'scope context' (essentially the id of the browser window so we can target the savePage and
          // saveClientConsole methods at the right window).
