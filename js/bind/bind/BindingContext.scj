@@ -188,13 +188,12 @@ public class BindingContext implements IScopeEventListener {
          doDispatch(toExecute);
          any = true;
       }
-
       return any;
    }
 
    /**
     * At this point we have the list of events with the same priority.  We need to figure out which to run first
-    * by looking for any depedencies between the listeners.
+    * by looking for any dependencies between the listeners.
     */
    private void doDispatch(BindingEvent list) {
       BindingEvent outer, inner;
@@ -226,8 +225,18 @@ public class BindingContext implements IScopeEventListener {
       }
       */
 
-      for (outer = list; outer != null; outer = outer.next) {
-         dispatchDependencies(outer);
+      IListener.SyncType oldSyncType = defaultSyncType;
+
+      // Need this to be in immediate mode to send these events
+      defaultSyncType = IListener.SyncType.IMMEDIATE;
+
+      try {
+         for (outer = list; outer != null; outer = outer.next) {
+            dispatchDependencies(outer);
+         }
+      }
+      finally {
+         defaultSyncType = oldSyncType;
       }
    }
 

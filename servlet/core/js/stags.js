@@ -647,6 +647,14 @@ js_HTMLElement_c.getDOMEventListeners = function() {
    return res;
 }
 
+js_HTMLElement_c.click = function() {
+   var evt = new MouseEvent("click");
+   evt.currentTarget = evt.target = this; // TODO: do not appear to be settable?
+   this.clickEvent = evt;
+   evt.currentTag = this;
+   sc_Bind_c.sendChangedEvent(this, "clickEvent", evt);
+}
+
 js_HTMLElement_c.destroy = function() {
    var origElem = this.element;
    this.element = null;
@@ -1188,9 +1196,7 @@ syncMgr = sc_SyncManager_c = {
                var callId = mObj.callId;
                if (mName === "evalScript") {
                   var res = eval(mObj.args[0]);
-                  var retType = res ? res.constructor.name : "null";
-                  syncMgr.pendingChanges.push({t:"methReturn", res:res, callId:callId, retType:retType});
-                  syncMgr.scheduleSync();
+                  syncMgr.addMethReturn(res, callId);
                }
             }
             else {
@@ -1239,6 +1245,24 @@ syncMgr = sc_SyncManager_c = {
                         chElem.selectedIndex = val;
                      else if (prop === "style")
                         chElem.style = val;
+                     else if (prop === "$meth") {
+                        var args = chObj["args"];
+                        var cid = chObj["callId"];
+                        var scElem = chElem.scObj;
+                        if (scElem) {
+                           var f = scElem[val];
+                           if (f) {
+                              var mres = f.apply(scElem, args);
+                              if (!mres)
+                                 mres = null; // cvt undefined to null for 'void' functions
+                              syncMgr.addMethReturn(mres, cid);
+                           }
+                           else {
+                              console.error("No method named: " + mn + " for remote call");
+                           }
+                        }
+                        pix = props.length; // finished this command
+                     }
                      else
                         sc_logError("Unrecognized property in stags sync layer: " + prop);
                   }
@@ -1262,7 +1286,7 @@ syncMgr = sc_SyncManager_c = {
             newSt = newServerTagList[j];
             var id = newSt.id;
             if (!id) {
-               console.log("no id for server tag!")
+               console.log("no id for server tag!");
                continue;
             }
             var oldSt = serverTags[newSt.name];
@@ -1377,6 +1401,11 @@ syncMgr = sc_SyncManager_c = {
    },
    addChange: function(obj, propName, val) {
       syncMgr.pendingChanges.push({o:obj, p:propName, v:val});
+      syncMgr.scheduleSync();
+   },
+   addMethReturn: function(res, callId) {
+      var retType = res ? res.constructor.name : "null";
+      syncMgr.pendingChanges.push({t:"methReturn", res:res, callId:callId, retType:retType});
       syncMgr.scheduleSync();
    },
    scheduleSync: function() {

@@ -79,7 +79,7 @@ if (needsConstructor) {
 <% } else if (hasTypeChanges) { 
 %>var <%= useShortTypeNames ? "_c = " : "" %><%= JSTypeName %>;
 <% } %>
-<%= annotations %><%= propertyMetadata %><%= typeAliases %><% for (JSMethod meth:methods) { %><%= shortJSTypeName%>.<%= meth.name%> = function (<%= meth.argNames %>) <%= meth.needsDispatch ? '/' + "* overloaded *" + '/' : "" %> {<%
+<%= annotations %><%= propertyMetadata %><%= methodMetadata %><%= typeAliases %><% for (JSMethod meth:methods) { %><%= shortJSTypeName%>.<%= meth.name%> = function (<%= meth.argNames %>) <%= meth.needsDispatch ? '/' + "* overloaded *" + '/' : "" %> {<%
       if (meth.getWithArgs) { %>
    if (arguments.length == 0) return;<% } %><%= meth.methodClassInit %><%
       if (!meth.needsDispatch) {

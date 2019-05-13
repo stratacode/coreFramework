@@ -36,7 +36,7 @@ function js_HTMLElement() {
 
 
 js_indexPattern = "/index.html";
-js_Element_c = js_HTMLElement_c = sc_newClass("sc.lang.html.HTMLElement", js_HTMLElement, null, [sc_IChildInit, sc_IStoppable]);
+js_Element_c = js_HTMLElement_c = sc_newClass("sc.lang.html.HTMLElement", js_HTMLElement, null, [sc_IChildInit, sc_IStoppable, sc_INamedChildren, sc_IObjChildren]);
 
 // This is part of the SemanticNode class on the server and so the component code gen uses it even for client code
 // involving component types which extend Element.  Just noop it here.
@@ -121,6 +121,31 @@ js_Element_c.getObjChildren = function(create) {
    if (this.repeatTags != null)
       return this.repeatTags;
    return null;
+}
+
+js_Element_c.getNameForChild = function(obj) {
+    if (this.repeatTags == null)
+       return null;
+    for (var i = 0; i < this.repeatTags.length; i++) {
+       if (this.repeatTags[i] === obj)
+          return sc_CTypeUtil_c.getClassName(sc_DynUtil_c.getTypeName(obj, false)) + "_" + i;
+    }
+    return null;
+}
+
+js_Element_c.getChildForName = function(name) {
+   if (this.repeatTags == null)
+      return null;
+   var uix = name.lastIndexOf('_');
+   if (uix === -1)
+      return null;
+   var uixVal = name.substring(uix+1);
+   if (uixVal.length === 0)
+      return null;
+   var ix = parseInt(uixVal);
+   if (Number.isNaN(ix) || ix < 0 || ix >= this.repeatTags.length)
+      return null;
+   return this.repeatTags[ix];
 }
 
 js_Element_c.escAtt = function(input, s) {
@@ -490,6 +515,7 @@ js_HTMLElement_c.updateDOM = function() {
             childTag.updateDOM();
          }
       }
+      this.initState = 1;
    }
    this.startValid = true;
    this.bodyValid = true;
@@ -694,7 +720,7 @@ js_HTMLElement_c.getDOMEventListeners = function() {
 
 js_HTMLElement_c.click = function() {
    var evt = new MouseEvent("click");
-   evt.currentTarget = evt.target = this;
+   evt.currentTarget = evt.target = this; // TODO: verify that this works. It seems like this properties may not be settable in JS
    this.clickEvent = evt;
    sc_Bind_c.sendEvent(sc_IListener_c.VALUE_CHANGED, this, "clickEvent", evt);
 }
@@ -3096,3 +3122,88 @@ Event.prototype.currentTag = null;
 if (typeof sc_SyncManager_c != "undefined") {
    sc_SyncManager_c.addSyncType(js_Event_c, null, ["type", "currentTag", "timeStamp"], null, sc_clInit(sc_SyncPropOptions_c).SYNC_INIT);
 }
+
+function sc_ServerTagManager() {   
+   this.serverTags = null;
+   this.newServerTags = null;
+   this.removedServerTags = null;
+   this.serverTagTypes = null;
+   jv_Object.call(this);
+}
+
+var sc_ServerTagManager_c = sc_newClass("sc.js.ServerTagManager", sc_ServerTagManager, jv_Object, [sc_IObjectId]);
+
+sc_ServerTagManager_c.setServerTags = function (sts)  {
+   this.serverTags = sts;
+};
+sc_ServerTagManager_c.getServerTags = function ()  {
+   return this.serverTags;
+};
+sc_ServerTagManager_c.setNewServerTags = function (sts)  {
+   this.newServerTags = sts;
+   js_HtmlPage_c.schedRefreshServerTags();
+};
+sc_ServerTagManager_c.getNewServerTags = function ()  {
+   return this.newServerTags;
+};
+sc_ServerTagManager_c.setRemovedServerTags = function (sts)  {
+   this.removedServerTags = sts;
+   js_HtmlPage_c.schedRefreshServerTags();
+};
+sc_ServerTagManager_c.getRemovedServerTags = function ()  {
+   return this.removedServerTags;
+};
+sc_ServerTagManager_c.setServerTagTypes = function (sts)  {
+   this.serverTagTypes = sts;
+};
+sc_ServerTagManager_c.getServerTagTypes = function ()  {
+   return this.serverTagTypes;
+};
+sc_ServerTagManager_c.getObjectId = function ()  {
+   return "sc.js.PageServerTagManager";
+};
+
+function sc_ServerTag() {
+   this.id = null;
+   this.props = null;
+   this.eventSource = false;
+   this.marked = false;
+   jv_Object.call(this);
+}
+
+var sc_ServerTag_c = sc_newClass("sc.js.ServerTag", sc_ServerTag, jv_Object, [sc_IObjectId]);
+
+sc_ServerTag_c.equals = function (other)  {
+   if (this.hasOwnProperty("$protoName")) {
+      return jv_Class_c.equals.apply(this, arguments);
+   }
+   if ((other instanceof sc_ServerTag)) {
+      var ot = (other);
+      if (!this.id.equals(ot.id))
+         return false;
+      if (this === ot)
+         return true;
+      if (this.props !== ot.props && (this.props === null || ot.props === null))
+         return false;
+      if (this.eventSource !== ot.eventSource)
+         return false;
+      return true;
+   }
+   return false;
+};
+sc_ServerTag_c.toString = function ()  {
+   if (this.hasOwnProperty("$protoName")) {
+      return jv_Class_c.toString.apply(this, arguments);
+   }
+   return "id=" + this.id + "(" + this.props + ")";
+};
+sc_ServerTag_c.hashCode = function ()  {
+   if (this.hasOwnProperty("$protoName")) {
+      return jv_Class_c.hashCode.apply(this, arguments);
+   }
+   return this.id.hashCode();
+};
+sc_ServerTag_c.getObjectId = function ()  {
+   return "sc.js.st_" + this.id;
+};
+

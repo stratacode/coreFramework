@@ -464,6 +464,28 @@ sc_DynUtil_c.createInnerInstance = function(newClass, outer, paramSig, paramValu
 
 sc_DynUtil_c.newInnerInstance = function(type, outer, constrSig, params) {
    params = sc_vararg(arguments, 3);
+   var mm = type._MM;
+   // If there's metadata, may need to convert the constructor parameters
+   if (mm) {
+      var initM = mm["<init>"];
+      if (initM) {
+         for (var ix = 0; ix < initM.length; ix++) { 
+            var pt = initM[ix];
+            if (pt.length === params.length) {
+               for (var px = 0; px < pt.length; px++) {
+                  var c = pt.charAt(px);
+                  if (c === '.')
+                     continue;
+                  if (c === '[') { // expecting an array here
+                     var p = params[px];
+                     if (sc_instanceOf(p, jv_Collection)) // we deserialize as a list so do the conversion here
+                        params[px] = p.toArray();
+                  }
+               }
+            }
+         }
+      }
+   }
    if (!sc_DynUtil_c.isComponentType(type)) {
       return sc_DynUtil_c.createInnerInstance(type, outer, constrSig, params);
    }
@@ -655,9 +677,9 @@ sc_DynUtil_c.findType = function(name) {
       sc_clInit(res);
       return res.prototype;
    }
-   if (name == "int" || name == "float" || name == "double" || name == "long")
+   if (name === "int" || name === "float" || name === "double" || name === "long")
       return Number_c;
-   if (name == "java.lang.String")
+   if (name === "java.lang.String")
       return String_c;
    return null;
 }
@@ -666,7 +688,7 @@ sc_DynUtil_c.findType = function(name) {
 sc_DynUtil_c.resolveName = function(name, create, returnTypes) {
    // Here we get the last type for 'name' since inner classes are not properties
    var rootName = sc_DynUtil_c.getRootTypeName(name, true);
-   if (rootName != null && name != rootName) {
+   if (rootName != null && name !== rootName) {
       var tailName = name.substring(rootName.length + 1);
       var root = sc_DynUtil_c.resolveName(rootName, create, true);
       if (root == null)
@@ -675,13 +697,20 @@ sc_DynUtil_c.resolveName = function(name, create, returnTypes) {
       var cur = root;
       do {
          var propName = sc_CTypeUtil_c.getHeadType(tailName);
-         var tailName = sc_CTypeUtil_c.getTailType(tailName);
+         tailName = sc_CTypeUtil_c.getTailType(tailName);
          if (propName == null) {
             propName = tailName;
             tailName = null;
          }
          sc_clInit(cur);
-         var next = sc_DynUtil_c.getPropertyValue(cur, propName, true); // Returns null if not there with this third arg - does not throw
+         var next = null; 
+         if (sc_instanceOf(cur, sc_INamedChildren)) {
+            var nameNext = cur.getChildForName(propName);
+            if (nameNext != null)
+               next = nameNext;
+         }
+         if (!next)
+            next = sc_DynUtil_c.getPropertyValue(cur, propName, true); // Returns null if not there with this third arg - does not throw
          if (next == null) {
             cur = null;
             break; // Still need to see if this is perhaps a class name.
@@ -741,6 +770,11 @@ sc_DynUtil_c.getObjectName = function(obj) {
             return objTypeName;
          if (sc_instanceOf(obj, sc_IObjectId))
             return sc_DynUtil_c.getInstanceId(obj);
+         if (sc_instanceOf(outer, sc_INamedChildren)) {
+            var childName = outer.getNamedForChild(obj);
+            if (childName)
+               return outerName + '.' + childName;
+         }
          return sc_DynUtil_c.getObjectId(obj, null, objTypeName);
       }
    }
@@ -809,8 +843,10 @@ sc_DynUtil_c.isComponentType = function(type) {
 }
 
 function sc_IObjChildren() {}
-
 sc_IObjChildren_c = sc_newClass("sc.dyn.IObjChildren", sc_IObjChildren, null, null);
+
+function sc_INamedChildren() {}
+sc_INamedChildren_c = sc_newClass("sc.dyn.INamedChildren", sc_INamedChildren, null, null);
 
 function sc_IStoppable() {}
 sc_IStoppable_c = sc_newClass("sc.obj.IStoppable", sc_IStoppable, null, null);

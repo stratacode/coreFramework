@@ -160,16 +160,16 @@ function sc_isAssignableFrom(srcClass, dstClass) {
    if (srcClass === dstClass)
       return true;
    do {
-      if (srcClass.$typeName == dstClass.$typeName) {
+      if (srcClass.$typeName === dstClass.$typeName) {
          return true;
       }
-      var impl = dstClass.$implements;
-      if (impl) {
-	  for (var i=0; i < impl.length; i++) {
-              var impl = impl[i];
-              if (sc_isAssignableFrom(srcClass, impl))
-		  return true;
-          }
+      var impls = dstClass.$implements;
+      if (impls) {
+         for (var i=0; i < impls.length; i++) {
+            var impl = impls[i];
+            if (sc_isAssignableFrom(srcClass, impl))
+               return true;
+         }
       }
       dstClass = dstClass.$extendsClass; 
    } while (dstClass);
