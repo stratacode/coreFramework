@@ -81,7 +81,7 @@ object ClientSyncDestination extends SyncDestination {
    }
 
    // Apply changes from the server, either by evaluating JS or use the super method which uses the deserializer to apply it
-   public void applySyncLayer(String toApply, String receiveLanguage, boolean isReset, String detail) {
+   public boolean applySyncLayer(String toApply, String receiveLanguage, boolean isReset, String detail) {
       if (receiveLanguage == null && toApply != null && !toApply.startsWith("sync:"))
          receiveLanguage = "js";
       if (SyncManager.trace) {
@@ -95,9 +95,14 @@ object ClientSyncDestination extends SyncDestination {
          if (SyncManager.trace) {
             System.out.println("Eval complete");
          }
+         if (toApply != null && toApply.length() > 0) {
+            SyncManager.callAfterApplySync();
+            return true;
+         }
+         return false;
       }
       else {
-         super.applySyncLayer(toApply, receiveLanguage, isReset, detail);
+         return super.applySyncLayer(toApply, receiveLanguage, isReset, detail);
       }
    }
 
@@ -110,6 +115,12 @@ object ClientSyncDestination extends SyncDestination {
       syncManager.addFrameworkNameContext(new sc.dyn.INameContext() {
          public Object resolveName(String name, boolean create, boolean returnTypes) {
             return Element.updateServerTag(null, name, null, false);
+         }
+      });
+
+      syncManager.addFrameworkListener(new sc.sync.IFrameworkListener() {
+         public void afterApplySync() {
+            Element.scheduleRefresh();
          }
       });
    }

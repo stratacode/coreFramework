@@ -81,7 +81,10 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
          if (clientSync) {
             System.out.println("Opening headless sync url: " + url);
 
-            processRes = cmd.execAsync('"' + chromeCmd + '"' + " -headless --auto-open-devtools-for-tabs --disable-gpu --repl --user-profile=/tmp/chrome-test-profile-dir " + url + " > /tmp/chromeHeadless.out");
+            // To debug problems that only show up in headless mode, add --remote-debugging-port=9222 and then navigate to localhost:9222 in another browser instance. You'll see
+            // see a thumbnail window of the output and the console errors there in the attached session.  Also --enable-logging --v=1 might be helpful for chrome's internal log.
+            // TODO: to access the js console from headless without using 'sync' (i.e. if there's an RTE initializing the app) we should use the devtools protocol
+            processRes = cmd.execAsync('"' + chromeCmd + '"' + " --remote-debugging-port=9222 --headless --auto-open-devtools-for-tabs --disable-gpu --user-profile=/tmp/chrome-test-profile-dir " + url + " > /tmp/chromeHeadless.out");
          }
          // client only hopefully we can just rely on chrome to save the dom with --dump-dom
          else {

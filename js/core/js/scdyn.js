@@ -1230,8 +1230,10 @@ sc_DynUtil_c.updateInstances = function(typeName) {
 }
 
 sc_DynUtil_c.applySyncLayer = function(lang, dest, scope, layerDef, isReset, allowCodeEval, bindCtx) {
-   if (lang.equals("js") && allowCodeEval)
+   if (lang.equals("js") && allowCodeEval) {
       sc_DynUtil_c.evalScript(layerDef);
+      return layerDef.length > 0;
+   }
    else
       throw new IllegalArgumentException("Error - unable to apply sync layer for lang: " + lang);
 }

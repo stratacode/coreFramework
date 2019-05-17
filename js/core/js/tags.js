@@ -93,6 +93,8 @@ js_Element_c._updateInst = function() {
 js_Element_c.refreshCount = 0;
 js_Element_c.refreshTags = function() {
    try {
+      sc_checkRefresh();
+
       var toRefresh = js_Element_c.tagsToRefresh;
       js_Element_c.tagsToRefresh = [];
       // TODO: could optimize this by sorting or removing child nodes whose parents are in the refresh list.  If we do refresh a higher level item before a lower level one, the child validate call at least should not happpen since we validate it already.
@@ -446,10 +448,28 @@ var sc$rootTags = new Object();
 var sc$rootTagsArray = [];
 
 function sc_refresh() {
+   if (!js_Element_c.needsRefresh) {
+      js_Element_c.needsRefresh = true;
+      if (!js_Element_c.globalRefreshScheduled && !js_Element_c.anyRefreshScheduled) {
+         if (js_Element_c.verbose)
+            console.log("Scheduling non-page based refresh");
+         setTimeout(sc_checkRefresh, 1);
+      }
+      else if (js_Element_c.verbose)
+         console.log("Needs refreshBindings");
+   }
+}
+
+function sc_checkRefresh() {
+   if (!js_Element_c.needsRefresh)
+      return;
+   js_Element_c.needsRefresh = false;
    if (sc$rootTagsArray.length === 0) {
-      if (typeof sc_SyncManager_c != "undefined") {
+      if (typeof sc_SyncManager_c !== "undefined") {
          var serverTagMgr = sc_SyncManager_c.getSyncInst("sc.js.PageServerTagManager");
          if (serverTagMgr) { // If there are server tags and no top-level page object - it's entirely a server tag page object.   Create a pageObj stub to refresh the server tags.
+            if (js_Element_c.verbose)
+               console.log("Initializing server tags only page");
             var pageObj = new js_HtmlPage();
             pageObj.serverContent = true;
             pageObj.refreshServerTags();
@@ -460,6 +480,8 @@ function sc_refresh() {
    for (var i = 0; i < sc$rootTagsArray.length; i++) {
       var rootTag = sc$rootTagsArray[i];
       if (rootTag.refreshBindings) { // When bindings in a tag need to be manually refreshed, you can set 'refreshBindings=true' on the root tag and we'll refresh all bindings on the page
+         if (js_Element_c.verbose)
+            console.log("Refresh bindings for page: " + rootTag.$protoName);
          sc_Bind_c.refreshBindings(rootTag);
       }
    }
@@ -1272,7 +1294,7 @@ js_HTMLElement_c.makeRoot = function() {
          sc_log("New root tag element: " + this.$protoName);
    }
    else
-      console.log("Making second root tag");
+      console.log("Warning: second root tag: " + this.$protoName);
 }
 
 js_HTMLElement_c.refreshBodyContent = function(sb) {
@@ -2271,6 +2293,10 @@ js_HtmlPage_c.refresh = js_Page_c.refresh = function() {
    // Do this right before we refresh.  That delays them till after the script code in the page
    // has been loaded so all of the dependencies are satisfied.
    sc_runRunLaterMethods();
+
+   sc_checkRefresh();
+
+   sc_runRunLaterMethods();
    // TODO: should we be refreshing only the body tag, not the head and HTML?
    /*
    if (this.body != null)
@@ -2447,6 +2473,10 @@ js_Element_c.updateServerTag = function(tagObj, id, serverTag, addSync) {
       }
    }
    return tagObj;
+}
+
+js_Element_c.scheduleRefresh = function() {
+   sc_refresh();
 }
 
 // For readability in the logs, flexibility in code-gen and efficiency in rendering we send the start tag txt all at once so

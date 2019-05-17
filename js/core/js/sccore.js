@@ -327,8 +327,9 @@ function sc_cancelScheduledJob(h, repeat) {
 
 function sc_addLoadMethodListener(thisObj, method) {
    if (document.readyState === "complete" ) {
-      sc_setMethodTimer(thisObj, method, 1);
-   } 
+      console.log("readyState already at complete for addLoadMethodListener");
+      sc_addScheduledJob(thisObj, method, 1);
+   }
    else if (document.addEventListener) {
       window.addEventListener("load", sc_methodCallback(thisObj, method), false);
    } 
