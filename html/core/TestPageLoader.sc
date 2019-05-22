@@ -7,6 +7,8 @@ import sc.obj.CurrentScopeContext;
 import sc.obj.ScopeContext;
 import sc.obj.AppGlobalScopeDefinition;
 import java.io.File;
+import java.util.Map;
+import java.util.TreeMap;
 import sc.dyn.DynUtil;
 import sc.lang.AbstractInterpreter;
 import sc.layer.LayeredSystem;
@@ -32,10 +34,20 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
    public boolean loadAllPages = true;
    public boolean recordClientOutput = true;
 
+   Map<String,Integer> savePageIndex = new TreeMap<String,Integer>();
+
    // Processes started by the test page loader for browser instances
    List<AsyncProcessHandle> processes = new ArrayList<AsyncProcessHandle>();
 
+   // If true, open the chrome with --headless
    public boolean headless;
+   /**
+    * When clientSync is true, we use RPC to talk to the browser process
+    * as part of testing - to fetch page contents, and logs. This is the case for
+    * serverTags or client/server mode when sync is enabled.
+    * When it's false, we get the page output from chrome command using a command line option but
+    * currently do not run page tests.
+    */
    public boolean clientSync;
 
    public boolean skipIndexPage = true;
@@ -62,12 +74,6 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
       System.out.println("- Server started");
 
       LayeredSystem jsPeer = sys.getPeerLayeredSystem("js");
-      // When clientSync is true, we use RPC to talk to the browser process
-      // as part of testing - to fetch page contents, and logs.  
-      // When it's false, we can still get the page output from chrome
-      // command.  This false case happens for either 'client only' mode
-      // or client/server mode where sync is not enabled.  Server tags supports
-      // the RPC commands we use in testing here.
       // TODO: maybe we should enable server tag sync using a new html.sync
       // layer and that would simplify this logic and add the ability to
       // use server tags without sync.
@@ -133,10 +139,14 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
       return null;
    }
 
-   public void savePage(String name, int ix, String pageContents) {
+   public void savePage(String name, String pageContents) {
       URLPath urlPath = findUrlPath(name);
       if (urlPath != null) {
+         Integer ix = savePageIndex.get(name);
+         if (ix == null)
+            ix = 1;
          saveURL(urlPath, getPageResultsFile(urlPath, "." + ix), pageContents);
+         savePageIndex.put(name, ix+1);
       }
       else
          throw new IllegalArgumentException("TestPageLoader.savePage - " + name + " not found");
@@ -233,7 +243,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
       }
    }
 
-   void runPageTest(URLPath urlPath, String scopeContextName) {
+   boolean runPageTest(URLPath urlPath, String scopeContextName) {
       String typeName = sc.type.CTypeUtil.capitalizePropertyName(urlPath.name);
       String testScriptName = "test" + typeName + ".scr";
       if (cmd.exists(testScriptName)) {
@@ -255,8 +265,10 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
             }
 
             System.out.println("- Done: " + testScriptName);
+            return true;
          }
-      }
+     }
+     return false;
    }
 
    public void loadAllPages() {
@@ -284,9 +296,13 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
          }
 
          try {
-            runPageTest(urlPath, scopeContextName);
+            boolean ranPageTest = runPageTest(urlPath, scopeContextName);
 
             saveClientConsole(urlPath, scopeContextName);
+
+            // Save the page after it's run a page test. Otherwise, it's the same thing and not worth the effort
+            if (clientSync && ranPageTest)
+               savePage(urlPath.name, getClientBodyHTML(scopeContextName));
          }
          finally {
             endSession(processRes.processHandle);
