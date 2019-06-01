@@ -16,7 +16,6 @@ class BodyTypeDeclaration extends Definition {
       return typeName;
    }
 
-
    private String fullTypeName;
    @Constant
    public void setFullTypeName(String ftn) {
@@ -55,6 +54,25 @@ class BodyTypeDeclaration extends Definition {
    public void setDeclaredProperties(List<Object> ap) {
       declaredProperties = ap;
       markChanged();
+   }
+
+   private String constructorParamNames;
+   @Constant
+   public String getConstructorParamNames() {
+      return constructorParamNames;
+   }
+   public void setConstructorParamNames(String cpn) {
+      constructorParamNames = cpn;
+      markChanged();
+   }
+
+   private AbstractMethodDefinition editorCreateMethod;
+   @Constant
+   public AbstractMethodDefinition getEditorCreateMethod() {
+      return editorCreateMethod;
+   }
+   public void setEditorCreateMethod(AbstractMethodDefinition meth) {
+      editorCreateMethod = meth;
    }
 
    private String packageName;

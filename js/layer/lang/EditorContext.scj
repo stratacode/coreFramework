@@ -14,7 +14,7 @@ public class EditorContext extends ClientEditorContext {
    Layer currentLayer;
    Object currentType;
 
-   public List<InstanceWrapper> getInstancesOfType(Object type, int max, boolean addNull) {
+   public List<InstanceWrapper> getInstancesOfType(Object type, int max, boolean addNull, String nullLabelName, boolean selectToCreate) {
       ArrayList<InstanceWrapper> ret = new ArrayList<InstanceWrapper>();
       if (type == null)
          return ret;
@@ -27,7 +27,7 @@ public class EditorContext extends ClientEditorContext {
       int i = 0;
       // Add a null entry at the front to represent the <type> selection
       if (addNull)
-         ret.add(new InstanceWrapper(this, null, typeName));
+         ret.add(new InstanceWrapper(this, null, typeName, nullLabelName, selectToCreate));
 
       // TODO: need a way to test for jv_Enum and then get the instance
       //if (ModelUtil.isEnum(type)) {
@@ -40,7 +40,7 @@ public class EditorContext extends ClientEditorContext {
       int sz = insts.length;
       for (i = 0; i < max && i < sz; i++) { 
          Object inst = insts[i];
-         ret.add(new InstanceWrapper(this, inst, typeName));
+         ret.add(new InstanceWrapper(this, inst, typeName, null, false));
       }
 
       return ret;

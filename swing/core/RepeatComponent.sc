@@ -149,8 +149,6 @@ public abstract class RepeatComponent<T> implements IChildContainer, sc.dyn.IObj
                      }
                      // The current guy is in the list but later on
                      else {
-                        if (curIx >= components.size())
-                           System.out.println("***");
                         T elemToMove = components.remove(curIx);
                         // Try to delete our way to the old guy so this stays incremental.  But at this point we also delete all the way to the old guy so the move is as short as possible (and to batch the removes in case this ever is used with transitions)
                         int delIx;

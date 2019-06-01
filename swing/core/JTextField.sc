@@ -5,6 +5,7 @@ import java.awt.event.FocusListener;
 import java.awt.event.FocusEvent;
 
 import sc.bind.Bind;
+import sc.util.StringUtil;
 
 @Component
 public class JTextField extends javax.swing.JTextField implements TextComponentStyle {
@@ -32,6 +33,12 @@ public class JTextField extends javax.swing.JTextField implements TextComponentS
    @Bindable
    public int userEnteredCount = 0;
 
+   @Bindable
+   public boolean uncommittedChanges = false;
+
+   @Bindable
+   public boolean commitOnFocusLoss = false;
+
    /** 
     * Bi-directional bindings do not like intermediate events.  Swing sends
     * a remove and an insert event for the setText call.  This sets up a race
@@ -43,6 +50,7 @@ public class JTextField extends javax.swing.JTextField implements TextComponentS
    public void setText(String t) {
       try {
          suppressEvents = true;
+         uncommittedChanges = StringUtil.equalStrings(t, enteredText);
          super.setText(t);
       }
       finally {
@@ -79,6 +87,7 @@ public class JTextField extends javax.swing.JTextField implements TextComponentS
    public void fireUserChange() {
       enteredText = text;
       userEnteredCount++;
+      uncommittedChanges = false;
    }
 
    {
@@ -89,6 +98,8 @@ public class JTextField extends javax.swing.JTextField implements TextComponentS
 
          public void focusLost(FocusEvent e) {
             focus = false;
+            if (uncommittedChanges && commitOnFocusLoss)
+               fireUserChange();
          }
       });
    }

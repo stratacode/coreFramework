@@ -12,9 +12,12 @@ public class InstanceWrapper implements sc.obj.IObjectId {
    @Sync(syncMode=SyncMode.Disabled)
    Object theInstance;
    @Sync(syncMode=SyncMode.Disabled)
-   boolean canCreate = false;
+   boolean selectToCreate = false;
    @Sync(syncMode=SyncMode.Disabled)
    String typeName;
+
+   @Sync(syncMode=SyncMode.Disabled)
+   String labelName;
 /*
    public InstanceWrapper(EditorContext ctx, boolean canCreate, String typeName) {
       this.typeName = typeName;
@@ -23,25 +26,29 @@ public class InstanceWrapper implements sc.obj.IObjectId {
    }
 */
 
-   public InstanceWrapper(EditorContext ctx, Object inst, String typeName) {
+   public InstanceWrapper(EditorContext ctx, Object inst, String typeName, String labelName, boolean selectToCreate) {
       this.theInstance = inst;
       this.ctx = ctx;
       this.typeName = typeName;
+      this.labelName = labelName;
+      this.selectToCreate = selectToCreate;
    }
 
    public Object getInstance() {
       if (theInstance != null)
          return theInstance;
 
-      if (canCreate)
+      if (selectToCreate)
          return theInstance = DynUtil.resolveName(typeName, true);
 
       return null;
    }
 
    public String toString() {
+      if (labelName != null)
+         return labelName;
       if (theInstance == null)
-         return typeName != null ? (canCreate ? "<select to create>" : "<type>") : "<type>";
+         return typeName != null ? (selectToCreate ? "<select to create>" : "<type>") : "<type>";
       return DynUtil.getInstanceName(theInstance);
    }
 
@@ -56,7 +63,11 @@ public class InstanceWrapper implements sc.obj.IObjectId {
    }
 
    public int hashCode() {
-      if (theInstance == null) return 0;
+      if (theInstance == null) {
+         if (typeName != null)
+            return typeName.hashCode();
+         return 0;
+      }
       return theInstance.hashCode();
    }
 

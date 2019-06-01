@@ -24,6 +24,7 @@ public class JComboBox extends javax.swing.JComboBox implements ComponentStyle {
             // The setSelectedIndex -> setSelectedItem call is used both programmatically and by the UI so we need some way to
             // differentiate... probably need keyboard context here as well?
             if (inSelectedIndex) {
+               userSelectedItem = selectedItem;
                SwingUtil.sendDelayedEvent(sc.bind.IListener.VALUE_CHANGED, JComboBox.this, userSelectedItemProperty);
             }
          }
@@ -44,7 +45,7 @@ public class JComboBox extends javax.swing.JComboBox implements ComponentStyle {
    override @Bindable preferredSize;
    override @Bindable location;
 
-   public @Bindable(manual=true) Object userSelectedItem := selectedItem;
+   public @Bindable(manual=true) Object userSelectedItem;
 
    @Bindable(manual=true)
    public void setSelectedItem(Object item) {

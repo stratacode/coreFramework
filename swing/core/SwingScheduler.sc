@@ -27,9 +27,12 @@ public class SwingScheduler implements sc.dyn.IScheduler {
 
       synchronized(invokeNextLock) {
          ScheduledJob.addToJobList(toInvokeNext, sj);
-         if (EventQueue.isDispatchThread())
-            execLaterJobs(IScheduler.NO_MIN, IScheduler.NO_MAX);
-         else if (!runScheduled) {
+         // Used to only schedule a job when not on the event thread. but often we use invokeLater to stage something
+         // to run after all of the bindings have fired. In that case, this runs the job too early (and may run tasks
+         // more often than necessary)
+         //if (EventQueue.isDispatchThread())
+         //   execLaterJobs(IScheduler.NO_MIN, IScheduler.NO_MAX);
+         if (!runScheduled) {
             runScheduled = true;
             SwingUtilities.invokeLater(new Runnable() {
                public void run() {
