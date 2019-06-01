@@ -23,10 +23,10 @@ public interface IListener {
    static final int VALUE_CHANGED_MASK = VALUE_CHANGED | ARRAY_ELEMENT_CHANGED;
 
    /** Stored internally to mark the case where we were not able to evaluate a given value */
-   static String UNSET_VALUE_SENTINEL = "<unset>";
+   static StringBuilder UNSET_VALUE_SENTINEL = new StringBuilder("<unset>");
 
    /** Stored to mark the case where we've invoked an asynchronous call to retrieve the value.  We don't fire the binding but mark it pending, to fire when the response comes in. */
-   static String PENDING_VALUE_SENTINEL = "<pending>";
+   static StringBuilder PENDING_VALUE_SENTINEL = new StringBuilder("<pending>");
 
    void valueRequested(Object obj, Object prop);
    /**
