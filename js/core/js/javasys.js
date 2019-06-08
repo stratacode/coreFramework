@@ -136,9 +136,9 @@ String.prototype.compareTo = function(other) {
    var len2 = other.length;
    var num = Math.min(len1, len2);
    for (var i = 0; i < num; i++) {
-      var c1 = this.charAt(i);
-      var c2 = other.charAt(i);
-      if (c1 != c2)
+      var c1 = this.charCodeAt(i);
+      var c2 = other.charCodeAt(i);
+      if (c1 !== c2)
          return c1 - c2;
    }
    return len1 - len2;
