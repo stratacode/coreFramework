@@ -50,12 +50,11 @@ public class JTextField extends javax.swing.JTextField implements TextComponentS
    public void setText(String t) {
       try {
          suppressEvents = true;
-         uncommittedChanges = StringUtil.equalStrings(t, enteredText);
          super.setText(t);
       }
       finally {
          suppressEvents = false;
-         SwingUtil.sendDelayedEvent(sc.bind.IListener.VALUE_CHANGED, this, textProperty);
+         fireTextChanged();
       }
    }
 
@@ -64,13 +63,11 @@ public class JTextField extends javax.swing.JTextField implements TextComponentS
       getDocument().addDocumentListener(new DocumentListener() {
          public void insertUpdate(DocumentEvent e) {
             SwingUtil.updateUserAction();
-            if (!suppressEvents)
-               SwingUtil.sendDelayedEvent(sc.bind.IListener.VALUE_CHANGED, JTextField.this, textProperty);
+            fireTextChanged();
          }
          public void removeUpdate(DocumentEvent e) {
             SwingUtil.updateUserAction();
-            if (!suppressEvents)
-               SwingUtil.sendDelayedEvent(sc.bind.IListener.VALUE_CHANGED, JTextField.this, textProperty);
+            fireTextChanged();
          }
          public void changedUpdate(DocumentEvent e) {}
       });
@@ -82,6 +79,17 @@ public class JTextField extends javax.swing.JTextField implements TextComponentS
             fireUserChange();
          }
       });
+   }
+
+   private void fireTextChanged() {
+      if (!suppressEvents) {
+         SwingUtil.sendDelayedEvent(sc.bind.IListener.VALUE_CHANGED, JTextField.this, textProperty);
+         onTextChanged();
+      }
+   }
+
+   private void onTextChanged() {
+      uncommittedChanges = !StringUtil.equalStrings(text, enteredText);
    }
 
    public void fireUserChange() {
