@@ -15,6 +15,7 @@ public class SCCompletionProvider extends CompletionProviderBase {
       ExistingLayer,
       EntireFile,
       ApplicationType,
+      CreateInstanceType,
       Default
    }
 
@@ -62,6 +63,10 @@ public class SCCompletionProvider extends CompletionProviderBase {
                }
                else if (completionType == CompletionTypes.ApplicationType) {
                   relPos = ctx.completeType(text, candidates);
+                  lastText = text;
+               }
+               else if (completionType == CompletionTypes.CreateInstanceType) {
+                  relPos = ctx.completeCreateInstanceType(text, candidates);
                   lastText = text;
                }
                else {
