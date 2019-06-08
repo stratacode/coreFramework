@@ -257,4 +257,8 @@ public class ModelUtil {
          return srcRes;
       return type;
    }
+
+   public static boolean sameTypes(Object t1, Object t2) {
+      return DynUtil.getTypeName(t1, false).equals(DynUtil.getTypeName(t2, false));
+   }
 }

@@ -14,6 +14,8 @@ import sc.obj.Constant;
 import sc.obj.Sync;
 import sc.obj.SyncMode;
 
+import sc.type.CTypeUtil;
+
 /** This is the part of the editor context we share on the client. It's a workaround for the fact that we don't depend on the modify operator to build SC (so the IDE can build it directly) */
 @Sync(onDemand=true)
 public class ClientEditorContext {
@@ -35,6 +37,8 @@ public class ClientEditorContext {
 
    HashMap<SrcEntry,MemoryEditSession> memSessions = new HashMap<SrcEntry, MemoryEditSession>();
 
+   private List<String> createInstTypeNames;
+
    private boolean memorySessionChanged = false;
    @Sync(syncMode=SyncMode.Disabled)
    @Bindable(manual=true)
@@ -47,4 +51,24 @@ public class ClientEditorContext {
       Bind.sendChangedEvent(this, "memorySessionChanged");
    }
 
+   @Bindable(manual=true)
+   public List<String> getCreateInstTypeNames() {
+      return createInstTypeNames;
+   }
+
+   public void setCreateInstTypeNames(List<String> nl) {
+      createInstTypeNames = nl;
+      Bind.sendChangedEvent(this, "createInstTypeNames");
+   }
+
+   public boolean isCreateInstType(String typeName) {
+      return createInstTypeNames != null && createInstTypeNames.contains(typeName);
+   }
+
+   public String getCreateInstFullTypeName(String typeName) {
+      for (String tn:createInstTypeNames)
+         if (CTypeUtil.getClassName(tn).equals(typeName))
+            return tn;
+      return null;
+   }
 }

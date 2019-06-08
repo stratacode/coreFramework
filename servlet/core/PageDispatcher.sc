@@ -906,7 +906,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          if (trace || Element.trace) {
             sb.append("   js_Element_c.trace = true;\n");
          }
-         if (verbose || Element.verbose) {
+         if (Element.verbose) {
             sb.append("   js_Element_c.verbose = true;\n");
          }
          sb.append("</script>");

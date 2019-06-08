@@ -4,6 +4,7 @@ import sc.dyn.DynUtil;
 import sc.type.CTypeUtil;
 import sc.obj.Sync;
 import sc.obj.SyncMode;
+import java.util.Map;
 
 @Sync(onDemand=true)
 public class InstanceWrapper implements sc.obj.IObjectId {
@@ -15,6 +16,12 @@ public class InstanceWrapper implements sc.obj.IObjectId {
    boolean selectToCreate = false;
    @Sync(syncMode=SyncMode.Disabled)
    String typeName;
+   
+   @Sync(syncMode=SyncMode.Disabled)
+   public boolean pendingCreate = false;
+
+   @Sync(syncMode=SyncMode.Disabled)
+   public Map<String,Object> pendingValues = null;
 
    @Sync(syncMode=SyncMode.Disabled)
    String labelName;
