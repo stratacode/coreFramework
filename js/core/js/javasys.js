@@ -186,7 +186,7 @@ var jv_Byte_c = sc_newClass("java.lang.Byte", jv_Byte, null, null);
 
 Error.prototype.printStackTrace = function() {
   if (this.stack)
-     console.log(this.stack);
+     sc_log(this.stack);
 }
 
 function jv_System() {
