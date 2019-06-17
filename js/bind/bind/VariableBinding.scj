@@ -329,10 +329,14 @@ public class VariableBinding extends DestinationListener {
                // a method binding needs to be re-evaluated.
                if (changed)
                   Bind.parentBindingChanged(boundProps[i]);
+               // If we have changed our value, we have not updated the bindingParent yet so getting the property value here would just
+               // mark it was valid again with the old stale value.
                else {
                   Object newValue = getBoundProperty(bindingParent, i);
 
-                  if (!equalValues(i, newValue)) {
+                  // Using sameValues here, not equalValues because if an IChangeable instance has changed we need to re-register the listeners
+                  // in valueValidated.
+                  if (!sameValues(i, newValue)) {
                      changed = true;
                   }
                }
@@ -481,6 +485,11 @@ public class VariableBinding extends DestinationListener {
       else {
          invalidateBinding(null, false, false);
       }
+   }
+
+   protected boolean sameValues(int index, Object newValue) {
+      Object oldValue = boundValues[index];
+      return newValue == oldValue || (!(oldValue instanceof IChangeable) && DynUtil.equalObjects(oldValue, newValue));
    }
 
    protected boolean equalValues(int index, Object newValue) {

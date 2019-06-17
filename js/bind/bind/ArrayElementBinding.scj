@@ -146,6 +146,14 @@ public class ArrayElementBinding extends VariableBinding {
       return false;
    }
 
+   // Just like equalValues but compares for == not equals so we detect changes when an IChangeable
+   // instance changes but the equals does not change.
+   protected boolean sameValues(int index, Object newValue) {
+      if (index != boundProps.length-1)
+         return super.sameValues(index, newValue);
+      return false;
+   }
+
    /** For the array element changed case, only trigger a firing if the array element matches.  Optimizing 1D only now */
    public boolean arrayElementInvalidated(Object srcObject, Object srcProp, Object dims, boolean apply) {
       int last = boundProps.length - 1;

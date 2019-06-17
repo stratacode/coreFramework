@@ -128,12 +128,16 @@ public abstract class AbstractMethodBinding extends DestinationListener {
             newValue = ((IBinding) dstObj).getPropertyValue(dstObj);
          else
             newValue = PBindUtil.getPropertyValue(dstObj, dstProp);
-         if (!equalObjects(newValue, boundValue)) {
+
+         boolean isChangeable = boundValue instanceof IChangeable;
+         if (!equalObjects(newValue, boundValue) || isChangeable) {
             if (useReverseListener()) {
-               if (boundValue instanceof IChangeable)
-                  Bind.removeListener(boundValue, null, this, VALUE_CHANGED_MASK);
-               if (newValue instanceof IChangeable)
-                  Bind.addListener(newValue, null, this, VALUE_CHANGED_MASK);
+               if (newValue != boundValue) {
+                  if (isChangeable)
+                     Bind.removeListener(boundValue, null, this, VALUE_CHANGED_MASK);
+                  if (newValue instanceof IChangeable)
+                     Bind.addListener(newValue, null, this, VALUE_CHANGED_MASK);
+               }
             }
             boundValue = newValue;
          }
