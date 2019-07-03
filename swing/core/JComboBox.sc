@@ -23,7 +23,7 @@ public class JComboBox extends javax.swing.JComboBox implements ComponentStyle {
             }
             // The setSelectedIndex -> setSelectedItem call is used both programmatically and by the UI so we need some way to
             // differentiate... probably need keyboard context here as well?
-            if (inSelectedIndex) {
+            if (userSelectedIndex) {
                userSelectedItem = selectedItem;
                SwingUtil.sendDelayedEvent(sc.bind.IListener.VALUE_CHANGED, JComboBox.this, userSelectedItemProperty);
             }
@@ -38,7 +38,8 @@ public class JComboBox extends javax.swing.JComboBox implements ComponentStyle {
    private boolean _inited;
 
    private boolean inSet = false;
-   private boolean inSelectedIndex = false;
+   private boolean notUserSet = false;
+   private boolean userSelectedIndex = false;
 
    private Integer pendingSelectedIndex = null;
 
@@ -77,9 +78,9 @@ public class JComboBox extends javax.swing.JComboBox implements ComponentStyle {
             i++;
          }
          if (newSelIx != -1)
-           selectedIndex = newSelIx;
+           setSelectedIndexNotUser(newSelIx);
          else if (selectedIndex >= _items.size())
-           selectedIndex = _items.size() - 1;
+           setSelectedIndexNotUser(_items.size() - 1);
       }
       SwingUtil.sendDelayedEvent(sc.bind.IListener.VALUE_CHANGED, JComboBox.this, preferredSizeProperty);
    }
@@ -92,7 +93,7 @@ public class JComboBox extends javax.swing.JComboBox implements ComponentStyle {
 
    private void checkBounds() {
       if (selectedIndex >= _items.size())
-        selectedIndex = _items.size() - 1;
+        setSelectedIndexNotUser(_items.size() - 1);
    }
 
    public void init() {
@@ -101,8 +102,8 @@ public class JComboBox extends javax.swing.JComboBox implements ComponentStyle {
          for (Object item:_items)
             addItem(item);
       }
-      if (pendingSelectedIndex != null) {
-         selectedIndex = pendingSelectedIndex;
+      if (pendingSelectedIndex != null && pendingSelectedIndex != getSelectedIndex()) {
+         setSelectedIndexNotUser(pendingSelectedIndex);
       }
    }
 
@@ -111,6 +112,19 @@ public class JComboBox extends javax.swing.JComboBox implements ComponentStyle {
       super.setSize(d);
       invalidate();
       validate();
+   }
+
+   // Because swing calls setSelectedIndex directly from the mouse handler, there's no way to really tell
+   // whether or not it's a user generated event, so we default to the call being user generated and make sure all
+   // code generated events use this method.
+   public void setSelectedIndexNotUser(int index) {
+      try {
+         notUserSet = true;
+         setSelectedIndex(index);
+      }
+      finally {
+         notUserSet = false;
+      }
    }
 
    @Bindable(manual=true)
@@ -122,12 +136,13 @@ public class JComboBox extends javax.swing.JComboBox implements ComponentStyle {
       else
          pendingSelectedIndex = null;
       try {
-         inSelectedIndex = true;
+         if (!notUserSet)
+            userSelectedIndex = true;
          super.setSelectedIndex(index);
          SwingUtil.sendDelayedEvent(sc.bind.IListener.VALUE_CHANGED, JComboBox.this, selectedIndexProperty);
       }
       finally {
-         inSelectedIndex = false;
+         userSelectedIndex = false;
       }
    }
 
