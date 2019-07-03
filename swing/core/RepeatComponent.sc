@@ -33,6 +33,10 @@ public abstract class RepeatComponent<T> implements IChildContainer, sc.dyn.IObj
    abstract public void setRepeatIndex(T repeatComponent, int ix);
 
    public void listChanged() {
+      if (parentComponent != null) {
+         parentComponent.invalidate();
+         parentComponent.repaint();
+      }
    }
 
    void invalidate() {
@@ -55,11 +59,21 @@ public abstract class RepeatComponent<T> implements IChildContainer, sc.dyn.IObj
       }
    }
 
-   private int repeatElementIndexOf(Object repeatComps, int startIx, Object repeatVar) {
+   private int repeatComponentIndexOf(Object repeatComps, int startIx, Object repeatVar) {
       int sz = PTypeUtil.getArrayLength(repeatComps);
       for (int i = startIx; i < sz; i++) {
          T repeatComp = (T) DynUtil.getArrayElement(repeatComps, i);
          Object arrayVal = getRepeatVar(repeatComp);
+         if (arrayVal == repeatVar || (arrayVal != null && arrayVal.equals(repeatVar)))
+            return i;
+      }
+      return -1;
+   }
+
+   private int repeatElementIndexOf(Object repeat, int startIx, Object repeatVar) {
+      int sz = PTypeUtil.getArrayLength(repeat);
+      for (int i = startIx; i < sz; i++) {
+         Object arrayVal = DynUtil.getArrayElement(repeat, i);
          if (arrayVal == repeatVar || (arrayVal != null && arrayVal.equals(repeatVar)))
             return i;
       }
@@ -106,7 +120,7 @@ public abstract class RepeatComponent<T> implements IChildContainer, sc.dyn.IObj
                   System.err.println("Null value for repeat element: " + i + " for: " + this);
                   continue;
                }
-               int curIx = repeatElementIndexOf(repeatComponents, 0, arrayVal);
+               int curIx = repeatComponentIndexOf(repeatComponents, 0, arrayVal);
 
                if (curIx == i) // It's at the right spot in repeatTags for the new value of repeat.
                   continue;
@@ -122,7 +136,7 @@ public abstract class RepeatComponent<T> implements IChildContainer, sc.dyn.IObj
                      // The current guy is new to the list
                      if (curIx == -1) {
                         // Either replace or insert a row
-                        int curNewIx = repeatElementIndexOf(repeatComponents, i, oldArrayVal);
+                        int curNewIx = repeatElementIndexOf(repeatVal, i, oldArrayVal);
                         if (curNewIx == -1) {
                            T newElem = createRepeatElement(arrayVal, i, oldElem);
                            if (oldElem == newElem) {
@@ -156,7 +170,7 @@ public abstract class RepeatComponent<T> implements IChildContainer, sc.dyn.IObj
                         for (delIx = i; delIx < curIx; delIx++) {
                            T delElem = components.get(i);
                            Object delArrayVal = getRepeatVar(delElem);
-                           int curNewIx = repeatElementIndexOf(repeatComponents, i, delArrayVal);
+                           int curNewIx = repeatElementIndexOf(repeatVal, i, delArrayVal);
                            if (curNewIx == -1) {
                               T toRem = components.remove(delIx);
                               removeElement(toRem, delIx);
