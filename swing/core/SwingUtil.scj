@@ -90,7 +90,9 @@ public class SwingUtil {
          Object[] children = container.getChildren();
          if (children != null) {
             for (Object subChild:children) {
-               SwingUtil.addChild(parent, subChild);
+               SwingUtil.addChild(parent, subChild, ix);
+               if (ix != -1)
+                  ix++;
             }
          }
       }
@@ -99,7 +101,9 @@ public class SwingUtil {
          Object[] children = DynUtil.getObjChildren(child, null, true);
          if (children != null) {
             for (Object subChild:children) {
-               SwingUtil.addChild(parent, subChild);
+               SwingUtil.addChild(parent, subChild, ix);
+               if (ix != -1)
+                  ix++;
             }
          }
       }
@@ -133,6 +137,25 @@ public class SwingUtil {
          java.awt.Component c = (java.awt.Component) child;
          parent.add(c, ix);
       }
+   }
+
+   public static int indexOf(Object parent, Object child) {
+      if (parent instanceof IChildContainer) {
+         IChildContainer container = (IChildContainer) parent;
+         Object[] children = container.getChildren();
+         if (children != null) {
+            for (int i = 0; i < children.length; i++) {
+               if (children[i] == child)
+                  return i;
+            }
+         }
+      }
+      else if (parent instanceof java.awt.Component) {
+         return ((JComponent) parent).getComponentZOrder((java.awt.Component) child);
+      }
+      else
+         throw new UnsupportedOperationException();
+      return -1;
    }
 
    public static void removeChild(Object parent, Object child) {
