@@ -9,9 +9,9 @@
 <% if (overrideGet) { %>
    <%=variableTypeName%> <%=lowerClassName%> = (<%=variableTypeName%>) super.get<%=upperClassName%>();
 <% } %>
-   if (<%=lowerClassName%> == null) {
-      <%=variableTypeName%> _<%=lowerClassName%> = <% if (typeIsCompiledComponent) { %><%=typeClassName%>.new<%=typeBaseName%>(false)<% } 
-                               else { %>new <%=typeName%>()<% } %>;
+   if (<%=lowerClassName%> == null) {<%=beforeNewObject%>
+      <%=variableTypeName%> _<%=lowerClassName%> = <% if (typeIsCompiledComponent) { %><%=typeClassName%>.new<%=typeBaseName%>(false<%=nextConstructorParams%>)<% }
+                               else { %>new <%=typeName%>(<%=constructorParams%>)<% } %>;
       <%=lowerClassName%> = _<%=lowerClassName%>;
       <% if (overrideGet) { %>
           set<%=upperClassName%>(_<%=lowerClassName%>);
