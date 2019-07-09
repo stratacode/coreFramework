@@ -71,7 +71,8 @@ android.lib extends util {
    //public static String platformTarget = "android-20";
    //public static String buildToolsVersion = "20.0.0";
    public static String platformTarget = "android-19";
-   public static String buildToolsVersion = "19.4.0";
+   //public static String buildToolsVersion = "23.0.1";
+   public static String buildToolsVersion = "19.1.0";
 
    // A list of places to look for ant by default
    public static String[] antPaths = {
@@ -113,9 +114,6 @@ android.lib extends util {
          }
       }
 
-      // TODO: we should make Layer.java implement IDynObject, then use the layer type here as the dynamic type so we can use
-      // fields in the layer to share info across the system.  resolveObject already will resolve the layer from it's name in the
-      // dynamic lookup.  There's more work to manage the DynObject from the layer instance.
       System.setProperty("android.sdkDir", sdkDir);
       System.setProperty("android.platformTarget", platformTarget);
 

@@ -15,6 +15,26 @@ public class TextUtil {
       return str.length();
    }
 
+   public static boolean isEmpty(String str) {
+      return str == null || str.length() == 0;
+   }
+
+   public static boolean equals(CharSequence s1, CharSequence s2) {
+      if (s1 == s2)
+         return true;
+      if (s1 == null || s2 == null)
+         return false;
+      int s1len = s1.length();
+      int s2len = s2.length();
+      if (s1len != s2len)
+         return false;
+      for (int i = 0; i < s1len; i++) {
+         if (s1.charAt(i) != s2.charAt(i))
+            return false;
+      }
+      return true;
+   }
+
    public static String escapeHTML(String in) {
       return StringUtil.escapeHTML(in, false).toString();
    }

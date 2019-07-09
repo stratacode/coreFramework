@@ -22,7 +22,7 @@ class BodyTypeDeclaration extends Definition {
       fullTypeName = ftn;
 
       if (ftn != null && LayeredSystem.current != null)
-         LayeredSystem.current.typesByNameIndex.put(fullTypeName, this);
+         LayeredSystem.current.addTypeDeclaration(fullTypeName, this);
    }
    public String getFullTypeName() {
       return fullTypeName;

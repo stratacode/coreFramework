@@ -3,6 +3,7 @@ import sc.obj.Sync;
 import sc.js.URLPath;
 import sc.bind.Bind;
 import sc.lang.java.BodyTypeDeclaration;
+import sc.lang.java.TypeDeclaration;
 
 import sc.dyn.DynUtil;
 
@@ -19,7 +20,15 @@ import sc.type.IResponseListener;
 public class LayeredSystem {
    public List<Layer> layers;
 
-   public HashMap<String,BodyTypeDeclaration> typesByNameIndex = new HashMap<String,BodyTypeDeclaration>();
+   HashMap<String,BodyTypeDeclaration> typesByNameIndex = new HashMap<String,BodyTypeDeclaration>();
+
+   public BodyTypeDeclaration getSrcTypeDeclaration(String typeName, Layer refLayer) {
+      return typesByNameIndex.get(typeName);
+   }
+   
+   public void addTypeDeclaration(String typeName, BodyTypeDeclaration toAdd) {
+      typesByNameIndex.put(typeName, toAdd);
+   }
 
    public static LayeredSystem current = null;
 

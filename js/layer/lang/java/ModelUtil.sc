@@ -100,7 +100,7 @@ public class ModelUtil {
    }
 
    public static Object findTypeDeclaration(LayeredSystem sys, String typeName, Layer refLayer, boolean layerResolve) {
-      return sys.typesByNameIndex.get(typeName);
+      return sys.getSrcTypeDeclaration(typeName, refLayer);
    }
 
    public static Object findType(LayeredSystem sys, String typeName) {
