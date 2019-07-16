@@ -18,7 +18,7 @@ public class ConstantBinding implements IBinding {
    public void invalidateBinding(Object object, boolean sendEvent, boolean includeParams) {
    }
 
-   public boolean applyBinding(Object obj, Object value, IBinding src) {
+   public boolean applyBinding(Object obj, Object value, IBinding src, boolean refresh, boolean pendingChild) {
       throw new UnsupportedOperationException("Can't apply binding to a constant: " + this);
    }
 

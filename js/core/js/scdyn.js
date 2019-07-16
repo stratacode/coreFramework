@@ -138,7 +138,7 @@ sc_DynUtil_c.getParameterTypes = function() { return null; }
 sc_DynUtil_c.invokeMethod = function(obj, method, paramValues) {
    var res;
    if (method.methStatic)
-      res = method.type[method.name].apply(null, paramValues);
+      res = method.type[method.name].apply(method.type, paramValues);
    else {
       if (obj[method.name] == null) {
          console.log("Error no method: " + method.name + " defined for obj: " + sc_DynUtil_c.getInstanceName(obj));
@@ -246,8 +246,12 @@ sc_DynUtil_c.getInstanceId = function(obj) {
 
    var type = sc_DynUtil_c.getType(obj);
 
-   if (sc_instanceOf(obj, jv_Enum) || obj == type)
-      return sc_DynUtil_c.getTypeName(type, false) + "." + sc_DynUtil_c.getEnumName(obj);
+   if (sc_instanceOf(obj, jv_Enum)) {
+      if (type.$outerClass)
+         return sc_DynUtil_c.getTypeName(type, false);
+      else
+         return sc_DynUtil_c.getTypeName(type, false) + "." + sc_DynUtil_c.getEnumName(obj);
+   }
 
    return sc_DynUtil_c.getObjectId(obj, type, null);
 }
@@ -362,6 +366,13 @@ sc_DynUtil_c.getArrayElement = function(arr, ix) {
       return arr.get(ix);
    else
       return arr[ix];
+}
+
+sc_DynUtil_c.setArrayElement = function(arr, ix, val) {
+   if (sc_instanceOf(arr, jv_List))
+      arr.set(ix, val);
+   else
+      arr[ix] = val;
 }
 
 sc_DynUtil_c.getIndexedProperty = function(obj, prop, ix) {
@@ -880,6 +891,7 @@ sc_PTypeUtil_c.isStringOrChar = function(type) {
 
 sc_PTypeUtil_c.getArrayLength = sc_DynUtil_c.getArrayLength;
 sc_PTypeUtil_c.getArrayElement = sc_DynUtil_c.getArrayElement;
+sc_PTypeUtil_c.setArrayElement = sc_DynUtil_c.setArrayElement;
 
 sc_PTypeUtil_c.getServerName = function() {
    return window.location.hostname;
@@ -1004,7 +1016,7 @@ sc_DynUtil_c.isObject = function(obj) {
 }
 
 sc_DynUtil_c.isObjectType = function(type) {
-   return type.$objectType !== undefined || sc_DynUtil_c.getAnnotationValue(type, "sc.obj.TypeSettings", "objectType");
+   return type.$objectType !== undefined || sc_DynUtil_c.getAnnotationValue(type, "sc.obj.TypeSettings", "objectType") != null;
 }
 
 sc_DynUtil_c.isRootedObject = function(obj) {
@@ -1020,6 +1032,8 @@ sc_DynUtil_c.isRootedObject = function(obj) {
 
 sc_DynUtil_c.getOuterObject = function(obj) {
    if (obj.outer === undefined)
+      return null;
+   if (sc_instanceOf(obj, jv_Enum))
       return null;
    return obj.outer;
 }

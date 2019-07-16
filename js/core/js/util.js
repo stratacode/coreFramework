@@ -28,9 +28,17 @@ sc_TextUtil_c.format = function(format, number) {
 }
 
 sc_TextUtil_c.length = function(str) {
-   if (str == null)
+   if (str === null)
       return 0;
    return str.length;
+}
+
+sc_TextUtil_c.isEmpty = function(str) {
+   return str === null || str.length === 0;
+}
+
+sc_TextUtil_c.equals = function(s1, s2) {
+   return s1 == s2;
 }
 
 sc_TextUtil_c.escapeHTML = function(input) {

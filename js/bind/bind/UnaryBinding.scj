@@ -19,7 +19,7 @@ public class UnaryBinding extends AbstractMethodBinding {
       return false;
    }
 
-   protected Object invokeMethod(Object obj) {
+   protected Object invokeMethod(Object obj, boolean pendingChild) {
       Object val = boundParams[0].getPropertyValue(obj);
       if (!isValidObject(val))
           return getUnsetOrPending(val);

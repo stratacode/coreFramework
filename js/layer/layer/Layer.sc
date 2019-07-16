@@ -49,18 +49,6 @@ public class Layer {
 
    @Constant public CodeType codeType = CodeType.Application;
 
-   /** The vanilla name of the layer - no package prefix but does include the layer group */
-   @Constant public String getLayerName() {
-      String base = layerDirName;
-      if (base == null || base.equals(".")) {
-         if (packagePrefix != null && packagePrefix.length() > 1 && layerUniqueName != null)
-            base = layerUniqueName.substring(packagePrefix.length()+1);
-         else
-            base = layerUniqueName;
-      }
-      return base;
-   }
-
    /** Just the layer group */
    public String getLayerGroupName() {
       if (layerDirName == null)
@@ -172,4 +160,19 @@ public class Layer {
       return false;
    }
 
+   private String layerName;
+   @Constant
+   public void setLayerName(String ln) {
+      layerName = ln;
+
+      if (ln != null && LayeredSystem.current != null) {
+         LayeredSystem sys = LayeredSystem.current;
+         if (sys.layers == null)
+            sys.layers = new ArrayList<Layer>();
+         sys.layers.add(this);
+      }
+   }
+   public String getLayerName() {
+      return layerName;
+   }
 }
