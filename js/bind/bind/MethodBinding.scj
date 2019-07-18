@@ -100,14 +100,15 @@ public class MethodBinding extends AbstractMethodBinding implements IResponseLis
       for (int i = 0; i < paramValues.length; i++) {
          Object val, type;
          Class typeClass;
-         val = boundParams[i].getPropertyValue(obj);
+         Object origVal;
+         origVal = val = boundParams[i].getPropertyValue(obj);
          if (val == UNSET_VALUE_SENTINEL) {
             valid = false;
             val = null;
          }
          if (val == PENDING_VALUE_SENTINEL)
             valid = false;
-         paramValues[i] = val;
+         paramValues[i] = origVal;
          // TODO: Do the wrapping of "null" to primitive types here
          //if (val == null && paramTypes != null && ((type = paramTypes[i]) instanceof Class) && PTypeUtil.isPrimitive(typeClass = (Class) type)) {
          //   paramValues[i] = PTypeUtil.getDefaultObjectValue(typeClass);
@@ -127,7 +128,7 @@ public class MethodBinding extends AbstractMethodBinding implements IResponseLis
       return !methodIsStatic;
    }
 
-   protected Object invokeMethod(Object obj, boolean pendingChild) {
+   protected Object invokeMethod(Object obj, boolean skipParamUpdate) {
       if (obj == null && !methodIsStatic) {
          System.err.println("*** Attempt to invoke method: " + this + " with a null value");
          return null;
@@ -138,13 +139,12 @@ public class MethodBinding extends AbstractMethodBinding implements IResponseLis
          return null;
       }
 
-      // If we weren't able to evaluate one of our parameters, this value is unset
-      if (pendingChild && hasPendingParams())
-         return PENDING_VALUE_SENTINEL;
-      if (!pendingChild && !updateParams(obj) && (flags & Bind.SKIP_NULL) != 0) {
+      if (skipParamUpdate || !updateParams(obj)) {
          if (hasPendingParams())
             return PENDING_VALUE_SENTINEL;
-         return UNSET_VALUE_SENTINEL;
+         // If we weren't able to evaluate one of our parameters, this value is unset
+         if ((flags & Bind.SKIP_NULL) != 0 && hasNullParams())
+            return UNSET_VALUE_SENTINEL;
       }
 
       if (methodIsStatic)
@@ -153,16 +153,17 @@ public class MethodBinding extends AbstractMethodBinding implements IResponseLis
          obj = methObj;
 
       try {
+         Object[] pvs = cleanParamValues();
          if (DynUtil.isRemoteMethod(method)) {
             if (boundValue == PENDING_VALUE_SENTINEL)
                return PENDING_VALUE_SENTINEL;
-            RemoteResult remRes = DynUtil.invokeRemote(null, null, null, obj, method, paramValues);
+            RemoteResult remRes = DynUtil.invokeRemote(null, null, null, obj, method, pvs);
             // When this listener fires, we call applyChangedValue(remRes.value)
             remRes.responseListener = this;
             return PENDING_VALUE_SENTINEL;
          }
          else {
-            return DynUtil.invokeMethod(obj, method, paramValues);
+            return DynUtil.invokeMethod(obj, method, pvs);
          }
       }
       catch (RuntimeException exc) {
@@ -183,25 +184,33 @@ public class MethodBinding extends AbstractMethodBinding implements IResponseLis
 
    /** Called when reverse bindings fire */
    protected Object invokeReverseMethod(Object obj, Object value) {
-      if (reverseMethodMapper != null) {
-         // If we fire the reverse method before the forward one is valid, need to try at least to init the params
-         if (!valid) {
-            if (!updateParams(null) && (flags & Bind.SKIP_NULL) != 0)
-               return hasPendingParams() ? PENDING_VALUE_SENTINEL : UNSET_VALUE_SENTINEL;
-         }
+      // If we fire the reverse method before the forward one is valid, need to try at least to init the params
+      if (!valid) {
+         if (!updateParams(null)) {
+            if (hasPendingParams())
+               return PENDING_VALUE_SENTINEL;
 
+            if ((flags & Bind.SKIP_NULL) != 0)
+               return UNSET_VALUE_SENTINEL;
+         }
+      }
+
+      if (reverseMethodMapper != null) {
          if (value == UNSET_VALUE_SENTINEL)
             return UNSET_VALUE_SENTINEL;
 
          if (value == PENDING_VALUE_SENTINEL)
             return PENDING_VALUE_SENTINEL;
 
-         return PBindUtil.invokeReverseMethod(this, reverseMethodMapper, obj, value, paramValues);
+         return PBindUtil.invokeReverseMethod(this, reverseMethodMapper, obj, value, cleanParamValues());
       }
       // This is the case where we have only a reverse binding and no inverse method.  We treat
       // this case differently - it means invoke the method only on the reverse direction.
-      else if (!direction.doForward())
+      else if (!direction.doForward()) {
+         if (hasPendingParams())
+            return PENDING_VALUE_SENTINEL;
          return invokeMethod(obj, false);
+      }
       else
          System.err.println("*** Reverse binding not firing - no reverse method: " + this);
       return null;
