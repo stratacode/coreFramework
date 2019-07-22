@@ -365,7 +365,8 @@ function sc_vararg(args, ix) {
    
    var arg = args[ix];
 
-   if (ix == args.length - 1 && arg !== null && arg.constructor === Array)
+   // Treating last arg as null as the same as no arguments. don't return [null] as with the slice call
+   if (ix == args.length - 1 && (arg === null || arg.constructor === Array))
       return arg;
    return Array.prototype.slice.call(args, ix);
 }

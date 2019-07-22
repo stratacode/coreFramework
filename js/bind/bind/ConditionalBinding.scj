@@ -20,7 +20,7 @@ public class ConditionalBinding extends AbstractMethodBinding {
    }
 
    protected Object invokeMethod(Object obj, boolean pendingChild) {
-      Object lhsVal = boundParams[0].getPropertyValue(obj);
+      Object lhsVal = boundParams[0].getPropertyValue(obj, false, pendingChild);
       Object res = lhsVal;
       paramValues[0] = lhsVal;
       if (lhsVal == PENDING_VALUE_SENTINEL)
@@ -34,7 +34,7 @@ public class ConditionalBinding extends AbstractMethodBinding {
          IBinding boundP = boundParams[i];
          if (res == null) {
             boundP.activate(true, obj, false);
-            Object rhsVal = boundParams[i].getPropertyValue(obj);
+            Object rhsVal = boundParams[i].getPropertyValue(obj, false, pendingChild);
             paramValues[i] = rhsVal;
             if (rhsVal == PENDING_VALUE_SENTINEL)
                return PENDING_VALUE_SENTINEL;

@@ -847,11 +847,18 @@ sc_DynUtil_c.dispose = function(obj, disposeChildren) {
    if (insts != null) {
        delete insts[sc_id(obj)];
    }
-}
+};
+
+sc_DynUtil_c.disposeLater = function(obj, disposeChildren) {
+   setTimeout(
+      function() {
+         sc_DynUtil_c.dispose(obj, disposeChildren);
+      }, 1);
+};
 
 sc_DynUtil_c.isComponentType = function(type) {
    return type._A_Component !== undefined;
-}
+};
 
 function sc_IObjChildren() {}
 sc_IObjChildren_c = sc_newClass("sc.dyn.IObjChildren", sc_IObjChildren, null, null);

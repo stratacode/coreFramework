@@ -53,7 +53,7 @@ public class SelectorBinding extends DestinationListener {
       initBinding();
       addListeners();
       if (direction.doForward()) {
-         Object result = getBoundValue();
+         Object result = getBoundValue(false);
          if (Bind.trace || (flags & Bind.TRACE) != 0)
             System.out.println("Init:" + toString());
          if (!isDefinedObject(result))
@@ -100,8 +100,8 @@ public class SelectorBinding extends DestinationListener {
          return evalBindingSlot(boundProps.length-2);
    }
 
-   protected Object getBoundValue() {
-      if (direction.doForward()) {
+   protected Object getBoundValue(boolean pendingChild) {
+      if (direction.doForward() || (pendingChild && isDefinedObject(boundValues[boundValues.length-1]))) {
          return boundValues[boundValues.length-1];
       }
       return evalBinding();
@@ -347,9 +347,9 @@ public class SelectorBinding extends DestinationListener {
 
       // TODO: Need to replace nulls with 0 for primitives?
       if (dstProp == null)
-         ((IBinding) dstObj).applyBinding(null, getBoundValue(), this, false, false);
+         ((IBinding) dstObj).applyBinding(null, getBoundValue(false), this, false, false);
       else
-         PBindUtil.setPropertyValue(dstObj, dstProp, getBoundValue());
+         PBindUtil.setPropertyValue(dstObj, dstProp, getBoundValue(false));
    }
 
    private boolean applyReverseBinding() {
@@ -359,7 +359,7 @@ public class SelectorBinding extends DestinationListener {
       valid = true;
       Object newValue = PBindUtil.getPropertyValue(dstObj, dstProp);
 
-      if (!DynUtil.equalObjects(newValue, getBoundValue())) {
+      if (!DynUtil.equalObjects(newValue, getBoundValue(false))) {
          Bind.applyBinding(bObj, bProp, newValue, this);
          return true;
       }
@@ -437,10 +437,10 @@ public class SelectorBinding extends DestinationListener {
       }
    }
 
-   public Object getPropertyValue(Object obj) {
+   public Object getPropertyValue(Object obj, boolean getField, boolean pendingChild) {
       if (!valid)
          validateBinding(obj);
-      return getBoundValue();
+      return getBoundValue(pendingChild);
    }
 
    public void addBindingListener(Object eventObject, IListener listener, int event) {

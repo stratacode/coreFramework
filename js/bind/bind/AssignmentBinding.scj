@@ -48,8 +48,8 @@ public class AssignmentBinding extends DestinationListener {
       return ((DestinationListener) rhsBinding).isValid();
    }
 
-   public Object getPropertyValue(Object parent) {
-      return rhsBinding.getPropertyValue(parent);
+   public Object getPropertyValue(Object parent, boolean getField, boolean pendingChild) {
+      return rhsBinding.getPropertyValue(parent, getField, pendingChild);
    }
 
    public void addBindingListener(Object eventObject, IListener listener, int event) {
@@ -88,7 +88,7 @@ public class AssignmentBinding extends DestinationListener {
 
    void applyBinding() {
       // Get this before marking it valid
-      Object newValue = getBoundValue();
+      Object newValue = getBoundValue(false);
 
       applyBindingWithValue(newValue);
    }
@@ -151,7 +151,7 @@ public class AssignmentBinding extends DestinationListener {
       initBinding();
       addListeners();
       if (direction.doForward()) {
-         Object result = getBoundValue();
+         Object result = getBoundValue(false);
          //if (trace) {
          //   System.out.println("Init: " + this);
          //}
@@ -163,11 +163,11 @@ public class AssignmentBinding extends DestinationListener {
          return null;
    }
 
-   protected Object getBoundValue() {
-      if (direction.doForward())
+   protected Object getBoundValue(boolean pendingChild) {
+      if (direction.doForward() || (pendingChild && isDefinedObject(boundValue)))
          return boundValue;
       else // reverse bindings are not cached - no listeners so we eval them each time
-         return rhsBinding.getPropertyValue(srcObj);
+         return rhsBinding.getPropertyValue(srcObj, false, pendingChild);
    }
 
    protected void initBinding() {
@@ -177,7 +177,7 @@ public class AssignmentBinding extends DestinationListener {
          System.out.println("*** RHS of Assignment binding did not resolve");
       rhsBinding.setBindingParent(this, direction);
       if (direction.doForward()) {
-         boundValue = rhsBinding.getPropertyValue(srcObj);
+         boundValue = rhsBinding.getPropertyValue(srcObj, false, false);
          doAssignment();
       }
       else if (direction.doReverse() && null != dstProp) {
@@ -193,7 +193,7 @@ public class AssignmentBinding extends DestinationListener {
          Object bindingParent = srcObj;
 
          if (isValidObject(bindingParent)) {
-            boundValue = rhsBinding.getPropertyValue(bindingParent);
+            boundValue = rhsBinding.getPropertyValue(bindingParent, false, false);
             doAssignment();
          }
       }
@@ -201,7 +201,7 @@ public class AssignmentBinding extends DestinationListener {
    }
 
    private void doAssignment() {
-      Object bv = getBoundValue();
+      Object bv = getBoundValue(false);
       if (isDefinedObject(bv)) {
          // Sets the value for lhsBinding's property to the boundValue specified.
          lhsBinding.applyReverseBinding(srcObj, bv, this);
@@ -288,7 +288,7 @@ public class AssignmentBinding extends DestinationListener {
             return true;
          }
 
-         Object newValue = rhsBinding.getPropertyValue(srcObj);
+         Object newValue = rhsBinding.getPropertyValue(srcObj, false, false);
          if (!DynUtil.equalObjects(newValue, boundValue)) {
             changed = true;
             if (apply)
@@ -325,7 +325,7 @@ public class AssignmentBinding extends DestinationListener {
             return true;
          }
 
-         Object newValue = rhsBinding.getPropertyValue(srcObj);
+         Object newValue = rhsBinding.getPropertyValue(srcObj, false, false);
          if (!DynUtil.equalObjects(newValue, boundValue))
             bindingInvalidated(apply);
       }

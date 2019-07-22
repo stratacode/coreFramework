@@ -78,7 +78,7 @@ public class VariableBinding extends DestinationListener {
       initBinding();
       addListeners();
       if (cacheValue()) {
-         Object result = getBoundValue();
+         Object result = getBoundValue(false);
          //if (trace) {
          //   System.out.println("Init: " + this);
          //}
@@ -194,12 +194,12 @@ public class VariableBinding extends DestinationListener {
          return evalBindingSlot(boundProps.length-2);
    }
 
-   protected Object getBoundValue() {
+   protected Object getBoundValue(boolean pendingChild) {
       // No properties means we just return the srcObj itself
       if (boundProps.length == 0)
          return srcObj;
 
-      if (cacheValue())
+      if (cacheValue() || (pendingChild && boundValues != null && isDefinedObject(boundValues[boundValues.length-1])))
          return boundValues[boundValues.length-1];
       else // reverse bindings are not cached - no listeners so we eval them each time
          return evalBinding();
@@ -503,7 +503,7 @@ public class VariableBinding extends DestinationListener {
          changed = validateBinding();
 
       // Get this before marking it valid
-      Object newValue = getBoundValue();
+      Object newValue = getBoundValue(false);
 
       if (activated)
          valid = true;
@@ -537,11 +537,11 @@ public class VariableBinding extends DestinationListener {
       Object bProp = getBoundProperty();
 
       valid = true;
-      Object newValue = dstProp == null ? ((IBinding) dstObj).getPropertyValue(dstObj) : PBindUtil.getPropertyValue(dstObj, dstProp);
+      Object newValue = dstProp == null ? ((IBinding) dstObj).getPropertyValue(dstObj, false, false) : PBindUtil.getPropertyValue(dstObj, dstProp);
 
       // For reverse only bindings, we do not want to eval the binding at all... that's what we do when
       // we decide to execute it anyway!
-      if (!direction.doForward() || !DynUtil.equalObjects(newValue, getBoundValue())) {
+      if (!direction.doForward() || !DynUtil.equalObjects(newValue, getBoundValue(false))) {
          if (!isAssignment) {
             Object oldValue = boundValues[boundValues.length-1];
             if (oldValue instanceof IChangeable)
@@ -624,10 +624,10 @@ public class VariableBinding extends DestinationListener {
       }
    }
 
-   public Object getPropertyValue(Object obj) {
+   public Object getPropertyValue(Object obj, boolean getField, boolean pendingChild) {
       if (!valid)
          validateBinding();
-      return getBoundValue();
+      return getBoundValue(pendingChild);
    }
 
    /** These are implemented for VariableBindings but not for AbstractMethodBindings.  These listeners are

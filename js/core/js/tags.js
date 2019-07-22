@@ -14,6 +14,7 @@ function js_HTMLElement() {
    this.element = null;
    this.id = null;
    this.repeat = null;
+   this.replaceWith = null;
    if (arguments.length === 3) {
       this.parentNode = arguments[0];
       this.repeatVar = arguments[1];
@@ -120,6 +121,8 @@ js_Element_c.refreshTags = function() {
 }
 
 js_Element_c.getObjChildren = function(create) {
+   if (this.replaceWith != null)
+      return this.replaceWith.getObjChildren(create);
    if (this.repeatTags != null)
       return this.repeatTags;
    return null;
@@ -341,6 +344,9 @@ js_HTMLElement_c.destroyRepeatTags = function() {
 }
 
 js_HTMLElement_c.removeFromDOM = function() {
+   if (this.replaceWith !== null) {
+      return this.replaceWith.removeFromDOM();
+   }
    var curElem = this.element;
    if (curElem == null || this.parentNode == null || this.parentNode.element == null)
       return false;
@@ -401,6 +407,9 @@ js_HTMLElement_c.destroy = function() {
    if (this.repeat != null) {
       this.destroyRepeatTags();
    }
+   if (this.replaceWith != null) {
+      this.replaceWith = null; // TODO: anything else we need to do here?
+   }
    if (this.repeatListener !== undefined) {
       sc_Bind_c.removeListener(this, "repeat", this.repeatListener, sc_IListener_c.VALUE_VALIDATED);
       delete this.repeatListener;
@@ -438,7 +447,7 @@ js_HTMLElement_c.mapAttributeToProperty = function(name) {
 }
 
 // The properties of the tagObject we listen to for changes.  When they change, we'll update the backing DOM element
-js_HTMLElement_c.refreshAttNames = ["class", "style", "repeat"];
+js_HTMLElement_c.refreshAttNames = ["class", "style", "repeat", "replaceWith"];
 // The list of attributes which change due to user interaction on the client that we sync to the server for 'serverTags'
 js_HTMLElement_c.eventAttNames = [];
 // The set of attributes when their value goes to null or "" the attribute name itself is removed
@@ -507,6 +516,9 @@ js_HTMLElement_c.allocUniqueId = function(baseName) {
 
 js_HTMLElement_c.getDOMElement = function() {
    var newElement = null;
+   if (this.replaceWith !== null) {
+       return this.replaceWith.getDOMElement();
+   }
    if (this.repeat === null || this.repeat === undefined) {
       if (this.id == null) {
          var tname = this.tagName;
@@ -525,7 +537,11 @@ js_HTMLElement_c.getDOMElement = function() {
 }
 
 js_HTMLElement_c.updateDOM = function() {
-   if (this.repeat === null || this.repeat === undefined) {
+   if (this.replaceWith !== null) {
+      this.replaceWith.updateDOM();
+      this.initState = 1;
+   }
+   else if (this.repeat === null || this.repeat === undefined) {
       var newElement = this.getDOMElement();
       this.setDOMElement(newElement);
    }
@@ -556,12 +572,9 @@ js_HTMLElement_c.updateFromDOMElement = js_HTMLElement_c.setDOMElement = functio
       }
 
       if (newElement !== null) {
-
-         //sc_id(newElement); enable for debugging to make it easier to identify unique elements
-        
-         // This can happen if 
+         //sc_id(newElement); if we call this here, it's useful for debugging to make it easier to identify unique elements
          if (newElement.scObj !== undefined) {
-             console.log("Warning: replacing object: " + sc_DynUtil_c.getInstanceId(newElement.scObj) + " with: " + sc_DynUtil_c.getInstanceId(this) + " for tag: " + this.tagName); 
+            console.log("Warning: replacing object: " + sc_DynUtil_c.getInstanceId(newElement.scObj) + " with: " + sc_DynUtil_c.getInstanceId(this) + " for tag: " + this.tagName);
          }
          newElement.scObj = this;
       }
@@ -745,6 +758,26 @@ js_HTMLElement_c.click = function() {
    evt.currentTarget = evt.target = this; // TODO: verify that this works. It seems like this properties may not be settable in JS
    this.clickEvent = evt;
    sc_Bind_c.sendEvent(sc_IListener_c.VALUE_CHANGED, this, "clickEvent", evt);
+}
+
+js_HTMLElement_c.setReplaceWith = function(rw) {
+   var oldRW = this.replaceWith;
+   if (oldRW === rw)
+      return;
+   if (oldRW === null)
+      oldRW = this;
+   // Clear out the old DOM element
+   oldRW.updateFromDOMElement(null);
+
+   this.replaceWith = rw;
+   sc_Bind_c.sendChangedEvent(this, "replaceWith");
+   this.invalidate();
+
+   // On refresh, if set the replaceWith element attaches to the new DOM element
+}
+
+js_HTMLElement_c.getReplaceWith = function() {
+   return this.replaceWith;
 }
 
 js_HTMLElement_c.setRepeat = function(r) {
@@ -1303,6 +1336,14 @@ js_HTMLElement_c.refreshBodyContent = function(sb) {
 
 js_HTMLElement_c.refreshBody = function() {
    var create = false;
+   if (this.replaceWith !== null) {
+      var replTag = this.replaceWith;
+      replTag.parentNode = this.parentNode;
+      replTag.refreshBody();
+      this.bodyValid = replTag.bodyValid;
+      return;
+   }
+
    this.updateDOM();
    if (this.element === null) {
       // We were made invisible or possibly our parent is invisible
@@ -1517,6 +1558,10 @@ js_HTMLElement_c.outputTag = function(sb) {
       }
       for (var i = 0; i < invisTags.length; i++)
          invisTags[i].outputTag(sb);
+      return;
+   }
+   if (this.replaceWith !== null) {
+      this.replaceWith.outputTag(sb);
       return;
    }
    if (this.repeat !== null) {
@@ -1773,6 +1818,7 @@ function js_Input() {
    this.clickCount = 0;
    this.checked = false;
    this.tagName = "input";
+   this.disabled = null;
 }
 js_Input_c = sc_newClass("sc.lang.html.Input", js_Input, js_HTMLElement, null);
 
@@ -1903,6 +1949,7 @@ function js_A() {
    js_HTMLElement.call(this);
    this.tagName = "a";
    this.clickCount = 0;
+   this.disabled = null;
 }
 
 js_A_c = sc_newClass("sc.lang.html.A", js_A, js_HTMLElement, null);
@@ -1910,6 +1957,8 @@ js_A_c.domChanged = js_Button_c.domChanged;
 js_A_c.doClickCount = js_Button_c.doClickCount;
 js_A_c.setClickCount = js_Input_c.setClickCount;
 js_A_c.getClickCount = js_Input_c.getClickCount;
+js_A_c.setDisabled = js_Input_c.setDisabled;
+js_A_c.getDisabled = js_Input_c.getDisabled;
 
 function js_SelectListener(scObj) {
    sc_AbstractListener.call(this);
@@ -2072,6 +2121,7 @@ function js_Option() {
    this.tagName = "option";
    this.optionData = null;
    this.selected = false;
+   this.disabled = null;
 
 }
 js_Option_c = sc_newClass("sc.lang.html.Option", js_Option, js_HTMLElement, null);
@@ -2099,6 +2149,9 @@ js_Option_c.setSelected = function(newSel) {
 js_Option_c.getSelected = function() {
    return this.selected; 
 }
+
+js_Option_c.setDisabled = js_Input_c.setDisabled;
+js_Option_c.getDisabled = js_Input_c.getDisabled;
 
 function js_Form() {
    js_HTMLElement.call(this);
@@ -3086,7 +3139,7 @@ js_RepeatServerTag_c.updateFromDOMElement = function(newElement) {
 
          // This can happen if
          if (newElement.scObj !== undefined) {
-            console.log("Warning: replacing object: " + sc_DynUtil_c.getInstanceId(newElement.scObj) + " with: " + sc_DynUtil_c.getInstanceId(this) + " for tag: " + this.tagName);
+            console.log("Warning: replacing repeat: " + sc_DynUtil_c.getInstanceId(newElement.scObj) + " with: " + sc_DynUtil_c.getInstanceId(this) + " for tag: " + this.tagName);
          }
          newElement.scObj = this;
       }

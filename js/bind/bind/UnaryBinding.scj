@@ -20,7 +20,7 @@ public class UnaryBinding extends AbstractMethodBinding {
    }
 
    protected Object invokeMethod(Object obj, boolean pendingChild) {
-      Object val = boundParams[0].getPropertyValue(obj);
+      Object val = boundParams[0].getPropertyValue(obj, false, pendingChild);
       if (!isValidObject(val))
           return getUnsetOrPending(val);
 
@@ -36,7 +36,7 @@ public class UnaryBinding extends AbstractMethodBinding {
       // To support prop =: var++; or ++var - the difference here does not matter because we don't return the value
       if (operator.equals("++") || operator.equals("--")) {
          IBinding param = boundParams[0];
-         Object val = param.getPropertyValue(obj);
+         Object val = param.getPropertyValue(obj, false, false);
          int ival = (Integer) val;
          if (operator.charAt(0) == '+')
             ival++;

@@ -1,6 +1,12 @@
 var Error_c = sc_newClass("java.lang.Error", Error, null, null);
 
 var Number_c = sc_newClass("java.lang.Number", Number, null, null);
+//sc_addTypeAlias("java.lang.Number", "java.lang.Byte");
+sc_addTypeAlias("java.lang.Number", "java.lang.Short");
+sc_addTypeAlias("java.lang.Number", "java.lang.Integer");
+sc_addTypeAlias("java.lang.Number", "java.lang.Long");
+sc_addTypeAlias("java.lang.Number", "java.lang.Float");
+sc_addTypeAlias("java.lang.Number", "java.lang.Double");
 
 Number_c.TYPE = Number_c;
 
@@ -93,11 +99,14 @@ Object.prototype.clone = function() {
    return clone;
 }
 
+// TODO: shouldn't the name be java.lang.String?
 var String_c = sc_newClass("String", String, null, null);
 
 String_c._valueOf = function(o) {
    return o === null || o === undefined ? "null" : o.toString();
 }
+
+String_c.getName = function() { return "java.lang.String"; }
 
 String.prototype._length = function() {
    return this.length;

@@ -101,7 +101,7 @@ public class MethodBinding extends AbstractMethodBinding implements IResponseLis
          Object val, type;
          Class typeClass;
          Object origVal;
-         origVal = val = boundParams[i].getPropertyValue(obj);
+         origVal = val = boundParams[i].getPropertyValue(obj, false, false);
          if (val == UNSET_VALUE_SENTINEL) {
             valid = false;
             val = null;

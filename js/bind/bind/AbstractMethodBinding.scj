@@ -95,7 +95,7 @@ public abstract class AbstractMethodBinding extends DestinationListener {
          // This also lets us register the IChangeable hook and keep it up to date in the value change part
          if (!direction.doForward()) {
             if (dstProp == null)
-               boundValue = ((IBinding) dstObj).getPropertyValue(dstObj);
+               boundValue = ((IBinding) dstObj).getPropertyValue(dstObj, false, false);
             else
                boundValue = PBindUtil.getPropertyValue(dstObj, dstProp);
             if (useReverseListener()) {
@@ -125,7 +125,7 @@ public abstract class AbstractMethodBinding extends DestinationListener {
       else if (direction.doReverse()) {
          Object newValue;
          if (dstProp == null)
-            newValue = ((IBinding) dstObj).getPropertyValue(dstObj);
+            newValue = ((IBinding) dstObj).getPropertyValue(dstObj, false, false);
          else
             newValue = PBindUtil.getPropertyValue(dstObj, dstProp);
 
@@ -150,7 +150,7 @@ public abstract class AbstractMethodBinding extends DestinationListener {
       return direction.doReverse() && !direction.doForward() && null != dstProp;
    }
 
-   public Object getPropertyValue(Object obj) {
+   public Object getPropertyValue(Object obj, boolean getField, boolean pendingChild) {
       // Do not cache results when it's a reverse only binding.  We're not listening on our parameters in
       // that case so we can't rely on being notified.
       if (!valid || !direction.doForward()) {
@@ -158,7 +158,7 @@ public abstract class AbstractMethodBinding extends DestinationListener {
             boundValue = null;
          }
          else {
-            boundValue = invokeMethod(obj, false);
+            boundValue = invokeMethod(obj, pendingChild);
             if (isDefinedObject(boundValue))
                valid = true;
          }
