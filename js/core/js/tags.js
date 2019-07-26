@@ -494,6 +494,13 @@ function sc_checkRefresh() {
          sc_Bind_c.refreshBindings(rootTag);
       }
    }
+
+   // If the focus element has changed, update the tag object. TODO: Maybe we should be doing this in a focus event handler so we don't wait for the next refresh?
+   var activeElem = document.activeElement;
+   var activeTag = null;
+   if (activeElem && activeElem.scObj)
+      activeTag = activeElem.scObj;
+   js_Document_c.getDocument().setActiveElement(activeTag);
 }
 
 var sc$idSpaces = {};
@@ -671,7 +678,10 @@ js_HTMLElement_c.domChanged = function(origElem, newElem) {
       }
       var style = this.style;
       if (style != null && style != newElem.getAttribute("style"))
-         newElem.setAttribute("style", this.style); 
+         newElem.setAttribute("style", this.style);
+      var doc = js_Document_c.getDocument();
+      if (doc.activeElement == this)
+         newElem.focus();
    }
 }
 
@@ -1453,6 +1463,12 @@ js_HTMLElement_c.output = js_HTMLElement_c.output_c = function() {
    return sb;
 }
 
+js_HTMLElement_c.focus = function() {
+   if (this.element)
+      this.element.focus();
+   js_Window_c.getWindow().documentTag.setActiveElement(this);
+}
+
 js_HTMLElement_c.createRepeatElement = function(rv, ix, oldTag) {
    var elem;
    var sync = typeof sc_SyncManager_c != "undefined";
@@ -2044,7 +2060,10 @@ js_Select_c.setOptionDataSource = function(newDS) {
          this.selectListener = new js_SelectListener(this);
          sc_Bind_c.addListener(this, "optionDataSource", this.selectListener, sc_IListener_c.VALUE_VALIDATED);
       }
-      this.optionDataSource = newDS; 
+      this.optionDataSource = newDS;
+      if (newDS != null && this.selectedIndex != -1 && this.selectedValue == null && this.selectedIndex < sc_PTypeUtil_c.getArrayLength(newDS)) {
+         this.setSelectedValue(sc_PTypeUtil_c.getArrayElement(newDS, this.selectedIndex));
+      }
    }
    sc_Bind_c.sendEvent(sc_IListener_c.VALUE_CHANGED, this, "optionDataSource" , newDS);
 }
@@ -2968,11 +2987,36 @@ function js_IRepeatWrapper() {}
 js_IRepeatWrapper_c = sc_newClass("sc.lang.html.IRepeatWrapper", js_IRepeatWrapper, null, null);
 
 function js_Document(wrapped) {
+   js_Document_c.documentWrapper = this;
    js_HTMLElement.call(this);
    this.setDOMElement(wrapped);
+   this.activeElement = null;
 }
 
 js_Document_c = sc_newClass("sc.lang.html.Document", js_Document, js_HTMLElement, null);
+
+js_Document_c.getDocument = function() {
+   if (js_Document_c.documentWrapper === undefined) {
+      js_Document_c.documentWrapper = new js_Document(document);
+   }
+   return js_Document_c.documentWrapper;
+};
+
+js_Document_c.setActiveElement = function(ae) {
+   if (ae == this.activeElement)
+      return;
+   this.activeElement = ae;
+   if (ae && ae.element)
+      ae.element.focus();
+   sc_Bind_c.sendChangedEvent(this, "activeElement");
+};
+
+js_Document_c.getActiveElement = function() {
+   if (document.activeElement && document.activeElement.scObj) {
+      this.activeElement = document.activeElement.scObj;
+   }
+   return this.activeElement;
+};
 
 function errorCountChanged() {
    sc_Bind_c.sendChangedEvent(js_Window_c.getWindow(), "errorCount");
@@ -2987,7 +3031,7 @@ function js_Window() {
    this.document = document;
    this.location = window.location;
    this.location.getPathname = getThisPathname;
-   this.documentTag = new js_Document(document);
+   this.documentTag = js_Document_c.getDocument();
    window.sc_errorCountListener = errorCountChanged;
 }
 

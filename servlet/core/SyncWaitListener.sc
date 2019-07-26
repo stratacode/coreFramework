@@ -17,7 +17,7 @@ class SyncWaitListener implements IScopeChangeListener, ICodeUpdateListener {
    }
 
    public String toString() {
-      return PageDispatcher.getSessionTraceInfo(ctx.session) + ": " + threadName + (waiting ? " waiting" : "");
+      return threadName + (waiting ? " waiting" : "");
    }
 
    // So we get codeUpdates

@@ -129,7 +129,7 @@ class SyncServlet extends HttpServlet {
          ctx = Context.initContext(request, response, null);
 
          if (verbosePage) 
-            System.out.println("Sync request: " + url + PageDispatcher.getTraceInfo(session));
+            System.out.println("Sync request: " + url + PageDispatcher.getTraceInfo(session) + " " + getDebugInfo(request, response));
 
          int sz = pageEnts.size();
 
@@ -143,7 +143,7 @@ class SyncServlet extends HttpServlet {
          // Wake up the previous listener - if any, so there's only one thread per window that's waiting at any given time.
          if (oldListener != null && oldListener.waiting) {
             if (verbosePage) 
-                System.out.println("Sync - waking up old listener for same window: " + oldListener);
+                System.out.println("Sync - waking up thread: " + oldListener.threadName + " from: " + PageDispatcher.getTraceInfo(session) + " " + getDebugInfo(request, response));
             synchronized (oldListener) {
                if (oldListener.waiting) {
                   oldListener.replaced = true;
@@ -151,6 +151,8 @@ class SyncServlet extends HttpServlet {
                }
             }
          }
+         else if (oldListener != null && verbosePage)
+            System.out.println("Sync - not waking up thread: " + oldListener.threadName + " from: " + PageDispatcher.getTraceInfo(session) + " " + getDebugInfo(request, response));
 
          if (reset == null) {
             // Reads the POST data as a layer, applies that layer to the current context, and execs any jobs spawned
@@ -237,7 +239,7 @@ class SyncServlet extends HttpServlet {
                      if (!Context.shuttingDown) { // Don't wait if the server is in the midst of shutting down
                         if (verbosePage) {
                            sleepStartTime = System.currentTimeMillis();
-                           System.out.println("Sync wait: " + url + (scopeContextName == null ? "" : " (scopeContextName: " + scopeContextName + ")") + " time: " + waitTime + PageDispatcher.getTraceInfo(session));
+                           System.out.println("Sync wait: " + url + (scopeContextName == null ? "" : " (scopeContextName: " + scopeContextName + ")") + " time: " + waitTime + PageDispatcher.getTraceInfo(session) + " " + getDebugInfo(request, response));
                         }
 
                         if (scopeContextName != null) {
@@ -269,7 +271,7 @@ class SyncServlet extends HttpServlet {
 
                if (Context.shuttingDown) {
                    if (verbosePage)
-                      System.out.println("Sync woke - shutdown: " + url + PageDispatcher.getTraceInfo(session) + (sleepStartTime == 0 ? "" : " after " + (System.currentTimeMillis() - sleepStartTime) + " millis"));
+                      System.out.println("Sync woke - shutdown: " + url + PageDispatcher.getTraceInfo(session) + (sleepStartTime == 0 ? "" : " after " + (System.currentTimeMillis() - sleepStartTime) + " millis") + " " + getDebugInfo(request, response));
                    // Sending the 410 - resource gone - response here to signal that we do not want the client to poll again.  If we are planning
                    // on restarting, send the 205 - reset which means send all of your data on the next request cause your session is gone
                    int resultCode = Context.restarting ? 205 : 410;
@@ -279,6 +281,9 @@ class SyncServlet extends HttpServlet {
 
                // Make sure we're still the first SyncServlet request waiting...
                if (windowCtx.waitingListener == listener && !listener.replaced) {
+                  if (verbosePage)
+                     System.out.println("Sync woke - acquiring locks: " + url + PageDispatcher.getTraceInfo(session) + " after " + (System.currentTimeMillis() - sleepStartTime) + " millis " + getDebugInfo(request, response));
+
                   curScopeCtx.startScopeContext(true);
 
                   // This curScopeCtx may have received data binding events from objects it created before we called 'wait'.  When we validate those bindings in startScopeContext, it might have queued additional jobs
@@ -291,12 +296,12 @@ class SyncServlet extends HttpServlet {
                   if (windowCtx.waitingListener == listener && !listener.replaced) {
                      repeatSync = true;
                      if (SyncManager.trace || PageDispatcher.trace)
-                        System.out.println("Sync woke: " + url + PageDispatcher.getTraceInfo(session) + " after " + (System.currentTimeMillis() - sleepStartTime) + " millis" + (interrupted ? " *** interrupted" : ""));
+                        System.out.println("Sync woke: " + url + PageDispatcher.getTraceInfo(session) + " after " + (System.currentTimeMillis() - sleepStartTime) + " millis" + (interrupted ? " *** interrupted" : "") + " " + getDebugInfo(request, response));
                   }
                }
                if (!repeatSync) {
                   if (SyncManager.trace || PageDispatcher.trace)
-                     System.out.println("Sync woke: " + url +  PageDispatcher.getTraceInfo(session) + " after " + (System.currentTimeMillis() - sleepStartTime) + " millis"  + (interrupted ? " *** interrupted and" : "") + " replaced - returning empty sync: ");
+                     System.out.println("Sync woke: " + url +  PageDispatcher.getTraceInfo(session) + " after " + (System.currentTimeMillis() - sleepStartTime) + " millis"  + (interrupted ? " *** interrupted and" : "") + " replaced - returning empty sync: " + " " + getDebugInfo(request, response));
                }
             }
          } while (repeatSync);
@@ -304,7 +309,7 @@ class SyncServlet extends HttpServlet {
          syncSession.lastSyncTime = System.currentTimeMillis();
 
          if (verbosePage)
-            System.out.println("Sync end: " + url + PageDispatcher.getTraceInfo(session) + (traceBuffer.length() > 0 ? (": " + traceBuffer) : "") + " for " + PageDispatcher.getRuntimeString(startTime));
+            System.out.println("Sync end: " + url + PageDispatcher.getTraceInfo(session) + (traceBuffer.length() > 0 ? (": " + traceBuffer) : "") + " for " + PageDispatcher.getRuntimeString(startTime) + " " + getDebugInfo(request, response));
       }
       catch (RuntimeIOException exc) {
          // For the case where the client side just is closed while we are waiting to write.  Only log this as a verbose message for now because it messages up autotests
@@ -374,5 +379,14 @@ class SyncServlet extends HttpServlet {
          ServletSyncDestination.applySyncLayer(bufStr, receiveLanguage, isReset, "client");
       }
       ctx.execLaterJobs();
+   }
+
+   private String getDebugInfo(HttpServletRequest request, HttpServletResponse response) {
+      try {
+         return "response closed: " + response.getWriter().checkError();
+      }
+      catch (IOException exc) {
+         return "response error: " + exc.toString();
+      }
    }
 }

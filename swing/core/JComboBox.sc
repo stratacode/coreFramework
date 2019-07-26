@@ -138,7 +138,8 @@ public class JComboBox extends javax.swing.JComboBox implements ComponentStyle {
       try {
          if (!notUserSet)
             userSelectedIndex = true;
-         super.setSelectedIndex(index);
+         if (items != null && index < items.size())
+            super.setSelectedIndex(index);
          SwingUtil.sendDelayedEvent(sc.bind.IListener.VALUE_CHANGED, JComboBox.this, selectedIndexProperty);
       }
       finally {
