@@ -1,4 +1,4 @@
-// Updating <%= javaTypeName %>
+// Updating type <%= javaTypeName %> due to code change
 <% if (needsInit) { %><%=
       runtimeTypeName %>_c._updateInst = function() {
 <%= updateInstSuper %>

@@ -900,6 +900,12 @@ js_HTMLElement_c.anyChangedRepeatTags = function() {
    return false;
 }
 
+// Remove all sub tags and rebuild from scratch. Unlike refreshRepeat, this does not do an incremental update.
+js_HTMLElement_c.rebuildRepeat = function() {
+   this.destroyRepeatTags();
+   this.refreshRepeat(false);
+}
+
 js_HTMLElement_c.refreshRepeat = function(noRefresh) {
    if (this.repeat && this.syncRepeatTags(true)) {
       if (!noRefresh)
@@ -936,7 +942,7 @@ js_HTMLElement_c.syncRepeatTags = function(updateDOM) {
             }
             this.destroyRepeatTags();
             anyChanges = true;
-            return;
+            return false;
          }
          var repeatTags = this.repeatTags;
          if (repeatTags === null) {
@@ -949,7 +955,7 @@ js_HTMLElement_c.syncRepeatTags = function(updateDOM) {
                }
                var newElem = this.createRepeatElement(toAddArrayVal, i, null);
                repeatTags.push(newElem);
-               anyChanges = true;
+               needsRefresh = anyChanges = true;
             }
             if (js_Element_c.verboseRepeat) {
                console.log("syncRepeatTags - new repeat repeatTags for: " + this.id);

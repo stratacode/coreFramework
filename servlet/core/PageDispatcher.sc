@@ -542,23 +542,14 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                // Loop over the query param properties defined for this page and set the corresponding properties in the pageObject
                if (pageEnt.queryParamProps != null) {
                   for (QueryParamProperty qpp:pageEnt.queryParamProps) {
-                     Object paramValue = ctx.queryParams == null ? null : ctx.queryParams.get(qpp.paramName);
+                     String paramValue = ctx.queryParams == null ? null : ctx.queryParams.get(qpp.paramName);
                      try {
-                        IBeanMapper mapper = qpp.mapper;
-                        if (mapper == null) {
-                           throw new IllegalArgumentException("*** No mapping for query parameter: " + qpp);
-                        }
-                        else {
-                           if (paramValue == null) {
-                              Object propType = mapper.getPropertyType();
-                              if (propType instanceof Class && PTypeUtil.isPrimitive((Class) propType))
-                                 continue;
-                           }
-                           mapper.setPropertyValue(inst, paramValue);
-                        }
+                        qpp.setPropertyValue(inst, paramValue);
                      }
                      catch (RuntimeException exc) {
                         System.err.println("*** Error setting property: " +  qpp.propName + " for: " + inst);
+                        if (verbose)
+                           exc.printStackTrace();
                         try {
                            ctx.response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid parameter: " + qpp.paramName);
                         }

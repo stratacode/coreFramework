@@ -80,6 +80,11 @@ public abstract class RepeatComponent<T> implements IChildContainer, sc.dyn.IObj
       return -1;
    }
 
+   public void rebuildList() {
+      removeAllElements();
+      refreshList();
+   }
+
    public boolean refreshList() {
       valid = true;
 

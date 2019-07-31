@@ -1,7 +1,7 @@
 <%@ import java.util.List;
     import sc.type.MethodBindSettings;
 %>
-// Updating <%= javaTypeName %>
+// Updating type <%= javaTypeName %> for sync update
 <% if (needsInit) {
    if (!globalType) { %><%=
       runtimeTypeName %>_c._update = function() { <% } %>

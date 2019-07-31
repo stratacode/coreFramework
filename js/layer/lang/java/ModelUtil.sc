@@ -261,4 +261,14 @@ public class ModelUtil {
    public static boolean sameTypes(Object t1, Object t2) {
       return DynUtil.getTypeName(t1, false).equals(DynUtil.getTypeName(t2, false));
    }
+
+   public static String getOperator(Object prop) {
+      if (prop instanceof IVariableInitializer) {
+         String op = ((IVariableInitializer) prop).operatorStr;
+         if (op == null)
+            return " = ";
+         return op;
+      }
+      throw new IllegalArgumentException();
+   }
 }

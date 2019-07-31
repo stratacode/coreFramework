@@ -74,10 +74,12 @@ if (needsConstructor) {
 }<%
 } %>
 
-<% if (needsClassDef) { 
+<% // If we are reusing the same type but have a new constructor, update the prototype of the constructor to point to the old type rather than define a new one. This avoids having to copy and update all of the static state
+   if (needsConstructor && !needsClassDef) {%><%= typeName %>.prototype = <%= JSTypeName %>;
+<% } %><% if (needsClassDef) {
 %>var <%= useShortTypeNames ? "_c , " : "" %><%= JSTypeName %> = <%= useShortTypeNames ? "_c = " :"" %><%= newClassMethodName %>("<%= javaTypeName %>", <%= typeName %>,<%= outerClassArg %> <%= extendsClass %>, <%= implementsClasses %>);
-<% } else if (hasTypeChanges) { 
-%>var <%= useShortTypeNames ? "_c = " : "" %><%= JSTypeName %>;
+<% } else if (hasTypeChanges && useShortTypeNames) {
+%>var _c = <%= JSTypeName %>;
 <% } %>
 <%= annotations %><%= propertyMetadata %><%= methodMetadata %><%= typeAliases %><% for (JSMethod meth:methods) { %><%= shortJSTypeName%>.<%= meth.name%> = function (<%= meth.argNames %>) <%= meth.needsDispatch ? '/' + "* overloaded *" + '/' : "" %> {<%
       if (meth.getWithArgs) { %>

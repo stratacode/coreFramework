@@ -46,13 +46,14 @@ class BodyTypeDeclaration extends Definition {
       return declarationType;
    }
 
+   @Bindable(manual=true)
    private List<Object> declaredProperties;
-   @Constant
    public List<Object> getDeclaredProperties() {
       return declaredProperties;
    }
    public void setDeclaredProperties(List<Object> ap) {
       declaredProperties = ap;
+      sc.bind.Bind.sendChangedEvent(this, "declaredProperties");
       markChanged();
    }
 

@@ -10,6 +10,7 @@ import sc.layer.LayeredSystem;
 @CompilerSettings(mixinTemplate="sc.type.InitTypesMixin")
 public class PageInit extends BasePageInit implements ServletContextListener, HttpSessionListener {
     public void contextInitialized(ServletContextEvent event) {
+       ServletScheduler.init();
        sc.obj.ScopeDefinition.initScopes();
        initTypes();
        // For servlets, the request is chained off of the window as well as 'global'
