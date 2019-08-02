@@ -247,7 +247,7 @@ sc_DynUtil_c.getInstanceId = function(obj) {
    var type = sc_DynUtil_c.getType(obj);
 
    if (sc_instanceOf(obj, jv_Enum)) {
-      if (type.$outerClass)
+      if (type.$outerClass && sc_DynUtil_c.isEnumType(type.$outerClass))
          return sc_DynUtil_c.getTypeName(type, false);
       else
          return sc_DynUtil_c.getTypeName(type, false) + "." + sc_DynUtil_c.getEnumName(obj);
@@ -261,7 +261,7 @@ sc_DynUtil_c.isEnumConstant = function(obj) {
 }
 
 sc_DynUtil_c.isEnumType = function(type) {
-   return sc_isAssignableFrom(jv_Enum, obj);
+   return sc_isAssignableFrom(jv_Enum, type.constructor);
 }
 
 sc_DynUtil_c.getObjectId = function(obj, type, typeName) {
