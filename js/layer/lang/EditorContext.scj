@@ -4,6 +4,8 @@ import sc.layer.Layer;
 import sc.lang.ClientEditorContext;
 import sc.lang.java.ModelUtil;
 
+import java.util.Map;
+import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,6 +15,9 @@ import sc.dyn.DynUtil;
 public class EditorContext extends ClientEditorContext {
    Layer currentLayer;
    Object currentType;
+
+   // TODO: add hook for a dispose listener or use JS weak hashmap to support Weak hashmaps through the JS emulation
+   Map<Object,InstanceWrapper> instanceWrappers = new java.util.IdentityHashMap<Object,InstanceWrapper>();
 
    public List<InstanceWrapper> getInstancesOfType(Object type, int max, boolean addNull, String nullLabelName, boolean selectToCreate) {
       ArrayList<InstanceWrapper> ret = new ArrayList<InstanceWrapper>();
@@ -40,10 +45,18 @@ public class EditorContext extends ClientEditorContext {
       int sz = insts.length;
       for (i = 0; i < max && i < sz; i++) { 
          Object inst = insts[i];
-         ret.add(new InstanceWrapper(this, inst, typeName, null, false));
+         ret.add(getOrCreateInstanceWrapper(inst));
       }
-
       return ret;
+   }
+
+   InstanceWrapper getOrCreateInstanceWrapper(Object inst) {
+      InstanceWrapper wrapper = instanceWrappers.get(inst);
+      if (wrapper == null) {
+         wrapper = new InstanceWrapper(this, inst, DynUtil.getTypeName(DynUtil.getType(inst), false), null, false);
+         instanceWrappers.put(inst, wrapper);
+      }
+      return wrapper;
    }
 
    private boolean needsSave = false;
