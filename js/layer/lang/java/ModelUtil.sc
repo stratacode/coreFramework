@@ -18,6 +18,8 @@ public class ModelUtil {
          return ((VariableDefinition) member).layer;
       else if (member instanceof BodyTypeDeclaration)
          return ((BodyTypeDeclaration) member).layer;
+      else if (member instanceof PropertyAssignment)
+         return ((PropertyAssignment) member).layer;
       return null;
    }
 
