@@ -11,6 +11,15 @@ import org.opencv.core.Scalar;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
+// To install on mac os X - follow the instructions for installing with homebrew and java enabled
+//   - brew edit opencv
+//           - find line with:
+//               -DBUILD_opencv_java=OFF
+//              and change it to:
+//               -DBUILD_opencv_java=ON
+//   - brew install --build-from-source opencv
+// NOTE: Last time I tried this I had problems compiling opencv and just copied the /usr/local/opt/opencv dir from the previous machine.
+
 opencv.lib {
    String openCVLibDir =  "/usr/local/opt/opencv/share/OpenCV/java";
    void start() {

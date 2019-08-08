@@ -1,13 +1,9 @@
 package sc.jetty;
 
-jetty.lib extends log4j.core {
+jetty.lib extends servlet.lib, log4j.core {
    compiledOnly = true;
 
    codeType = sc.layer.CodeType.Framework;
-
-   object servletPkg extends MvnRepositoryPackage {
-      url = "mvn://javax.servlet/javax.servlet-api/3.1.0";
-   }
 
    object jettyPkg extends MvnRepositoryPackage {
       //url = "mvn://org.eclipse.jetty/jetty-webapp/8.1.17.v20150415";

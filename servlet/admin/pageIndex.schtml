@@ -19,7 +19,7 @@
                <%!
                   Object patternInst;
                   Map<String,Object> otherProps;
-                  Element createElement(Object value, int ix, Element oldTag) {
+                  public Element createElement(Object value, int ix, Element oldTag) {
                      if (PString.isString(value)) {
                         ConstStringURLElement elem = new ConstStringURLElement();
                         elem.strVal = value.toString();
@@ -69,7 +69,7 @@
                      throw new IllegalArgumentException("Unrecognized value for pattern element: " + value);
                   }
 
-                  void updateElementIndexes(int fromIx) {
+                  public void updateElementIndexes(int fromIx) {
                   }
                %>
             </span>

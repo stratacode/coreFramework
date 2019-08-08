@@ -4,7 +4,7 @@ import sc.servlet.PathServlet;
 import sc.servlet.PathServletFilter;
 
 /** Defines basic web-app support.  Used by all servlet based frameworks for generating web.xml */
-servlet.webApp extends util, html.schtml {
+servlet.webApp extends servlet.lib, util, html.schtml {
    compiledOnly = true;
 
    codeType = sc.layer.CodeType.Framework;

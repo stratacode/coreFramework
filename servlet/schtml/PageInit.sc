@@ -18,6 +18,8 @@ public class PageInit extends BasePageInit implements ServletContextListener, Ht
        LayeredSystem sys = LayeredSystem.getCurrent();
        // Call back to the layered system to let it know the sync types etc are initialized.  We might need to init the sync for the command interpreter
 
+       PageDispatcher.initPageEntries();
+
        if (sys != null)
           sys.runtimeInitialized();
     }

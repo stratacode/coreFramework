@@ -1088,7 +1088,7 @@ syncMgr = sc_SyncManager_c = {
             if (cl === "sc.js.ServerTag")
                newServerTags[newArgs[0]] = {name:newArgs[0]};
             // These map to system objects so no server tag instance
-            else if (cl !== "sc.js.ServerTagManager" && cl !== "sc.lang.html.Location")
+            else if (cl !== "sc.js.ServerTagManager" && cl !== "sc.lang.html.Location" && cl !== "sc.lang.html.Document")
                sc_logError("Unrecognized class for $new in stags.js: " + cl);
             continue;
          }

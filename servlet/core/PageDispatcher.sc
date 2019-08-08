@@ -45,6 +45,7 @@ import sc.obj.ScopeContext;
 import sc.obj.ScopeDefinition;
 import sc.obj.RequestScopeDefinition;
 import sc.obj.CurrentScopeContext;
+import sc.obj.Constant;
 
 import sc.lang.html.QueryParamProperty;
 
@@ -106,8 +107,10 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
    public static final int PAGE_FLAG_URL = 1;
    public static final int PAGE_FLAG_SYNC = 2;
 
-   static class PageEntry implements IPageEntry {
+   public static class PageEntry implements IPageEntry {
+      @Constant
       String keyName;
+      @Constant
       String pattern;
       Parselet patternParselet;
       Pattern urlPattern;
@@ -121,8 +124,12 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       boolean resource;
       Set<String> syncTypes;
 
+      @Constant
+      ScopeDefinition pageScope;
+
       // Stores the list of query parameters (if any) for the given page - created with @QueryParam
-      List<QueryParamProperty> queryParamProps;
+      @Constant
+      public List<QueryParamProperty> queryParamProps;
 
       public String toString() {
          if (pattern == null)
@@ -195,6 +202,17 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          else
             return ModelUtil.getAndRegisterGlobalObjectInstance(pageType);
       }
+
+      void initPageScope() {
+         if (pageScope != null)
+            return;
+         String scopeName = DynUtil.getScopeNameForType(pageType);
+         // This is the scope used for server tags - for request, it needs to be request but otherwise it's window.
+         if (scopeName != null && scopeName.equals("request"))
+            pageScope = ScopeDefinition.getScopeByName(scopeName);
+         else
+            pageScope = WindowScopeDefinition;
+      }
    }
 
    /**
@@ -248,6 +266,12 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             System.out.println("PageDispatcher: adding index page for: " + (dir.length() == 0 ? "doc root" : dir));
          addPage(dir + "_index_", dir + "/", pageType, urlPage, doSync, isResource, priority, lockScope, queryParamProps, syncTypes);
       }
+   }
+
+   /** Must be called after the scopes have been defined, before service is run */
+   public static void initPageEntries() {
+      for (PageEntry pageEnt:pages.values())
+         pageEnt.initPageScope();
    }
 
    public void service(javax.servlet.http.HttpServletRequest request, 
@@ -744,7 +768,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                // Null serverTagTypes will not collect the server tag sync types. But if we are using a filter we need to collect them.
                stCtx.serverTagTypes = new HashSet<String>();
             }
-            page.addServerTags(WindowScopeDefinition, stCtx, false);
+            page.addServerTags(pageEnt.pageScope, stCtx, false);
 
             // For server tag pages, if there are listeners on the window object properties like innerWidth/Height or document properties, add ServerTags for
             // window and document too

@@ -2223,6 +2223,7 @@ js_Form_c.getSubmitCount = function() {
 
 function js_Page() {
    js_HTMLElement.call(this);
+   this.updateURLScheduled = false;
    // Schedule a refresh once this script is done loading
    sc_addLoadMethodListener(this, js_Page_c.onPageLoad);
    sc_runLaterScheduled = true;
@@ -2238,8 +2239,10 @@ function js_Page() {
       this.queryParamProperties = pi.queryParamProperties;
       this.urlParts = pi.urlParts;
    }
+   var newURLProps = {};
+   var updateURLListener = new js_RefreshURLListener(this);
    if (this.urlParts != null) {
-      this.processURLParams(window.location.pathname, this.urlParts, false);
+      this.processURLParams(window.location.pathname, this.urlParts, false, newURLProps, updateURLListener);
    }
    if (this.queryParamProperties != null) {
       var qps = this.queryParamProperties;
@@ -2262,7 +2265,14 @@ function js_Page() {
             }
          }
       }
+      for (var q = 0; q < qps.size(); q++) {
+         var qp = qps.get(q);
+         var pn = qp.propName;
+         newURLProps[pn] = sc_DynUtil_c.getPropertyValue(this, pn);
+         sc_Bind_c.addListener(this, pn, updateURLListener, sc_IListener_c.VALUE_VALIDATED);
+      }
    }
+   this.lastURLProps = newURLProps;
    // Signal to others not to bother refreshing individually - avoids refreshing individual tags when we are going to do it at the page level anyway
    //if (this.refreshOnLoad)
    //   js_Element_c.globalRefreshScheduled = true;
@@ -2389,7 +2399,14 @@ js_HtmlPage_c.refresh = js_Page_c.refresh = function() {
    this.refreshServerTags();
 }
 
-js_HtmlPage_c.processURLParams = js_Page_c.processURLParams = function(url, ups, opt) {
+js_HtmlPage_c.schedURLUpdate = js_Page_c.schedURLUpdate = function() {
+   if (!this.updateURLScheduled) {
+      this.updateURLScheduled = true;
+      sc_addRunLaterMethod(this, js_Page_c.updateURLFromProperties, 5);
+   }
+}
+
+js_HtmlPage_c.processURLParams = js_Page_c.processURLParams = function(url, ups, opt, newURLProps, updateURLListener) {
    var urlNext = url;
    for (var i = 0; i < ups.size(); i++) {
       var up = ups.get(i);
@@ -2474,18 +2491,23 @@ js_HtmlPage_c.processURLParams = js_Page_c.processURLParams = function(url, ups,
             console.error("Unrecognized parselet type for url parameter: " + up.parseletName);
          up.setPropertyValue(this, val);
          urlNext = urlNext.substring(ct);
+
+         // List for property changes and update the URL
+         if (up.propName !== null) {
+            var pn = up.propName;
+            newURLProps[pn] = val;
+            sc_Bind_c.addListener(this, pn, updateURLListener, sc_IListener_c.VALUE_VALIDATED);
+         }
       }
       else if (up.urlParts) { // js_OptionalURLParam
          if (urlNext.length === 0) {
             break;
          }
-         urlNext = this.processURLParams(urlNext, up.urlParts, true);
+         urlNext = this.processURLParams(urlNext, up.urlParts, true, newURLProps, updateURLListener);
       }
    }
    return urlNext;
 }
-
-
 
 // Called to create, or update a server tag object, pointing to the DOM element specified by 'id'.
 // It's called from a server response handler with an optional serverTag info object describing the properties the
@@ -2834,11 +2856,6 @@ js_Img_c.getSrc = function() {
    return this.src; 
 }
 
-function js_RefreshAttributeListener(scObj) {
-   sc_AbstractListener.call(this);
-   this.scObj = scObj;
-}
-
 function js_Style() {
    js_HTMLElement.call(this);
    this.tagName = "style";
@@ -2907,6 +2924,112 @@ js_StyleSheet_c.updateDOM = function() {
 
 js_StyleSheet_c.setDOMElement = function(elem) {
    js_HTMLElement_c.setDOMElement.call(this, elem);
+}
+
+function js_RefreshURLListener(page) {
+   sc_AbstractListener.call(this);
+   this.page = page;
+}
+
+js_RefreshURLListener_c = sc_newClass("sc.lang.html.RefreshURLListener", js_RefreshURLListener, sc_AbstractListener, null);
+
+// Called when a queryParam or URL param property has changed via the data binding events.  Schedule an update of the URL.
+js_RefreshURLListener_c.valueValidated = function(obj, prop, detail, apply) {
+   if (obj != this.page)
+      console.error("Log error in refreshURLListener!");
+   if (!sc_DynUtil_c.equalObjects(this.page.lastURLProps[prop], sc_DynUtil_c.getPropertyValue(this.page, prop))) {
+      this.page.schedURLUpdate();
+   }
+}
+
+function sc_replaceQueryString(url, newq) {
+   var qix = url.indexOf('?');
+   var post = "";
+   if (qix == -1) {
+      var hix = url.indexOf('#');
+      if (hix != -1) {
+         if (hix > url.length + 1)
+            post = url.substring(hix);
+         url = url.substring(0, hix);
+      }
+   }
+   if (qix == -1)
+      return url + newq + post;
+   else
+      return url.substring(0,qix) + newq;
+}
+
+js_HtmlPage_c.appendURLParts = js_Page_c.appendURLParts = function(baseURL, ups, opt) {
+   var append = "";
+   for (var i = 0; i < ups.size(); i++) {
+      var up = ups.get(i);
+      if (sc_instanceOf(up, String)) {
+         append += up;
+      }
+      else if (up.parseletName) { // js_URLParamProperty
+         if (up.propName !== null) {
+            var propVal = sc_DynUtil_c.getPropertyValue(this, up.propName);
+            if (propVal === null) {
+               if (opt) // No value in this list of urlParts and we skip the entire thing - including any string contents since this is inside the []
+                  return baseURL;
+            }
+            else {
+               // TODO: look at parseletName for the conversion algorithm if this is not right
+               append += propVal;
+            }
+         }
+      }
+      else if (up.urlParts) { // js_OptionalURLParam
+         append += this.appendURLParts("", up.urlParts, true);
+      }
+   }
+   return baseURL + append;
+}
+
+js_HtmlPage_c.updateURLFromProperties = js_Page_c.updateURLFromProperties = function() {
+   var qps = this.queryParamProperties;
+   var ups = this.urlParts;
+
+   var newURLProps = {};
+   var baseURL = location.href;
+   var needsPush = false;
+   if (ups !== null) {
+      baseURL = this.appendURLParts("", ups, false);
+      if (baseURL != location.href)
+         needsPush = true;
+   }
+   if (qps !== null) {
+      var qstr = null;
+      for (var i = 0; i < qps.size(); i++) {
+         var qp = qps.get(i);
+         var propVal = sc_DynUtil_c.getPropertyValue(this, qp.propName);
+         if (propVal) {
+            if (qstr === null)
+               qstr = "?";
+            else
+               qstr += "&";
+            qstr += qp.paramName + "=" + propVal;
+         }
+         newURLProps[qp.propName] = propVal;
+      }
+      if (qstr !== null) {
+         baseURL = sc_replaceQueryString(baseURL, qstr);
+         needsPush = true;
+      }
+   }
+   if (needsPush)
+      history.pushState(newURLProps, "queryParamProps", baseURL);
+   this.lastURLProps = newURLProps;
+   this.updateURLScheduled = false;
+}
+
+js_RefreshURLListener_c.toString = function() {
+   return "<" + this.page.$protoName + " (url/query param listener)>";
+}
+
+function js_RefreshAttributeListener(scObj) {
+   sc_AbstractListener.call(this);
+   this.scObj = scObj;
 }
 
 js_RefreshAttributeListener_c = sc_newClass("sc.lang.html.RefreshAttributeListener", js_RefreshAttributeListener, sc_AbstractListener, null);

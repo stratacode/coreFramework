@@ -9,7 +9,7 @@
    import java.util.Map.Entry;
    import java.util.Arrays;
 %>
-<html scope="request">
+<html scope="request" exec="server">
 
 <body>
 <h2>StrataCode Server State Viewer</h2>
@@ -20,11 +20,11 @@
             <h3>Scope: <%= currentScope.externalName %></h3>
             <p>
                <%
-                  ScopeContext ctx = currentScope.getScopeContext(false);
-                  if (ctx == null)
+                  ScopeContext scopeCtx = currentScope.getScopeContext(false);
+                  if (scopeCtx == null)
                      out.append("not created");
                   else {
-                     Map<String,Object> values = ctx.getValues();
+                     Map<String,Object> values = scopeCtx.getValues();
                      if (values == null) {
                         out.append("no values");
                      }
@@ -46,18 +46,24 @@
 
                         // Now dump out the contents of the sync context if we found one
                         if (syncCtx != null && syncCtx.objectIndex.size() > 0) {
-                           %><h3>Synchronized objects</h3>
+                           %>Synchronized objects<br/>
+                            <table><tr><th>Name(constr args)</th><th>registered</th><th>onDemand</th><th>initialized</th></tr>
                            <%
                            for (Map.Entry<String,Object> ent:syncCtx.objectIndex.entrySet()) {
                               InstInfo instInfo = syncCtx.getInstInfo(ent.value);
                               if (instInfo != null) {
                                  %>
-                                    <h4><%= instInfo.name %></h4>(<%= sc.util.ArrayUtil.argsToString(instInfo.args) %>)  Registered: <%= instInfo.registered %>
-                                        onDemand: <%= instInfo.onDemand %>Initialized: <%= instInfo.initialized %> Value: <%= ent.value %>
+                                 <tr>
+                                    <td><%= instInfo.name %>(<%= sc.util.ArrayUtil.argsToString(instInfo.args) %>)</td>
+                                    <td><%= instInfo.registered %></td>
+                                    <td><%= instInfo.onDemand %></td>
+                                    <td><%= instInfo.initialized %></td>
+                                 </tr>
                                  <%
                               }
-                           }
-                        }
+                           } %>
+                           </table>
+                        <% }
                      }
                   }
                %>
