@@ -2228,8 +2228,6 @@ function js_Page() {
    sc_addLoadMethodListener(this, js_Page_c.onPageLoad);
    sc_runLaterScheduled = true;
    this.refreshedOnce = false;
-   var url = window.location.href;
-   this.pageURL = url;
    var pi = js_PageInfo_c.pages[this.$protoName];
    if (pi == null) {
       this.queryParamProperties = null;
@@ -2239,40 +2237,8 @@ function js_Page() {
       this.queryParamProperties = pi.queryParamProperties;
       this.urlParts = pi.urlParts;
    }
-   var newURLProps = {};
-   var updateURLListener = new js_RefreshURLListener(this);
-   if (this.urlParts != null) {
-      this.processURLParams(window.location.pathname, this.urlParts, false, newURLProps, updateURLListener);
-   }
-   if (this.queryParamProperties != null) {
-      var qps = this.queryParamProperties;
-      var qix = url.indexOf('?');
-      if (qix != -1 && qix < url.length - 1) {
-         var qstr = url.substring(qix+1);
-         var qarr = qstr.split('&');
-         for (var i = 0; i < qarr.length; i++) {
-            var qent = qarr[i];
-            var eix = qent.indexOf('=');
-            if (eix != -1 && eix < qent.length) {
-               var en = qent.substring(0, eix);
-               var ev = decodeURIComponent(qent.substring(eix+1));
-               for (var j = 0; j < qps.size(); j++) {
-                  var qp = qps.get(j);
-                  if (en.equals(qp.paramName)) {
-                     qp.setPropertyValue(this, ev);
-                  }
-               }
-            }
-         }
-      }
-      for (var q = 0; q < qps.size(); q++) {
-         var qp = qps.get(q);
-         var pn = qp.propName;
-         newURLProps[pn] = sc_DynUtil_c.getPropertyValue(this, pn);
-         sc_Bind_c.addListener(this, pn, updateURLListener, sc_IListener_c.VALUE_VALIDATED);
-      }
-   }
-   this.lastURLProps = newURLProps;
+   // Set page properties and add listeners to update the URL state
+   this.updatePageFromURL(true);
    // Signal to others not to bother refreshing individually - avoids refreshing individual tags when we are going to do it at the page level anyway
    //if (this.refreshOnLoad)
    //   js_Element_c.globalRefreshScheduled = true;
@@ -2280,6 +2246,7 @@ function js_Page() {
    this.serverTags = {}; // element id as the key pointing to the ServerTag instance received from the server
    this.serverTagObjs = {}; // stores wrapper server tag objects using element id as the key.
    this.stInit = false;
+   this.urlChanged = false;
 }
 
 js_Page_c = sc_newClass("sc.lang.html.Page", js_Page, js_HTMLElement, null);
@@ -2402,7 +2369,97 @@ js_HtmlPage_c.refresh = js_Page_c.refresh = function() {
 js_HtmlPage_c.schedURLUpdate = js_Page_c.schedURLUpdate = function() {
    if (!this.updateURLScheduled) {
       this.updateURLScheduled = true;
-      sc_addRunLaterMethod(this, js_Page_c.updateURLFromProperties, 5);
+      sc_addRunLaterMethod(this, js_Page_c.updateURL, 5);
+   }
+}
+
+js_HtmlPage_c.updateURL = js_Page_c.updateURL = function() {
+   this.updateURLScheduled = false;
+   if (this.urlChanged)
+      this.updatePageFromURL(false);
+   else
+      this.updateURLFromProperties(false);
+
+}
+
+function sc_cleanURL(u) {
+   var hix = u.indexOf("#");
+   if (hix == u.length - 1)
+      return u.substring(0,hix);
+   return u;
+}
+
+function sc_sameURLs(u1,u2) {
+   if (u1 === u2)
+      return true;
+   if (sc_cleanURL(u1) === sc_cleanURL(u2))
+      return true;
+   return false;
+}
+
+js_HtmlPage_c.updatePageFromURL = js_Page_c.updatePageFromURL = function(addListener) {
+   var url = window.location.href;
+   this.pageURL = url;
+   this.urlChanged = false;
+   var updateURLListener = addListener ? new js_RefreshURLListener(this) : null;
+   var urlPropNames = [];
+   var urlPropValues = {__pns:urlPropNames};
+   if (this.urlParts != null) {
+      this.processURLParams(window.location.pathname, this.urlParts, false, urlPropValues, updateURLListener);
+   }
+   if (this.queryParamProperties != null) {
+      var qps = this.queryParamProperties;
+      var qix = url.indexOf('?');
+      var foundProps = {};
+      if (qix != -1 && qix < url.length - 1) {
+         var qstr = url.substring(qix+1);
+         var qarr = qstr.split('&');
+         for (var i = 0; i < qarr.length; i++) {
+            var qent = qarr[i];
+            var eix = qent.indexOf('=');
+            if (eix != -1 && eix < qent.length) {
+               var en = qent.substring(0, eix);
+               var ev = decodeURIComponent(qent.substring(eix+1));
+               for (var j = 0; j < qps.size(); j++) {
+                  var qp = qps.get(j);
+                  if (en.equals(qp.paramName)) {
+                     qp.setPropertyValue(this, ev);
+                     foundProps[qp.propName] = true;
+                  }
+               }
+            }
+         }
+      }
+      // Make sure any properties not in the URL get reset to null - this is required for resetting values
+      // like when implementing the back button.
+      for (var j = 0; j < qps.size(); j++) {
+         var qp = qps.get(j);
+         if (!foundProps[qp.propName])
+            qp.setPropertyValue(this, null);
+      }
+
+      if (updateURLListener !== null) {
+         for (var q = 0; q < qps.size(); q++) {
+            var qp = qps.get(q);
+            var pn = qp.propName;
+            urlPropValues[pn] = sc_DynUtil_c.getPropertyValue(this, pn);
+            urlPropNames.push(pn);
+            sc_Bind_c.addListener(this, pn, updateURLListener, sc_IListener_c.VALUE_VALIDATED);
+         }
+      }
+   }
+   this.lastURLProps = urlPropValues;
+   if (addListener && urlPropNames.length > 0) {
+      var thisPage = this;
+      history.replaceState(urlPropValues, "init page state");
+      // Called every time local navigation changes both: a click on an a href="#" link or back/forward
+      window.addEventListener('popstate', function(ev) {
+         if (!sc_sameURLs(window.location.href, thisPage.pageURL)) {
+            thisPage.urlChanged = true;
+            thisPage.schedURLUpdate();
+         }
+         //thisPage.updatePageFromURL(false);
+      });
    }
 }
 
@@ -2493,9 +2550,10 @@ js_HtmlPage_c.processURLParams = js_Page_c.processURLParams = function(url, ups,
          urlNext = urlNext.substring(ct);
 
          // List for property changes and update the URL
-         if (up.propName !== null) {
+         if (up.propName !== null && updateURLListener !== null) {
             var pn = up.propName;
             newURLProps[pn] = val;
+            newURLProps.__pns.push(pn);
             sc_Bind_c.addListener(this, pn, updateURLListener, sc_IListener_c.VALUE_VALIDATED);
          }
       }
@@ -3017,10 +3075,11 @@ js_HtmlPage_c.updateURLFromProperties = js_Page_c.updateURLFromProperties = func
          needsPush = true;
       }
    }
-   if (needsPush)
-      history.pushState(newURLProps, "queryParamProps", baseURL);
+   if (needsPush) {
+      history.replaceState(newURLProps, "queryParamProps", baseURL);
+      this.pageURL = window.location.href;
+   }
    this.lastURLProps = newURLProps;
-   this.updateURLScheduled = false;
 }
 
 js_RefreshURLListener_c.toString = function() {

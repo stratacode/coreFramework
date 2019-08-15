@@ -23,14 +23,26 @@ class AppSessionScopeContext extends ScopeContext implements HttpSessionBindingL
    // efficiently if we don't wrap everything in one hash-map where we would have to manage
    // the save/restore and incremental updates could not be optimized by the app server
    Object getValue(String key) {
-      return session.getAttribute(appId + "__" + key);
+      try {
+         return session.getAttribute(appId + "__" + key);
+      }
+      catch (IllegalStateException exc) {
+         // When the session is expired on this request we may access the session afterwards - like in setInitialSync
+         return null;
+      }
    }
 
    public void setValue(String key, Object value) {
+      // Stored in the session so we can use the session persistence of the app server
+      try {
+         session.setAttribute(appId + "__" + key, value);
+      }
+      catch (IllegalStateException exc) {
+         if (ScopeDefinition.verbose)
+            System.out.println("Scope: appSession - set value " + key + " = " + value + " session not updated because it has been invalidated");
+      }
       if (ScopeDefinition.trace)
          System.out.println("Scope: appSession - set value " + key + " = " + value + " for: " + toString());
-      // Stored in the session so we can use the session persistence of the app server
-      session.setAttribute(appId + "__" + key, value);
       if (valuesMap == null) {
          valuesMap = new LinkedHashMap<String,Object>();
       }

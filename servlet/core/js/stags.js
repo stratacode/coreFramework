@@ -1024,7 +1024,7 @@ sc_SyncListener_c.error = function(code, text) {
    var errReq = syncMgr.pendingSends.pop(); 
    if (code === 205) { // session on server has expired - send the reset state and the original error request to be reapplied
       sc_logError("*** Server session lost - sending empty reset");
-      var resetJ = {sync:sc$resetState};
+      var resetJ = {sync:[sc$resetState]};
       syncMgr.writeToDestination(JSON.stringify(resetJ, null, 3) + " " + errReq,"&reset=true");
    }
    else if (code === 410) { // server shutdown

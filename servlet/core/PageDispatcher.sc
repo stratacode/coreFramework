@@ -936,7 +936,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             if (isUrlPage)
                PTypeUtil.setAppId(pageEnt.keyName);
 
-            ctx = Context.initContext(request, response, queryParams);
+            ctx = Context.initContext(request, response, request.getRequestURL().toString(), request.getRequestURI().toString(), queryParams);
 
             LayeredSystem sys = LayeredSystem.getCurrent();
             if (sys != null && sys.options.autoRefresh) {
@@ -1266,5 +1266,20 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
    /** Hook to allow tag objects to find the page type for a given URL at runtime */
    public IPageEntry lookupPageType(String url) {
       return pages.get(url);
+   }
+
+   /** Build the requestURL from a requestURI and a request.  */
+   public static String buildRequestURL(HttpServletRequest request, String uri) {
+      StringBuilder builder = new StringBuilder();
+      builder.append(request.getProtocol());
+      builder.append("://");
+      builder.append(request.getServerName());
+      if (request.getServerPort() != 80 && request.getServerPort() != 443) {
+         builder.append(":");
+         builder.append(request.getServerPort());
+      }
+      builder.append("/");
+      builder.append(uri);
+      return builder.toString();
    }
 }

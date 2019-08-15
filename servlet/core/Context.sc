@@ -43,6 +43,9 @@ class Context {
 
    CurrentScopeContext curScopeCtx = null;
 
+   String requestURL;
+   String requestURI;
+
    /** Set to true when the server is in the midst of a shutdown */
    static boolean shuttingDown = false;
    /** Set this to true when the server will restart */
@@ -51,9 +54,11 @@ class Context {
    static boolean verbose = false;
    static boolean trace = false;
 
-   Context(HttpServletRequest req, HttpServletResponse res, TreeMap<String,String> queryParams) {
+   Context(HttpServletRequest req, HttpServletResponse res, String requestURL, String requestURI, TreeMap<String,String> queryParams) {
       request = req;
       response = res;
+      this.requestURL = requestURL;
+      this.requestURI = requestURI;
       this.queryParams = queryParams;
    }
 
@@ -66,11 +71,20 @@ class Context {
       if (request == null)
          return session;
       // TODO: performance - maybe add: if (session !=null) return session;
-      HttpSession sess = request.getSession(true);
-      if (verbose && sess != null && session == null)
-         System.out.println("Using session id " + sess.getId() + " with trace id: " + DynUtil.getTraceObjId(sess.getId()) + " on thread: " + DynUtil.getCurrentThreadString());
-      session = sess;
-      return sess;
+      try {
+         if (session != null)
+            return session;
+         HttpSession sess = request.getSession(true);
+         if (verbose && sess != null && session == null)
+            System.out.println("Using session id " + sess.getId() + " with trace id: " + DynUtil.getTraceObjId(sess.getId()) + " on thread: " + DynUtil.getCurrentThreadString());
+         session = sess;
+         return sess;
+      }
+      catch (IllegalStateException exc) {
+         if (verbose)
+            System.out.println("Response is committed error trying to get session");
+      }
+      return null;
    }
 
    private static ThreadLocal<Context> currentContextStore = new ThreadLocal<Context>();
@@ -126,9 +140,9 @@ class Context {
       return ctx;
    }
 
-   static Context initContext(HttpServletRequest request, HttpServletResponse response, TreeMap<String,String> queryParams) {
+   static Context initContext(HttpServletRequest request, HttpServletResponse response, String requestURL, String requestURI, TreeMap<String,String> queryParams) {
       Context ctx;
-      currentContextStore.set(ctx = new Context(request, response, queryParams));
+      currentContextStore.set(ctx = new Context(request, response, requestURL, requestURI, queryParams));
 
       String windowIdStr = request.getParameter("windowId");
       if (windowIdStr != null) {
@@ -293,7 +307,7 @@ class Context {
          }
          synchronized (ctxList) {
             windowId = ctxList.size();
-            windowCtx = new WindowScopeContext(windowId, Window.createNewWindow(request.getRequestURL().toString(), request.getServerName(), request.getServerPort(), request.getRequestURI(), request.getPathInfo(), request.getQueryString()));
+            windowCtx = new WindowScopeContext(windowId, Window.createNewWindow(requestURL, request.getServerName(), request.getServerPort(), request.getRequestURI(), request.getPathInfo(), request.getQueryString()));
             windowCtx.init();
             ctxList.add(windowCtx);
 
