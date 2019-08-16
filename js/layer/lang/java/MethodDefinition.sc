@@ -4,4 +4,6 @@ import sc.obj.GetSet;
 class MethodDefinition extends AbstractMethodDefinition {
    @GetSet
    String returnTypeName;
+   @GetSet
+   String propertyName;
 }
