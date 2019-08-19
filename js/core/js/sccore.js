@@ -200,7 +200,7 @@ function sc_instanceOfChar(srcObj, type) {
 }
 
 function sc_instanceOfClass(obj, dstClass) {
-  return obj != null && obj.hasOwnProperty("$protoName") || obj.hasOwnProperty("$typeName");
+  return obj != null && (obj.hasOwnProperty("$protoName") || obj.hasOwnProperty("$typeName"));
 }
 
 function sc_clInit(c) {
