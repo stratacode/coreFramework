@@ -296,6 +296,20 @@ js_HTMLElement_c.isVisibleInView = function() {
    }
 }
 
+js_HTMLElement_c.setBodyOnly = function(nbo) {
+   if (this.bodyOnly == nbo)
+      return;
+   this.bodyOnly = nbo;
+   if (this.initState === 1) {
+      var enclTag = this.getEnclosingTag();
+      if (enclTag != null)
+         enclTag.invalidateBody();
+      else
+         this.invalidate();
+   }
+   sc_Bind_c.sendEvent(sc_IListener_c.VALUE_CHANGED, this, "bodyOnly" , nbo);
+}
+
 js_HTMLElement_c.setHTMLClass = function(cl) {
    if (cl != this.HTMLClass) {
       this.HTMLClass = cl; 
