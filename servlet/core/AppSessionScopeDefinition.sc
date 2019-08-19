@@ -29,18 +29,25 @@ object AppSessionScopeDefinition extends ScopeDefinition {
       AppSessionScopeContext ctx;
       String appId = sc.type.PTypeUtil.getAppId();
       String key = "_sessionApp_" + appId;
-      ctx = (AppSessionScopeContext) session.getAttribute(key);
-      if (ctx == null && create) {
-         synchronized (session) {
-            ctx = (AppSessionScopeContext) session.getAttribute(key);
-            if (ctx == null) {
-               ctx = new AppSessionScopeContext(session, appId);
-               if (ScopeDefinition.verbose)
-                   System.out.println("Creating appSession context for app: " + appId + " session: " + session.getId());
-               session.setAttribute(key, ctx);
-               ctx.init();
+      try {
+         ctx = (AppSessionScopeContext) session.getAttribute(key);
+         if (ctx == null && create) {
+            synchronized (session) {
+               ctx = (AppSessionScopeContext) session.getAttribute(key);
+               if (ctx == null) {
+                  ctx = new AppSessionScopeContext(session, appId);
+                  if (ScopeDefinition.verbose)
+                      System.out.println("Creating appSession context for app: " + appId + " session: " + session.getId());
+                  session.setAttribute(key, ctx);
+                  ctx.init();
+               }
             }
          }
+      }
+      catch (IllegalStateException exc) {
+         if (ScopeDefinition.verbose)
+            System.out.println("Session expired for app: " + appId);
+         return null;
       }
       return ctx;
    }
