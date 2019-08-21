@@ -1,0 +1,27 @@
+<%@ import sc.html.QueryParam; %>
+<html exec="server">
+   <%!
+      @QueryParam
+      boolean invalidateSession;
+   %>
+   <body>
+      <%! HttpSession session; %>
+      <%
+         Context servletCtx = Context.getCurrentContext();
+         session = servletCtx == null ? null : servletCtx.getSession();
+
+         if (session == null)
+            out.append("No session");
+         else if (invalidateSession) {
+            session.invalidate();
+            out.append("Session invalidated<p>");
+         }
+         else {
+            %>
+      Session id: <%= session.getId() %><br>
+      created: <%= sc.util.PerfMon.getTimeDelta(session.getCreationTime()) %>
+         <% } %>
+      <p>
+      <a href=':= pageBaseURL + "?invalidateSession" '>Invalidate session</a>
+   </body>
+</html>

@@ -1255,7 +1255,11 @@ js_HTMLElement_c.moveElement = function(tag, oldIx, newIx, updateDOM) {
          }
       }
    }
-   this.repeatTags.splice(newIx, 0, elemToMove);
+   if (this.repeatTags[oldIx] === tag)
+      this.repeatTags.splice(oldIx, 1);
+   else
+      console.error("Unrecognized case in moveElement for syncRepeatTags");
+   this.repeatTags.splice(newIx, 0, tag);
 
    return needsRefresh;
 }

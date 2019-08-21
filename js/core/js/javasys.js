@@ -99,8 +99,31 @@ Object.prototype.clone = function() {
    return clone;
 }
 
-// TODO: shouldn't the name be java.lang.String?
-var String_c = sc_newClass("String", String, null, null);
+function jv_Object() {
+}
+
+var jv_Object_c = sc_newClass("java.lang.Object", jv_Object, null, null);
+
+jv_Object_c.equals = function(other) {
+   return this == other;
+}
+
+jv_Object_c.getClass = function() {
+   return this.constructor.prototype;
+}
+
+// All class objects have a getName method but our only way to add methods to java.lang.Class is via jv_Object here.
+jv_Object_c.getName = function() {
+   if (this.hasOwnProperty("$protoName"))
+      return this.$protoName;
+   throw new jv_UnsupportedOperationException();
+}
+
+function jv_Comparable() {}
+var jv_Comparable_c = sc_newClass("java.lang.Comparable", jv_Comparable, jv_Object, null);
+
+// TODO: shouldn't the type name be java.lang.String here?
+var String_c = sc_newClass("String", String, null, [jv_Comparable]);
 
 String_c._valueOf = function(o) {
    return o === null || o === undefined ? "null" : o.toString();
@@ -159,26 +182,6 @@ String.prototype.toCharArray = function() {
 
 String.prototype.equalsIgnoreCase = function(o) {
    return this.toUpperCase() === o.toUpperCase();
-}
-
-function jv_Object() {
-}
-
-var jv_Object_c = sc_newClass("java.lang.Object", jv_Object, null, null);
-
-jv_Object_c.equals = function(other) {
-   return this == other;
-}
-
-jv_Object_c.getClass = function() {
-   return this.constructor.prototype;
-}
-
-// All class objects have a getName method but our only way to add methods to java.lang.Class is via jv_Object here.  
-jv_Object_c.getName = function() {
-   if (this.hasOwnProperty("$protoName"))
-      return this.$protoName;
-   throw new jv_UnsupportedOperationException();
 }
 
 var Boolean_c = sc_newClass("java.lang.Boolean", Boolean, null, null);
@@ -455,9 +458,17 @@ jv_Collections_c = {};
 
 jv_Collections_c.sort = function(list) {
    var arr = list.toArray();
-   arr.sort(function(a,b) { return a.compareTo(b); } );
+   if (arguments.length == 1)
+      arr.sort(function(a,b) { return a.compareTo(b); } );
+   else {
+      var comparator = arguments[1];
+      arr.sort(function(a, b) {
+         return comparator.compare(a, b);
+      });
+   }
    var sz = arr.length;
    for (var i = 0; i < sz; i++) {
       list.set(i, arr[i]);
    }
 }
+
