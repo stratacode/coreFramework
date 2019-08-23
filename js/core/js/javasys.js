@@ -1,6 +1,29 @@
 var Error_c = sc_newClass("java.lang.Error", Error, null, null);
 
-var Number_c = sc_newClass("java.lang.Number", Number, null, null);
+function jv_Object() {
+}
+
+var jv_Object_c = sc_newClass("java.lang.Object", jv_Object, null, null);
+
+jv_Object_c.equals = function(other) {
+   return this == other;
+}
+
+jv_Object_c.getClass = function() {
+   return this.constructor.prototype;
+}
+
+// All class objects have a getName method but our only way to add methods to java.lang.Class is via jv_Object here.
+jv_Object_c.getName = function() {
+   if (this.hasOwnProperty("$protoName"))
+      return this.$protoName;
+   throw new jv_UnsupportedOperationException();
+}
+
+function jv_Comparable() {}
+var jv_Comparable_c = sc_newClass("java.lang.Comparable", jv_Comparable, jv_Object, null);
+
+var Number_c = sc_newClass("java.lang.Number", Number, null, [jv_Comparable]);
 //sc_addTypeAlias("java.lang.Number", "java.lang.Byte");
 sc_addTypeAlias("java.lang.Number", "java.lang.Short");
 sc_addTypeAlias("java.lang.Number", "java.lang.Integer");
@@ -16,6 +39,10 @@ Number.prototype.hashCode = function() {
 
 Number.prototype.intValue = function() {
    return this < 0 ? Math.ceil(this) : Math.floor(this);
+}
+
+Number.prototype.compareTo = function(o) {
+   return o == this ? 0 : (o < this ? -1 : 1);
 }
 
 Number_c.parseInt = parseInt;
@@ -98,29 +125,6 @@ Object.prototype.clone = function() {
 
    return clone;
 }
-
-function jv_Object() {
-}
-
-var jv_Object_c = sc_newClass("java.lang.Object", jv_Object, null, null);
-
-jv_Object_c.equals = function(other) {
-   return this == other;
-}
-
-jv_Object_c.getClass = function() {
-   return this.constructor.prototype;
-}
-
-// All class objects have a getName method but our only way to add methods to java.lang.Class is via jv_Object here.
-jv_Object_c.getName = function() {
-   if (this.hasOwnProperty("$protoName"))
-      return this.$protoName;
-   throw new jv_UnsupportedOperationException();
-}
-
-function jv_Comparable() {}
-var jv_Comparable_c = sc_newClass("java.lang.Comparable", jv_Comparable, jv_Object, null);
 
 // TODO: shouldn't the type name be java.lang.String here?
 var String_c = sc_newClass("String", String, null, [jv_Comparable]);

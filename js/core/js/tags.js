@@ -1217,6 +1217,8 @@ js_HTMLElement_c.removeElement = function(tag, ix, updateDOM) {
             needsRefresh = true;
          }
       }
+      if (this.bodyOnly) // TODO: more than one tag in the body - should be able to 'rewind' by figuring out how many children per repeat element?
+         needsRefresh = true;
       if (!needsRefresh)
          curElem.parentNode.removeChild(curElem);
    }
@@ -1241,6 +1243,8 @@ js_HTMLElement_c.moveElement = function(tag, oldIx, newIx, updateDOM) {
             needsRefresh = true;
          }
       }
+      if (this.bodyOnly) // TODO: do this incrementally?
+         needsRefresh = true;
       // The new spot is at the end of the list
       if (!needsRefresh) {
          if (newIx >= this.repeatTags.length) {

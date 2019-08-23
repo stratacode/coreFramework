@@ -1268,3 +1268,36 @@ sc_DynUtil_c.hasPendingJobs = function() {
 }
 
 sc_DynUtil_c.getCurrentThreadString = function() { return ""; }
+
+sc_DynUtil_c.findCommonSuperType = function(c1,c2) {
+   var o1 = c1;
+   var o2 = c2;
+
+   if (o1 == null && o2 != null)
+      return o2;
+   if (o2 == null && o1 != null)
+      return o1;
+
+   while (o1 != null && o2 != null && !sc_DynUtil_c.isAssignableFrom(o1, o2))
+      o1 = sc_DynUtil_c.getExtendsType(o1);
+
+   while (c1 != null && o2 != null && !sc_DynUtil_c.isAssignableFrom(o2, c1))
+      o2 = sc_DynUtil_c.getExtendsType(o2);
+
+   return o1 != null && o2 != null && sc_DynUtil_c.isAssignableFrom(o1, o2) ? o2 : o1;
+}
+
+sc_DynUtil_c.compare = function(o1,o2) {
+   var res
+   if (sc_instanceOf(o1, jv_Comparable)) {
+      res = o1.compareTo(o2);
+   }
+   else if (sc_instanceOf(o2, jv_Comparable)) {
+      res = o2.compareTo(o1);
+   }
+   else {
+       console.error("Unable to compare values: " + o1 + " and " + o2);
+      res = 0;
+   }
+   return res;
+}
