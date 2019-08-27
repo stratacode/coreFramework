@@ -103,11 +103,24 @@ public class Layer {
        LayeredSystem sys = LayeredSystem.current;
        ArrayList<Layer> res = new ArrayList<Layer>();
        for (String baseLayerName:baseLayerNames) {
-          Layer baseLayer = sys.getLayerByDirName(baseLayerName);
-          if (baseLayer != null)
+          Layer baseLayer = sys.getLayerByName(baseLayerName);
+          boolean found = false;
+          if (baseLayer != null) {
              res.add(baseLayer);
-          else
-             System.out.println("*** Unable to find base layer: " + baseLayerName);
+             found = true;
+          }
+          else {
+             String prefix = CTypeUtil.getPackageName(getLayerName());
+             if (prefix != null) {
+                baseLayer = sys.getLayerByName(CTypeUtil.prefixPath(prefix, baseLayerName));
+                if (baseLayer != null) {
+                   res.add(baseLayer);
+                   found = true;
+                }
+             }
+             if (!found)
+                System.out.println("*** Unable to find base layer: " + baseLayerName);
+          }
        }
 
        return res;
@@ -132,7 +145,7 @@ public class Layer {
          return false;
 
       for (Layer base:baseLayers) {
-         if (base.layerDirName.equals(layerDirName))
+         if (base.layerDirName.equals(other.layerDirName))
             return true;
          if (base.extendsLayer(other))
             return true;

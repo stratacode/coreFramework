@@ -159,4 +159,13 @@ class BodyTypeDeclaration extends Definition {
       return declaredProperties == null ? null : declaredProperties.toArray();
    }
 
+   private BodyTypeDeclaration modifiedType;
+   @Constant
+   void setModifiedType(BodyTypeDeclaration mt) {
+      modifiedType = mt;
+   }
+   public BodyTypeDeclaration getModifiedType() {
+      return modifiedType;
+   }
+
 }

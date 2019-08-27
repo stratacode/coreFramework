@@ -9,6 +9,7 @@ import sc.dyn.DynUtil;
 
 import java.util.List;
 import java.util.HashMap;
+import java.util.TreeMap;
 
 import sc.type.IResponseListener;
 
@@ -21,6 +22,7 @@ public class LayeredSystem {
    public List<Layer> layers;
 
    HashMap<String,BodyTypeDeclaration> typesByNameIndex = new HashMap<String,BodyTypeDeclaration>();
+   TreeMap<String,FetchTypeResponseListener> beingFetched = new TreeMap<String,FetchTypeResponseListener>();
 
    public BodyTypeDeclaration getSrcTypeDeclaration(String typeName, Layer refLayer) {
       return typesByNameIndex.get(typeName);
@@ -45,6 +47,17 @@ public class LayeredSystem {
 
       for (Layer l:layers)
          if (l.layerUniqueName.equals(dirName))
+            return l;
+
+      return null;
+   }
+
+   public Layer getLayerByName(String layerName) {
+      if (layers == null)
+         return null;
+
+      for (Layer l:layers)
+         if (l.layerName.equals(layerName))
             return l;
 
       return null;
@@ -88,26 +101,53 @@ public class LayeredSystem {
    private class FetchTypeResponseListener implements IResponseListener {
       String typeName;
       IResponseListener wrapped;
+      List<IResponseListener> chainedListeners;
       FetchTypeResponseListener(String typeName, IResponseListener wrap) {
          this.wrapped = wrap;
          this.typeName = typeName;
       }
 
       public void response(Object response) {
+         beingFetched.remove(typeName);
          typesByNameIndex.put(typeName, (BodyTypeDeclaration)response);
-         if (response != null)
+         if (response != null) {
             wrapped.response(response);
+            if (chainedListeners != null) {
+               for (IResponseListener cl:chainedListeners)
+                  cl.response(response);
+            }
+         }
       }
       public void error(int errorCode, Object error) {
+         beingFetched.remove(typeName);
          System.err.println("*** Error trying to fetch type declaration: " + errorCode + ": " + error);
+         wrapped.error(errorCode, error);
+      }
+
+      public void addChainedListener(IResponseListener resp) {
+         if (chainedListeners == null)
+            chainedListeners = new java.util.ArrayList<IResponseListener>();
+         chainedListeners.add(resp);
       }
    }
 
    public void fetchRemoteTypeDeclaration(String typeName, IResponseListener resp) {
+      if (resp == null)
+         System.out.println("***");
       // We cache null if there's no src type declaration to avoid trying this over and over again
       if (!typesByNameIndex.containsKey(typeName)) {
+         FetchTypeResponseListener listener = beingFetched.get(typeName);
+         if (listener != null) {
+            listener.addChainedListener(resp);
+            return;
+         }
          sc.dyn.RemoteResult res = DynUtil.invokeRemote(null, null, null, this, DynUtil.resolveRemoteMethod(this, "getSrcTypeDeclaration", Object.class, "Ljava/lang/String;"), typeName);
-         res.responseListener = new FetchTypeResponseListener(typeName, resp);
+         FetchTypeResponseListener ftrl = new FetchTypeResponseListener(typeName, resp);
+         // In the response listener, we might not have set all of the properties of the returned type, so it's more convenient to notify these after the
+         // sync has completed.
+         //res.responseListener = ftrl;
+         res.postListener = ftrl;
+         beingFetched.put(typeName, ftrl);
       }
    }
 

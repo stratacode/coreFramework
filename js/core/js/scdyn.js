@@ -667,7 +667,7 @@ sc_DynUtil_c.getPackageName = function(type) {
    return sc_CTypeUtil_c.getPackageName(sc_DynUtil_c.getRootTypeName(sc_DynUtil_c.getTypeName(type, false), false));
 }
 
-// TODO: use the annotations so we can return a custom scope for editing purposes on the client
+// TODO: we could save the Scope annotation in JS and look that up, but scopes are not used consistently in the client version
 sc_DynUtil_c.getScopeName = sc_DynUtil_c.getScopeNameForType = function(obj) {
    return null;
 }
