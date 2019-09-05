@@ -10,6 +10,7 @@ import javax.swing.text.BadLocationException;
 public class SCCompletionProvider extends CompletionProviderBase {
    public EditorContext ctx;
    public JavaModel fileModel;
+   public Object currentType;
 
    public enum CompletionTypes {
       ExistingLayer,
@@ -59,7 +60,7 @@ public class SCCompletionProvider extends CompletionProviderBase {
                   // of the current type and then use that to complete the text.
                   lastText = text;
                   text = getStatementCompleteStart(text);
-                  relPos = ctx.complete(text, 0, candidates, lastText, fileModel);
+                  relPos = ctx.complete(text, 0, candidates, lastText, fileModel, currentType);
                }
                else if (completionType == CompletionTypes.ApplicationType) {
                   relPos = ctx.completeType(text, candidates);
@@ -70,7 +71,7 @@ public class SCCompletionProvider extends CompletionProviderBase {
                   lastText = text;
                }
                else {
-                  relPos = ctx.complete(text, 0, candidates);
+                  relPos = ctx.complete(text, 0, candidates, null, null, currentType);
                   lastText = text;
                }
                lastComp = comp;
