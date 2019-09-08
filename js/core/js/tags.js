@@ -1863,10 +1863,11 @@ function js_Input() {
    this.checked = false;
    this.tagName = "input";
    this.disabled = null;
+   this.size = 20;
 }
 js_Input_c = sc_newClass("sc.lang.html.Input", js_Input, js_HTMLElement, null);
 
-js_Input_c.refreshAttNames = js_HTMLElement_c.refreshAttNames.concat(["value", "disabled", "checked"]);
+js_Input_c.refreshAttNames = js_HTMLElement_c.refreshAttNames.concat(["value", "disabled", "checked", "size"]);
 js_Input_c.eventAttNames = js_HTMLElement_c.eventAttNames.concat(["value", "checked", "changeEvent", "clickCount"]);
 js_Input_c.removeOnEmpty = {value:true};
 
@@ -1938,6 +1939,19 @@ js_Input_c.setDisabled = function(newVal) {
 
 js_Input_c.getDisabled = function() {
    return this.disabled; 
+}
+
+js_Input_c.setSize = function(s) {
+   if (s != this.size) {
+      this.size = s;
+      if (this.element !== null && this.element.size != s)
+         this.element.size = s;
+      sc_Bind_c.sendEvent(sc_IListener_c.VALUE_CHANGED, this, "size" , s);
+   }
+}
+
+js_Input_c.getSize = function() {
+   return this.size;
 }
 
 js_Input_c.setClickCount = function(ct) {
@@ -2022,6 +2036,9 @@ function js_Select() {
    this.optionDataSource = null;
    this.selectedIndex = -1;
    this.selectedValue = null;
+   this.disabled = false;
+   this.size = 20;
+   this.multiple = false;
 }
 js_Select_c = sc_newClass("sc.lang.html.Select", js_Select, js_HTMLElement, null);
 js_Select_c.eventAttNames = js_HTMLElement_c.eventAttNames.concat([ "selectedIndex"]);
@@ -2098,6 +2115,19 @@ js_Select_c.setOptionDataSource = function(newDS) {
 
 js_Select_c.getOptionDataSource = function() {
    return this.optionDataSource; 
+}
+
+js_Select_c.setMultiple = function(m) {
+   if (m != this.multiple) {
+      this.multiple = m;
+      if (this.element !== null && this.element.multiple != m)
+         this.element.multiple = m;
+      sc_Bind_c.sendEvent(sc_IListener_c.VALUE_CHANGED, this, "multiple" , m);
+   }
+}
+
+js_Select_c.getMultiple = function() {
+   return this.multiple;
 }
 
 // TODO: the select tag should probably use the "repeat" property which it already inherits.  For now it's an experiment in 
@@ -2197,8 +2227,11 @@ js_Option_c.getSelected = function() {
    return this.selected; 
 }
 
-js_Option_c.setDisabled = js_Input_c.setDisabled;
-js_Option_c.getDisabled = js_Input_c.getDisabled;
+js_Select_c.setDisabled = js_Option_c.setDisabled = js_Input_c.setDisabled;
+js_Select_c.getDisabled = js_Option_c.getDisabled = js_Input_c.getDisabled;
+
+js_Select_c.setSize = js_Input_c.setSize;
+js_Select_c.getSize = js_Input_c.getSize;
 
 function js_Form() {
    js_HTMLElement.call(this);
