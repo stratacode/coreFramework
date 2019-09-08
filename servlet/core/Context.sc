@@ -106,14 +106,17 @@ class Context {
       if (session != null) {
          ArrayList<WindowScopeContext> ctxList = (ArrayList<WindowScopeContext>) session.getAttribute("_windowContexts");
          if (ctxList != null) {
-            for (WindowScopeContext winCtx:ctxList) {
-               if (winCtx == null) {
-                  System.err.println("*** Invalid null window context");
-                  continue;
-               }
-               if (winCtx.windowId == windowId) {
-                  updateWindowContext(winCtx);
-                  return windowCtx;
+            synchronized (ctxList) {
+               for (int i = 0; i < ctxList.size(); i++) {
+                  WindowScopeContext winCtx = ctxList.get(i);
+                  if (winCtx == null) {
+                     System.err.println("*** Invalid null window context");
+                     continue;
+                  }
+                  if (winCtx.windowId == windowId) {
+                     updateWindowContext(winCtx);
+                     return windowCtx;
+                  }
                }
             }
          }
