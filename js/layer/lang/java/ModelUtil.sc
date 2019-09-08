@@ -122,6 +122,16 @@ public class ModelUtil {
       return null;
    }
 
+   public static Object getEnclosingType(Object prop, LayeredSystem sys) {
+      if (prop instanceof Definition) {
+         String enclTypeName = ((Definition) prop).enclosingTypeName;
+         if (enclTypeName == null)
+            return null;
+         return findType(sys, enclTypeName);
+      }
+      return null;
+   }
+
    public static boolean isDynamicType(Object type) {
       return type instanceof TypeDeclaration && ((TypeDeclaration) type).isDynamicType();
    }

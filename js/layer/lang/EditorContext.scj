@@ -13,7 +13,6 @@ import sc.dyn.DynUtil;
 
 @sc.obj.Sync(onDemand=true)
 public class EditorContext extends ClientEditorContext {
-   Layer currentLayer;
    Object currentType;
 
    // TODO: add hook for a dispose listener or use JS weak hashmap to support Weak hashmaps through the JS emulation

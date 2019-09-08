@@ -1,7 +1,7 @@
 import sc.layer.Layer;
 import sc.obj.GetSet;
 
-class VariableDefinition extends Definition implements IVariableInitializer {
+class VariableDefinition extends Statement implements IVariableInitializer {
    @GetSet
    String variableName;
    @Bindable

@@ -132,8 +132,6 @@ public class LayeredSystem {
    }
 
    public void fetchRemoteTypeDeclaration(String typeName, IResponseListener resp) {
-      if (resp == null)
-         System.out.println("***");
       // We cache null if there's no src type declaration to avoid trying this over and over again
       if (!typesByNameIndex.containsKey(typeName)) {
          FetchTypeResponseListener listener = beingFetched.get(typeName);

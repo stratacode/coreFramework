@@ -33,6 +33,8 @@ public class ClientEditorContext {
 
    public Layer currentLayer;
 
+   public List<Layer> currentLayers = new sc.util.ArrayList<Layer>(1);
+
    public String layerPrefix;
 
    HashMap<SrcEntry,MemoryEditSession> memSessions = new HashMap<SrcEntry, MemoryEditSession>();
@@ -70,5 +72,40 @@ public class ClientEditorContext {
          if (CTypeUtil.getClassName(tn).equals(typeName))
             return tn;
       return null;
+   }
+   public void updateCurrentLayer(Layer l) {
+      currentLayer = l;
+      currentLayers = l.getSelectedLayers();
+   }
+
+   public void addCurrentLayer(Layer l) {
+      if (currentLayers == null)
+         updateCurrentLayer(l);
+      else {
+         for (int i = 0; i < currentLayers.size(); i++) {
+            Layer current = currentLayers.get(i);
+            if (current == l)
+               return;
+            if (current.layerPosition > l.layerPosition) {
+               currentLayers.add(i, l);
+               return;
+            }
+         }
+         currentLayers.add(l);
+      }
+   }
+
+   @Bindable(manual=true)
+   public void setCurrentLayer(Layer newLayer) {
+      // TODO: should we try to preserve imports here and only switch the layer of the pending model if there's no type?
+      if (currentLayer != newLayer) {
+         updateCurrentLayer(newLayer);
+         if (currentLayer != null)
+            layerPrefix = currentLayer.packagePrefix;
+         else
+            layerPrefix = null;
+         Bind.sendChangedEvent(this, "currentLayer");
+         Bind.sendChangedEvent(this, "currentLayers");
+      }
    }
 }

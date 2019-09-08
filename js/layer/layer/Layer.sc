@@ -188,4 +188,13 @@ public class Layer {
    public String getLayerName() {
       return layerName;
    }
+
+   public List<Layer> getSelectedLayers() {
+      ArrayList<Layer> res = new ArrayList<Layer>();
+      res.add(this);
+      if (transparent && baseLayers != null) {
+         res.addAll(baseLayers);
+      }
+      return res;
+   }
 }

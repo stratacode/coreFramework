@@ -168,4 +168,13 @@ class BodyTypeDeclaration extends Definition {
       return modifiedType;
    }
 
+   public boolean getInheritProperties() {
+      Boolean res = (Boolean) getAnnotationValue("sc.obj.CompilerSettings", "inheritProperties");
+      return res == null || res;
+   }
+
+   public boolean getExportProperties() {
+      Boolean res = (Boolean) getAnnotationValue("sc.obj.CompilerSettings", "exportProperties");
+      return res == null || res;
+   }
 }

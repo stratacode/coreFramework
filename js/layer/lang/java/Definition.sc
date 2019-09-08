@@ -9,6 +9,10 @@ class Definition {
    @GetSet
    int modifierFlags;
 
+   @sc.obj.Constant
+   @GetSet
+   String enclosingTypeName;
+
    static String getAnnotationValueKey(String typeName, String ident) {
       return typeName + "__" + ident;
    }
@@ -16,6 +20,8 @@ class Definition {
    Object getAnnotationValue(String annotName, String valName) {
       Map<String,Object> annots = annotations;
       if (annots != null) {
+         if (sc.type.PTypeUtil.isUndefined(annots))
+            System.out.println("*** Corrupt annotation! should not be null");
          return annots.get(getAnnotationValueKey(annotName, valName));
       }
       return null;
