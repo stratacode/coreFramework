@@ -3,6 +3,7 @@ import sc.type.IBeanMapper;
 import sc.type.TypeUtil;
 
 /** Wrapper for javax.swing.JLabel to make it a bindable StrataCode component. */
+@CompilerSettings(inheritProperties=false)
 @Component
 public class JLabel extends javax.swing.JLabel implements ComponentStyle {
    public static IBeanMapper textProp = TypeUtil.getPropertyMapping(JLabel.class, "text");

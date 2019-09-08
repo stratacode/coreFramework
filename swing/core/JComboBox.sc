@@ -7,6 +7,7 @@ import javax.swing.DefaultListCellRenderer;
 import sc.type.TypeUtil;
 import sc.type.IBeanMapper;
 
+@CompilerSettings(inheritProperties=false)
 @Component
 public class JComboBox extends javax.swing.JComboBox implements ComponentStyle {
    static IBeanMapper selectedItemProperty = TypeUtil.getPropertyMapping(JComboBox.class, "selectedItem");
@@ -78,9 +79,9 @@ public class JComboBox extends javax.swing.JComboBox implements ComponentStyle {
             i++;
          }
          if (newSelIx != -1)
-           setSelectedIndexNotUser(newSelIx);
+           setDisplaySelectedIndex(newSelIx);
          else if (selectedIndex >= _items.size())
-           setSelectedIndexNotUser(_items.size() - 1);
+           setDisplaySelectedIndex(_items.size() - 1);
       }
       SwingUtil.sendDelayedEvent(sc.bind.IListener.VALUE_CHANGED, JComboBox.this, preferredSizeProperty);
    }
@@ -93,7 +94,7 @@ public class JComboBox extends javax.swing.JComboBox implements ComponentStyle {
 
    private void checkBounds() {
       if (selectedIndex >= _items.size())
-        setSelectedIndexNotUser(_items.size() - 1);
+        setDisplaySelectedIndex(_items.size() - 1);
    }
 
    public void init() {
@@ -103,7 +104,7 @@ public class JComboBox extends javax.swing.JComboBox implements ComponentStyle {
             addItem(item);
       }
       if (pendingSelectedIndex != null && pendingSelectedIndex != getSelectedIndex()) {
-         setSelectedIndexNotUser(pendingSelectedIndex);
+         setDisplaySelectedIndex(pendingSelectedIndex);
       }
    }
 
@@ -114,10 +115,13 @@ public class JComboBox extends javax.swing.JComboBox implements ComponentStyle {
       validate();
    }
 
-   // Because swing calls setSelectedIndex directly from the mouse handler, there's no way to really tell
-   // whether or not it's a user generated event, so we default to the call being user generated and make sure all
-   // code generated events use this method.
-   public void setSelectedIndexNotUser(int index) {
+   /**
+    * Update this property to programmatically update the display of the selected index, without updating the userSelectedItem.
+    * It will return the same value as the underlying swing 'selectedIndex' property which is used for changes that are triggered
+    * by a user action and fire changes to userSelectedItem.  Ideally we'd have that be 'userSelectedIndex' but swing will call setSelectedIndex
+    * directly from the mouse handler so it's hard to change the behavior in that case.
+    */
+   public void setDisplaySelectedIndex(int index) {
       try {
          notUserSet = true;
          setSelectedIndex(index);
@@ -125,6 +129,10 @@ public class JComboBox extends javax.swing.JComboBox implements ComponentStyle {
       finally {
          notUserSet = false;
       }
+   }
+
+   public int getDisplaySelectedIndex() {
+      return getSelectedIndex();
    }
 
    @Bindable(manual=true)

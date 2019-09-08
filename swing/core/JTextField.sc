@@ -7,6 +7,7 @@ import java.awt.event.FocusEvent;
 import sc.bind.Bind;
 import sc.util.StringUtil;
 
+@CompilerSettings(inheritProperties=false)
 @Component
 public class JTextField extends javax.swing.JTextField implements TextComponentStyle {
    static sc.type.IBeanMapper textProperty = sc.type.TypeUtil.getPropertyMapping(JTextField.class, "text");

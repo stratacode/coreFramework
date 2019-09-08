@@ -2,7 +2,7 @@ import java.awt.event.ComponentListener;
 import java.awt.event.ComponentEvent;
 
 @Component
-@CompilerSettings(objectTemplate="sc.swing.JFrameInit", newTemplate="sc.swing.JFrameNew", dynChildManager="sc.swing.SwingDynChildManager")
+@CompilerSettings(objectTemplate="sc.swing.JFrameInit", newTemplate="sc.swing.JFrameNew", dynChildManager="sc.swing.SwingDynChildManager", exportProperties=false)
 public class JFrame extends javax.swing.JFrame {
   {
      addComponentListener(new ComponentListener() {  
