@@ -395,6 +395,7 @@ public class VariableBinding extends DestinationListener {
 
                if (!equalValues(i, newValue)) {
                   changed = true;
+
                   valid = false;
 
                   if (apply) {
@@ -592,6 +593,7 @@ public class VariableBinding extends DestinationListener {
          ((IBinding) dstObj).invalidateBinding(dstObj, sendEvent, false);
       else if (sendEvent)
          Bind.sendEvent(IListener.VALUE_CHANGED, dstObj, (String) dstProp);
+
       valid = false;
    }
 
@@ -608,6 +610,22 @@ public class VariableBinding extends DestinationListener {
       }
       else if (!activated)
          applyBinding(true);
+      // A child binding notified us of a change but it's value did not change. This change has already invalidated
+      // the chain so we need to revalidate it without doing anything.
+      else {
+         for (int i = 0; i < boundProps.length; i++) {
+            Object boundProp = boundProps[i];
+            if (boundProp instanceof DestinationListener) {
+               if (!((DestinationListener) boundProp).isValid())
+                  return false;
+            }
+         }
+         valid = true;
+         // TODO: if this is a child binding, should we mark the parent binding valid too? This happens when a property changes in a child
+         // binding of ours but it did not result in the child's value changing. This binding was marked invalid when the original message
+         // was propagated through and so needs to be marked valid again as part of the chain. Otherwise, we don't propagate the invalid
+         // state to the child the next time this binding is invalidated and fail to re-validate the child.
+      }
       return false;
    }
 
@@ -724,8 +742,9 @@ public class VariableBinding extends DestinationListener {
          if (!valid)
             reactivate(obj);
       }
-      else // TODO: required because bindings when deactivated do not always deliver events.  Could be fixed if they invalidate the parent during the re-activation process when their value is changed.  The goal being that if you switch back and forth you do not have to recache the world.  See SelectorBinding as well
+      else { // TODO: required because bindings when deactivated do not always deliver events.  Could be fixed if they invalidate the parent during the re-activation process when their value is changed.  The goal being that if you switch back and forth you do not have to recache the world.  See SelectorBinding as well
          valid = false;
+      }
    }
 
 
