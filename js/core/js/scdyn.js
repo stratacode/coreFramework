@@ -337,7 +337,11 @@ sc_DynUtil_c.getInstanceName = function(obj) {
    if (str != null && str.length < 60 && str != "[object Object]")
       return str;
 
-   return sc_CTypeUtil_c.getClassName(obj.$protoName) + '__' + scid;
+   var pn = obj.$protoName;
+   if (!pn) {
+      pn = "unknownType";
+   }
+   return sc_CTypeUtil_c.getClassName(pn) + '__' + scid;
 }
 
 sc_DynUtil_c.arrayToInstanceName = function(list) {
@@ -891,6 +895,10 @@ sc_PTypeUtil_c.isANumber = function(type) {
    return tot == "number" || (tot == "object" && type.constructor === Number);
 }
 
+sc_PTypeUtil_c.isUndefined = function(o) {
+   return o === undefined;
+}
+
 sc_PTypeUtil_c.isStringOrChar = function(type) {
    var tot = typeof type;
    return tot == "string" || (tot == "object" && type.constructor === String);
@@ -1218,11 +1226,16 @@ sc_DynUtil_c.getInstancesOfTypeAndSubTypes = function(typeName) {
    if (type == null) {
       return null;
    }
-   var subClasses = type.constructor.$subClasses;
+   var tconstr = type.constructor;
+   var subClasses = tconstr.hasOwnProperty("$subClasses") ? tconstr.$subClasses : null;
    if (subClasses) {
       for (var i = 0; i < subClasses.length; i++) {
          var subClass = subClasses[i];
-         var subInsts = sc_DynUtil_c.getInstancesOfTypeAndSubTypes(subClass.$typeName);
+         var subTypeName = subClass.$typeName;
+         if (subTypeName == typeName) {
+            console.error("Inheritance loop for: " + typeName);
+         }
+         var subInsts = sc_DynUtil_c.getInstancesOfTypeAndSubTypes(subTypeName);
          if (subInsts != null) {
             if (insts == null)
                insts = subInsts;
