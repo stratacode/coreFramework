@@ -17,6 +17,17 @@ public class SwingBindingManager extends BindingManager {
    private static volatile boolean handlerRegistered = false;
 
    public void sendEvent(IListener listener, int event, Object obj, IBeanMapper prop, Object eventDetail) {
+      BindingContext curCtx = BindingContext.getBindingContext();
+      if (curCtx != bindingContext && curCtx != null) {
+         if (curCtx.defaultSyncType == IListener.SyncType.QUEUED) {
+            curCtx.queueEvent(event, obj, prop, listener, eventDetail);
+            return;
+         }
+         else {
+            System.err.println("*** Unrecognized binding context in SwingBindingManager");
+         }
+      }
+
       if (EventQueue.isDispatchThread()) {
          super.sendEvent(listener, event, obj, prop, eventDetail);
       }
