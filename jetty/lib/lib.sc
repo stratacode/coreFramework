@@ -2,6 +2,7 @@ package sc.jetty;
 
 jetty.lib extends servlet.lib, log4j.core {
    compiledOnly = true;
+   hidden = true;
 
    codeType = sc.layer.CodeType.Framework;
 

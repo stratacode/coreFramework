@@ -7,6 +7,7 @@
 html.schtml extends html.core {
    exportPackage = false;
    compiledOnly = true;
+   hidden = true;
 
    codeType = sc.layer.CodeType.Framework;
 

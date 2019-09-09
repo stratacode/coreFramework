@@ -12,6 +12,7 @@ import org.eclipse.jetty.webapp.WebAppContext;
 /** The jetty server layer.  This is the core server without servlets. */
 public jetty.serve extends meta, util, html.core {
    compiledOnly = true;
+   hidden = true;
 
    codeType = sc.layer.CodeType.Framework;
 }

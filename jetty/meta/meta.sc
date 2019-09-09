@@ -11,6 +11,7 @@ import org.eclipse.jetty.security.LoginService;
 jetty.meta extends lib /*, v8compat */ {
    annotationLayer = true;
    compiledOnly = true;
+   hidden = true;
 
    codeType = sc.layer.CodeType.Framework;
 }

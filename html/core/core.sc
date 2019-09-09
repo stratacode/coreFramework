@@ -14,6 +14,7 @@ import sc.lang.html.Document;
  */
 html.core extends sys.std {  // Extending sys.std because we override the standard file type handling.  Need to then have us after sys.std.
    compiledOnly = true;
+   hidden = true;
 
    codeType = CodeType.Framework;
 

@@ -11,6 +11,7 @@ import java.io.IOException;
 
 public servlet.core extends webApp, meta, html.core {
    compiledOnly = true;
+   hidden = true;
 
    codeType = sc.layer.CodeType.Framework;
 

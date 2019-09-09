@@ -33,7 +33,7 @@ public class ClientEditorContext {
 
    public Layer currentLayer;
 
-   public List<Layer> currentLayers = new sc.util.ArrayList<Layer>(1);
+   public List<Layer> currentLayers = new ArrayList<Layer>(1);
 
    public String layerPrefix;
 

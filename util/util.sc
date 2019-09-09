@@ -17,6 +17,7 @@ util extends sys.std {
    // Note this needs to be an application layer so it is sorted after the js.sys layers... it needs to be able to find
    // the src versions of the java.* classes.
    codeType = sc.layer.CodeType.Application;
+   hidden = true;
 
    compiledOnly = true;
    finalLayer = true;

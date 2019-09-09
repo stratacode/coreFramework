@@ -80,20 +80,20 @@ public class Layer {
       sb.append(" #");
       sb.append(layerPosition);
 
-      if (dependentLayers != null) {
+      if (usedByLayerNames != null) {
          sb.append(" used by: ");
-         sb.append(dependentLayers);
+         sb.append(usedByLayerNames);
       }
 
       return sb.toString();
    }
 
-   List<Layer> dependentLayers;
-   public List<Layer> getDependentLayers() {
-      return dependentLayers;
+   List<String> usedByLayerNames;
+   public List<String> getUsedByLayerNames() {
+      return usedByLayerNames;
    }
-   public void setDependentLayers(List<Layer> layers) {
-      dependentLayers = layers;
+   public void setUsedByLayerNames(List<String> layers) {
+      usedByLayerNames = layers;
    }
 
    public List<Layer> getBaseLayers() {
