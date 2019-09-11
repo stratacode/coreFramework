@@ -14,6 +14,8 @@ import sc.obj.Constant;
 import sc.obj.Sync;
 import sc.obj.SyncMode;
 
+import sc.dyn.DynUtil;
+
 import sc.type.CTypeUtil;
 
 /** This is the part of the editor context we share on the client. It's a workaround for the fact that we don't depend on the modify operator to build SC (so the IDE can build it directly) */
@@ -78,20 +80,55 @@ public class ClientEditorContext {
       currentLayers = l.getSelectedLayers();
    }
 
-   public void addCurrentLayer(Layer l) {
-      if (currentLayers == null)
-         updateCurrentLayer(l);
-      else {
-         for (int i = 0; i < currentLayers.size(); i++) {
-            Layer current = currentLayers.get(i);
-            if (current == l)
-               return;
-            if (current.layerPosition > l.layerPosition) {
-               currentLayers.add(i, l);
-               return;
+   @sc.obj.ManualGetSet
+   private void changeCurrentLayer(Layer l) {
+      currentLayer = l;
+   }
+
+   public void layerSelected(Layer l, boolean addToSelection) {
+      if (currentLayers == null || currentLayers.size() == 0) {
+         setCurrentLayer(l);
+      }
+      else if (!addToSelection) {
+         if (currentLayers.get(0) == l) {
+            List<Layer> newLayers = l.getSelectedLayers();
+            if (!DynUtil.equalObjects(newLayers, currentLayers)) {
+               currentLayers = newLayers;
+               Bind.sendChangedEvent(this, "currentLayers");
             }
          }
-         currentLayers.add(l);
+         else {
+            setCurrentLayer(l);
+         }
+      }
+      else {
+         boolean handled = false;
+         int insertPos = -1;
+         ArrayList<Layer> newCurrentLayers = new ArrayList<Layer>(currentLayers);
+         for (int i = 0; i < currentLayers.size(); i++) {
+            Layer current = currentLayers.get(i);
+            if (current == l) {
+               newCurrentLayers.remove(i);
+               handled = true;
+               break;
+            }
+            if (current.layerPosition < l.layerPosition) {
+               insertPos = i;
+               break;
+            }
+         }
+         if (!handled) {
+            if (insertPos != -1)
+               newCurrentLayers.add(insertPos, l);
+            else
+               newCurrentLayers.add(l);
+         }
+         Layer newCurrentLayer = newCurrentLayers.size() == 0 ? null : newCurrentLayers.get(0);
+         if (newCurrentLayer != currentLayer) {
+            changeCurrentLayer(newCurrentLayer);
+            Bind.sendChangedEvent(this, "currentLayer");
+         }
+         currentLayers = newCurrentLayers;
       }
    }
 
