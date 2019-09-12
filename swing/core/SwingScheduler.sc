@@ -19,7 +19,7 @@ public class SwingScheduler implements sc.dyn.IScheduler {
       ScheduledJob.runJobList(toInvokeNext, minPriority, maxPriority);
    }
 
-   public void invokeLater(Runnable runnable, int priority) {
+   public ScheduledJob invokeLater(Runnable runnable, int priority) {
       ScheduledJob sj = new ScheduledJob();
       sj.toInvoke = runnable;
       sj.priority = priority;
@@ -43,6 +43,13 @@ public class SwingScheduler implements sc.dyn.IScheduler {
                }
             });
          }
+      }
+      return sj;
+   }
+
+   public boolean clearInvokeLater(ScheduledJob job) {
+      synchronized(invokeNextLock) {
+         return ScheduledJob.removeJobFromList(toInvokeNext, job);
       }
    }
 
