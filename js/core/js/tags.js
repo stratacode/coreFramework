@@ -1468,9 +1468,15 @@ js_HTMLElement_c.refreshStart = function() {
      return;
 
    this.startValid = true;
-   if (!this.visible)
+   if (!this.visible) {
       this.removeFromDOM();
-   // TODO: replacing a tag and it's attributes from HTML is hard!  there's replaceChild but no way to append an HTML string.  Here we want to replace a specific element.  Could call createElement but would need to manually add the attributes.  Could add the element to the parent, find it, then replace it maybe?}
+   }
+   else if (this.element) {
+      var sb = new jv_StringBuilder();
+      this.outputStartTag(sb);
+      this.setStartTagTxt(sb.toString());
+   }
+   // else - TODO: will the parent always be refreshed in this case or do we need to re-render the entire element under a temporary one and use replaceChild here
 }
 
 js_HTMLElement_c.updateChildDOMs = function() {
@@ -1856,7 +1862,7 @@ js_HTMLElement_c.getHovered = function() {
 }
 
 function js_Input() {
-   js_HTMLElement.call(this);
+   js_HTMLElement.apply(this, arguments);
    this.value = null;
    this.type = "text";
    this.clickCount = 0;
@@ -1896,7 +1902,6 @@ js_Input_c.domChanged = function(origElem, newElem) {
       js_Button_c.domChanged.call(this, origElem, newElem);
       return;
    }
-   js_HTMLElement_c.domChanged.call(this, origElem, newElem);
    if (origElem !== null) {
       sc_removeEventListener(origElem, 'change', js_Input_c.doChangeEvent);
       sc_removeEventListener(origElem, 'keyup', js_Input_c.doChangeEvent);
@@ -1907,6 +1912,10 @@ js_Input_c.domChanged = function(origElem, newElem) {
       if (this.value != null && !this.serverContent)
          newElem.value = this.value; 
    }
+   // Putting this after the above listener which updates 'value'
+   // because JS will use this order for event callbacks and we want
+   // value to be set in the changeEvent and keyUpEvent handlers.
+   js_HTMLElement_c.domChanged.call(this, origElem, newElem);
 }
 
 js_Input_c.updateFromDOMElement = function(newElem) {
@@ -2004,7 +2013,7 @@ js_Button_c.doClickCount = function(event) {
 }
 
 function js_A() {
-   js_HTMLElement.call(this);
+   js_HTMLElement.apply(this, arguments);
    this.tagName = "a";
    this.clickCount = 0;
    this.disabled = null;
@@ -2031,7 +2040,7 @@ js_SelectListener_c.valueValidated = function(obj, prop, detail, apply) {
 }
 
 function js_Select() {
-   js_HTMLElement.call(this);
+   js_HTMLElement.apply(this, arguments);
    this.tagName = "select";
    this.optionDataSource = null;
    this.selectedIndex = -1;
@@ -2055,7 +2064,6 @@ js_Select_c.doChangeEvent = function(event) {
 }
 
 js_Select_c.domChanged = function(origElem, newElem) {
-   js_HTMLElement_c.domChanged.call(this, origElem, newElem);
    if (origElem != null)
       sc_removeEventListener(origElem, 'change', js_Select_c.doChangeEvent);
    if (newElem != null) {
@@ -2063,6 +2071,7 @@ js_Select_c.domChanged = function(origElem, newElem) {
       if (!this.serverContent) // when serverContent the tagObject is just using the DOM's value
          newElem.selectedIndex = this.selectedIndex;
    }
+   js_HTMLElement_c.domChanged.call(this, origElem, newElem);
 }
 
 js_Select_c.setSelectedIndex = function(newIx) {
@@ -2194,7 +2203,7 @@ js_Select_c.refreshBodyContent = function(sb) {
 }
 
 function js_Option() {
-   js_HTMLElement.call(this);
+   js_HTMLElement.apply(this, arguments);
    this.tagName = "option";
    this.optionData = null;
    this.selected = false;
@@ -2234,7 +2243,7 @@ js_Select_c.setSize = js_Input_c.setSize;
 js_Select_c.getSize = js_Input_c.getSize;
 
 function js_Form() {
-   js_HTMLElement.call(this);
+   js_HTMLElement.apply(this, arguments);
    this.tagName = "form";
    this.submitCount = 0;
 }
@@ -2258,11 +2267,11 @@ js_Form_c.submit = function() {
 }
 
 js_Form_c.domChanged = function(origElem, newElem) {
-   js_HTMLElement_c.domChanged.call(this, origElem, newElem);
    if (origElem != null)
       sc_removeEventListener(origElem, 'submit', js_Form_c.submitEvent);
    if (newElem != null)
       sc_addEventListener(newElem, 'submit', js_Form_c.submitEvent);
+   js_HTMLElement_c.domChanged.call(this, origElem, newElem);
 }
 
 js_Form_c.setSubmitCount = function(ct) {
@@ -2946,10 +2955,10 @@ js_HtmlPage_c.schedRefreshServerTags = function() {
 }
 
 function js_Img() {
-    js_HTMLElement.call(this);
-    this.tagName = "img";
-    this.src = null;
-    this.height = this.width = 0;
+   js_HTMLElement.apply(this, arguments);
+   this.tagName = "img";
+   this.src = null;
+   this.height = this.width = 0;
 }
 
 js_Img_c = sc_newClass("sc.lang.html.Img", js_Img, js_HTMLElement, null);
@@ -2970,7 +2979,7 @@ js_Img_c.getSrc = function() {
 }
 
 function js_Style() {
-   js_HTMLElement.call(this);
+   js_HTMLElement.apply(this, arguments);
    this.tagName = "style";
 }
 
