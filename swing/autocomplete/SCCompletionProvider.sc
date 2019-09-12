@@ -4,6 +4,7 @@ import java.util.Collections;
 import sc.lang.EditorContext;
 import sc.lang.CommandSCLanguage;
 import sc.lang.java.JavaModel;
+import sc.lang.CompletionTypes;
 import javax.swing.text.JTextComponent;
 import javax.swing.text.BadLocationException;
 
@@ -11,14 +12,6 @@ public class SCCompletionProvider extends CompletionProviderBase {
    public EditorContext ctx;
    public JavaModel fileModel;
    public Object currentType;
-
-   public enum CompletionTypes {
-      ExistingLayer,
-      EntireFile,
-      ApplicationType,
-      CreateInstanceType,
-      Default
-   }
 
    public CompletionTypes completionType = CompletionTypes.Default;
 
@@ -48,32 +41,8 @@ public class SCCompletionProvider extends CompletionProviderBase {
             String text = comp.getDocument().getText(0, comp.getCaretPosition());
 
             if (lastText == null || !text.equals(lastText) || lastComp != comp) {
-               candidates.clear();
-               if (completionType == CompletionTypes.ExistingLayer) {
-                  relPos = ctx.completeExistingLayer(text, 0, candidates);
-                  lastText = text;
-               }
-               else if (completionType == CompletionTypes.EntireFile) {
-                  // We are passing in two versions of the text to complete.  One which is from the beginning of the file
-                  // and the other which is just the last token.  We can use the first approach either to find the specific
-                  // AST node which failed to parse, then complete that, or we can use that approach just to find the context
-                  // of the current type and then use that to complete the text.
-                  lastText = text;
-                  text = getStatementCompleteStart(text);
-                  relPos = ctx.complete(text, 0, candidates, lastText, fileModel, currentType);
-               }
-               else if (completionType == CompletionTypes.ApplicationType) {
-                  relPos = ctx.completeType(text, candidates);
-                  lastText = text;
-               }
-               else if (completionType == CompletionTypes.CreateInstanceType) {
-                  relPos = ctx.completeCreateInstanceType(text, candidates);
-                  lastText = text;
-               }
-               else {
-                  relPos = ctx.complete(text, 0, candidates, null, null, currentType);
-                  lastText = text;
-               }
+               relPos = ctx.completeText(text, completionType, candidates, fileModel, currentType);
+               lastText = text;
                lastComp = comp;
             }
          }
