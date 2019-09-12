@@ -15,6 +15,8 @@ import sc.dyn.DynUtil;
 public class EditorContext extends ClientEditorContext {
    Object currentType;
 
+   public static int MaxCompletions = 20;
+
    // TODO: add hook for a dispose listener or use JS weak hashmap to support Weak hashmaps through the JS emulation
    Map<Object,InstanceWrapper> instanceWrappers = new java.util.IdentityHashMap<Object,InstanceWrapper>();
 
