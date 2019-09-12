@@ -354,6 +354,12 @@ class Context {
       ScheduledJob.addToJobList(toInvokeLater, sj);
    }
 
+   boolean clearInvokeLater(ScheduledJob sj) {
+      if (toInvokeLater == null)
+         return false;
+      return ScheduledJob.removeJobFromList(toInvokeLater, sj);
+   }
+
    boolean hasDoLaterJobs() {
       return toInvokeLater != null && toInvokeLater.size() > 0;
    }

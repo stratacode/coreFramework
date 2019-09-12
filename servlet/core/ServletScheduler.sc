@@ -6,7 +6,7 @@ class ServletScheduler implements sc.dyn.IScheduler {
    static Object invokeNextRequestLock = new Object();
    static ArrayList<ScheduledJob> toInvokeNextRequest = new ArrayList<ScheduledJob>();
 
-   public void invokeLater(Runnable runnable, int priority) {
+   public ScheduledJob invokeLater(Runnable runnable, int priority) {
       ScheduledJob sj = new ScheduledJob();
       sj.toInvoke = runnable;
       sj.priority = priority;
@@ -18,10 +18,21 @@ class ServletScheduler implements sc.dyn.IScheduler {
          synchronized(invokeNextRequestLock) {
             toInvokeNextRequest.add(sj);
          }
-         return;
       }
+      else
+         ctx.invokeLater(sj);
+      return sj;
+   }
 
-      ctx.invokeLater(sj);
+   public boolean clearInvokeLater(ScheduledJob job) {
+      Context ctx = Context.getCurrentContext();
+      if (ctx == null) {
+         synchronized(invokeNextRequestLock) {
+            return toInvokeNextRequest.remove(job);
+         }
+      }
+      else
+         return ctx.clearInvokeLater(job);
    }
 
    void execLaterJobs(int minPriority, int maxPriority) {
