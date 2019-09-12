@@ -821,7 +821,11 @@ sc_DynUtil_c.getNumInnerObjectLevels = function(obj) {
 }
 
 sc_DynUtil_c.invokeLater = function(runnable, priority) {
-   sc_addRunLaterMethod(runnable, runnable.run, priority);
+   return sc_addRunLaterMethod(runnable, runnable.run, priority);
+}
+
+sc_DynUtil_c.clearInvokeLater = function(job) {
+  return sc_removeRunLaterMethod(job);
 }
 
 sc_DynUtil_c.dispose = function(obj, disposeChildren) {

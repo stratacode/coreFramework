@@ -290,6 +290,7 @@ function sc_runRunLaterMethods() {
 
 // Set this to true when you need to pause runLaters - e.g. wait till you are about to do the next UI refresh.
 var sc_runLaterScheduled = false;
+var sc_evCt = 0;
 
 function sc_addRunLaterMethod(thisObj, method, priority) {
    var i;
@@ -302,11 +303,22 @@ function sc_addRunLaterMethod(thisObj, method, priority) {
       if (priority > sc_runLaterMethods[i].priority)
          break;
    }
-   var newEnt = {thisObj:thisObj, method: method, priority:priority};
+   var newEnt = {thisObj:thisObj, method: method, priority:priority, id:sc_evCt++};
    if (i == len)
       sc_runLaterMethods.push(newEnt);
    else
       sc_runLaterMethods.splice(i, 0, newEnt);
+   return newEnt;
+}
+
+function sc_removeRunLaterMethod(ent) {
+  for (var i = 0; i < sc_runLaterMethods.length; i++) {
+     if (sc_runLaterMethods[i].id === ent.id) {
+        sc_runLaterMethods.splice(i, 1);
+        return true;
+     }
+  }
+  return false;
 }
 
 function sc_hasPendingJobs() {
