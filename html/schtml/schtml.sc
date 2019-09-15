@@ -31,6 +31,6 @@ html.schtml extends html.core {
       //webProc.templatePrefix = "web";
 
       // Any files under the 'web' directory are of srcPathType = 'web'. 
-      addSrcPath("web", "web", defaultWebRoot);
+      addSrcPath("web", "web", defaultWebRoot, null);
    }
 }

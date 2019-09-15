@@ -23,7 +23,7 @@ public js.core extends html.core, js.prebuild, js.sys, js.util, sys.sccore {
       tempLang.processPrefix = defaultWebRoot;
 
       // Files in the web directory are marked as type 'web' and go into the defaultWebRoot 'web'
-      addSrcPath("web", "web", defaultWebRoot);
+      addSrcPath("web", "web", defaultWebRoot, null);
 
       // So JS code can use these scopes which are defined in the servlet.core layer.  But they all map to global on the client
       registerScopeAlias("session", "global");

@@ -33,11 +33,17 @@ public class JavaModel implements IChangeable {
    public SrcEntry srcFile;
 
    @Bindable
-   @sc.obj.HTMLSettings(returnsHTML=true)
    public String cachedModelText;
 
    @Bindable
    public boolean needsModelText;
+
+   @Bindable
+   @sc.obj.HTMLSettings(returnsHTML=true)
+   public String cachedHTMLModelText;
+
+   @Bindable
+   public boolean needsHTMLModelText;
 
    @Bindable
    @sc.obj.HTMLSettings(returnsHTML=true)

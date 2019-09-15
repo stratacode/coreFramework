@@ -33,8 +33,8 @@ function js_HTMLElement() {
    this.parentNode = null;
    this.invisTags = null;
    this.initState = 0;
+   this.changedCount = 0;
 }
-
 
 js_indexPattern = "/index.html";
 js_Element_c = js_HTMLElement_c = sc_newClass("sc.lang.html.HTMLElement", js_HTMLElement, null, [sc_IChildInit, sc_IStoppable, sc_INamedChildren, sc_IObjChildren]);
@@ -264,7 +264,7 @@ js_HTMLElement_c.getPreviousElementSibling = function() {
 js_HTMLElement_c.setVisible = function(vis) {
    if (vis != this.visible) {
       this.visible = vis;
-      // If we have not been initialized yet, don't both invalidating.  This gets set before even 
+      // If we have not been initialized yet, don't bother invalidating.  This gets set before even
       // the id of the element has been defined so too early to decide if we need a refresh.
       if (this.initState === 1) {
          var enclTag = this.getEnclosingTag();
@@ -334,6 +334,21 @@ js_HTMLElement_c.setStyle = function(st) {
          el.setAttribute("style", st);
       sc_Bind_c.sendEvent(sc_IListener_c.VALUE_CHANGED, this, "style" , st);
    }
+}
+
+js_HTMLElement_c.setChangedCount = function(ct) {
+   if (ct != this.changedCount) {
+      this.changedCount = ct;
+      sc_Bind_c.sendEvent(sc_IListener_c.VALUE_CHANGED, this, "changedCount" , this.changedCount);
+   }
+}
+
+js_HTMLElement_c.getChangedCount = function() {
+   return this.changedCount;
+}
+
+js_HTMLElement_c.notifyChanged = function() {
+   this.setChangedCount(this.changedCount + 1);
 }
 
 js_HTMLElement_c.getHTMLClass = function() {
@@ -697,6 +712,7 @@ js_HTMLElement_c.domChanged = function(origElem, newElem) {
       if (doc.activeElement == this)
          newElem.focus();
    }
+   this.notifyChanged();
 }
 
 js_HTMLElement_c.initDOMListener = function(listener, prop, scEventName) {
@@ -930,7 +946,9 @@ js_HTMLElement_c.refreshRepeat = function(noRefresh) {
    }
 }
 
-js_HTMLElement_c.repeatTagsChanged = function() {}
+js_HTMLElement_c.repeatTagsChanged = function() {
+   this.notifyChanged();
+}
 
 // This method gets called when the repeat property has changed.  For each value in the repeat array we create a tag object and corresponding DOM element in repeatTags.
 // process incrementally updates one from the other, trying to move and preserve the existing tags when possible because that will lead to incremental UI refreshes.

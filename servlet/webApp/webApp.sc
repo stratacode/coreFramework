@@ -38,6 +38,6 @@ servlet.webApp extends servlet.lib, util, html.schtml {
       addTypeGroupDependency("web/WEB-INF/web.scxml", "web.WEB-INF.web", "servlets");
       addTypeGroupDependency("web/WEB-INF/web.scxml", "web.WEB-INF.web", "servletFilters");
 
-      addSrcPath("web", "web", "web");
+      addSrcPath("web", "web", "web", null);
    }
 }
