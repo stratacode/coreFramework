@@ -1,0 +1,27 @@
+<html>
+<head>
+   <link rel="stylesheet" href="cm/lib/codemirror.css">
+   <script src="cm/lib/codemirror.js"></script>
+   <script src="cm/mode/clike/clike.js"></script>
+   <script src="cm/addon/edit/matchbrackets.js"></script>
+   <script src="cm/keymap/vim.js"></script>
+</head>
+<body>
+   <form action="something">
+     <textarea id="testTextArea" width="80" height="60">
+       class Bar {
+           int foobar() {
+           }
+       }
+     </textarea>
+     <input type="submit" value="Submit"/>
+   </form>
+     <script>
+       var editor = CodeMirror.fromTextArea(document.getElementById("testTextArea"), { lineNumbers: true, mode: "text/x-java", 
+       matchBrackets: true, keyMap: "vim"});
+
+     </script>
+   </form>
+
+</body>
+</html>

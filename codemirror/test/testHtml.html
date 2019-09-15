@@ -1,0 +1,30 @@
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <link rel="stylesheet" href="cm/lib/codemirror.css">
+  <link rel="stylesheet" href="cm/addon/hint/show-hint.css">
+  <script src="cm/lib/codemirror.js"></script>
+  <script src="cm/addon/hint/show-hint.js"></script>
+  <script src="cm/addon/hint/xml-hint.js"></script>
+  <script src="cm/addon/hint/html-hint.js"></script>
+  <script src="cm/mode/xml/xml.js"></script>
+  <script src="cm/mode/javascript/javascript.js"></script>
+  <script src="cm/mode/css/css.js"></script>
+  <script src="cm/mode/htmlmixed/htmlmixed.js"></script>
+</head>
+<body>
+   <form action="something">
+     <textarea id="testTextArea" width="80" height="60">
+        <html><body>hello</body></html>
+     </textarea>
+     <input type="submit" value="Submit"/>
+   </form>
+     <script>
+       var editor = CodeMirror.fromTextArea(document.getElementById("testTextArea"), { lineNumbers: true, mode: "text/html", 
+       matchBrackets: true});
+
+     </script>
+   </form>
+
+</body>
+</html>
