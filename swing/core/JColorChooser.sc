@@ -3,6 +3,7 @@ import javax.swing.event.ChangeListener;
 
 import sc.bind.Bind;
 
+@CompilerSettings(inheritProperties=false)
 @Component
 public class JColorChooser extends javax.swing.JColorChooser {
    static sc.type.IBeanMapper colorProperty = sc.type.TypeUtil.getPropertyMapping(JColorChooser.class, "color");

@@ -1,6 +1,7 @@
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
+@CompilerSettings(inheritProperties=false)
 @Component
 public class JList extends javax.swing.JList {
    static sc.type.IBeanMapper selectedIndexProperty = sc.type.TypeUtil.getPropertyMapping(JList.class, "selectedIndex");

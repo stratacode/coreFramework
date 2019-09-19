@@ -1,6 +1,7 @@
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
+@CompilerSettings(inheritProperties=false)
 @Component
 public class JTextArea extends javax.swing.JTextArea implements TextComponentStyle {
    public static sc.type.IBeanMapper textProperty = sc.type.TypeUtil.getPropertyMapping(JTextArea.class, "text");

@@ -1,4 +1,6 @@
 import sc.bind.IChangeable;
+import sc.bind.Bind;
+import sc.bind.IListener;
 
 import sc.layer.Layer;
 import sc.layer.SrcEntry;
@@ -78,4 +80,15 @@ public class JavaModel implements IChangeable {
    }
 
    // TODO: Change tracking... server increments some version number and we send the IChangeable event
+
+   // Used to fire refresh events on the source or generated text events on this file
+   public void markChanged() {
+      Bind.sendEvent(IListener.VALUE_CHANGED, this, null);
+      Bind.sendChangedEvent(this, "cachedGeneratedJSText");
+      Bind.sendChangedEvent(this, "cachedGeneratedText");
+      Bind.sendChangedEvent(this, "cachedModelText");
+      Bind.sendChangedEvent(this, "cachedHTMLModelText");
+      Bind.sendChangedEvent(this, "cachedGeneratedSCText");
+      Bind.sendChangedEvent(this, "cachedGeneratedClientJavaText");
+   }
 }

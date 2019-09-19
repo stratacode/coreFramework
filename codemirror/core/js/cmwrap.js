@@ -1,17 +1,18 @@
 
-function sc_CodeMirror(id, optStr) {
+function sc_CodeMirror(id, optStr, listener) {
    this.id = id;
    this.options = JSON.parse(optStr);
    this.cm = null;
    this.textarea = null;
    this.mode = null;
-   this.changedCount = 0;
+   this.listener = listener;
+   this.errors = [];
 }
 
-sc_CodeMirror_c = sc_newClass("sc.codemirror.CodeMirror", sc_CodeMirror, jv_Object, null);
+var sc_CodeMirror_c = sc_newClass("sc.codemirror.CodeMirror", sc_CodeMirror, jv_Object, null);
 
-sc_CodeMirror_c.createFromTextArea = function(id, optStr) {
-   var cm = new sc_CodeMirror(id, optStr);
+sc_CodeMirror_c.createFromTextArea = function(id, optStr, listener) {
+   var cm = new sc_CodeMirror(id, optStr, listener);
    cm.init();
    return cm;
 }
@@ -24,7 +25,9 @@ sc_CodeMirror_c.init = function() {
       var thisWrapper = this;
 
       this.cm.on("change", function(cm, changedObj) {
-         thisWrapper.setChangedCount(thisWrapper.changedCount+1);
+         // Skip changes due to us changing the value
+         if (changedObj.origin != "setValue")
+            thisWrapper.listener.contentChanged();
       });
    }
 }
@@ -53,8 +56,31 @@ sc_CodeMirror_c.updateContent = function(text, fileName) {
   }
   if (!text)
      text = "";
-  if (this.cm)
+  if (this.cm) {
      this.cm.getDoc().setValue(text);
+     this.reapplyErrors();
+  }
+}
+
+sc_CodeMirror_c.getContent = function() {
+   if (this.cm) {
+      return this.cm.getValue();
+   }
+   return null;
+}
+
+sc_CodeMirror_c.getCursorIndex = function() {
+   if (this.cm) {
+      // cm.getCursor() returns {line,ch} whereas we use an index offset in the editor context
+      this.cm.indexFromPos(this.cm.getCursor());
+   }
+   return 0;
+}
+
+sc_CodeMirror_c.setCursorIndex = function(ind) {
+   if (this.cm) {
+      this.cm.setCursor(this.cm.posFromIndex(ind));
+   }
 }
 
 sc_CodeMirror_c.setMode = function(mode) {
@@ -75,13 +101,40 @@ sc_CodeMirror_c.setOption = function(name,val) {
       this.cm.setOption(name, val);
 }
 
-sc_CodeMirror_c.setChangedCount = function(ct) {
-   this.changedCount = ct;
-   sc_Bind_c.sendChange(this, "changedCount", ct);
+sc_CodeMirror_c.addError = function(err,six,eix,nf) {
+   var textMarker = null;
+   if (eix == six)
+      six = six - 10;
+   eix++;
+
+   if (this.cm) {
+      var cssClass = nf ? 'notFound' : 'syntaxError';
+      textMarker = this.cm.markText(this.cm.posFromIndex(six), this.cm.posFromIndex(eix), {className: cssClass, title: err});
+   }
+   this.errors.push({textMarker:textMarker, err:err, six:six, eix:eix, nf:nf});
 }
 
-sc_CodeMirror_c.getChangedCount = function() {
-   return this.changedCount;
+sc_CodeMirror_c.reapplyErrors = function() {
+   for (var i = 0; i < this.errors.length; i++) {
+      var error = this.errors[i];
+      var cssClass = error.nf ? 'notFound' : 'syntaxError';
+      error.textMarker = this.cm.markText(this.cm.posFromIndex(error.six), this.cm.posFromIndex(error.eix), {className: cssClass, title: error.err});
+   }
+   this.cm.refresh();
+}
+
+sc_CodeMirror_c.clearErrors = function() {
+   for (var i = 0; i < this.errors.length; i++) {
+      var error = this.errors[i];
+      if (error.textMarker)
+         error.textMarker.clear();
+   }
+   this.errors = [];
+}
+
+sc_CodeMirror_c.refresh = function() {
+   if (this.cm != null)
+      this.cm.refresh();
 }
 
 sc_CodeMirror_c.removeCodeMirror = function() {
@@ -89,3 +142,8 @@ sc_CodeMirror_c.removeCodeMirror = function() {
    this.textarea.parentNode.removeChild(this.cm.getWrapperElement());
    this.cm = null;
 }
+
+function sc_CodeMirror_IEditorEventListener() {}
+
+var sc_CodeMirror_IEditorEventListener_c = sc_newInnerClass("sc.codemirror.CodeMirror.IEditorEventListener", sc_CodeMirror_IEditorEventListener, sc_CodeMirror, jv_Object, null);
+

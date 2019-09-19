@@ -26,7 +26,7 @@ public class ClientEditorContext {
 
    JavaModel pendingModel = null;
    LinkedHashSet<JavaModel> changedModels = new LinkedHashSet<JavaModel>();
-   LinkedHashMap<SrcEntry, Object> errorModels = new LinkedHashMap<SrcEntry, Object>();
+   LinkedHashMap<SrcEntry, List<ModelError>> errorModels = new LinkedHashMap<SrcEntry, List<ModelError>>();
 
    ArrayList<BodyTypeDeclaration> currentTypes = new ArrayList<BodyTypeDeclaration>();
 
@@ -37,14 +37,24 @@ public class ClientEditorContext {
 
    public List<Layer> currentLayers = new ArrayList<Layer>(1);
 
+   @Sync(syncMode=SyncMode.Disabled)
    public String layerPrefix;
 
-   HashMap<SrcEntry,MemoryEditSession> memSessions = new HashMap<SrcEntry, MemoryEditSession>();
+   @Bindable(manual=true)
+   private HashMap<SrcEntry,MemoryEditSession> memSessions = null;
+
+   public void setMemSessions(HashMap<SrcEntry,MemoryEditSession> msMap) {
+      this.memSessions = msMap;
+      Bind.sendChangedEvent("this", "memSessions");
+   }
+
+   public HashMap<SrcEntry,MemoryEditSession> getMemSessions() {
+      return this.memSessions;
+   }
 
    private List<String> createInstTypeNames;
 
    private boolean memorySessionChanged = false;
-   @Sync(syncMode=SyncMode.Disabled)
    @Bindable(manual=true)
    public boolean getMemorySessionChanged() {
       return memorySessionChanged;
@@ -76,13 +86,89 @@ public class ClientEditorContext {
       return null;
    }
    public void updateCurrentLayer(Layer l) {
-      currentLayer = l;
+      changeCurrentLayer(l);
       currentLayers = l.getSelectedLayers();
    }
 
    @sc.obj.ManualGetSet
    private void changeCurrentLayer(Layer l) {
       currentLayer = l;
+   }
+
+   public boolean hasAnyMemoryEditSession(boolean memorySessionChanged) {
+      return memorySessionChanged || (memSessions != null && memSessions.size() > 0);
+   }
+
+   /** Returns the model text to display - the extra modelText param is here for data binding purposes */
+   public String getModelText(JavaModel model, String modelText) {
+      MemoryEditSession mes = getMemorySession(model.getSrcFile());
+      if (mes == null)
+         return modelText;
+      return mes.getText();
+   }
+
+   public String getMemoryEditSessionText(SrcEntry ent) {
+      MemoryEditSession mes = memSessions == null ? null : memSessions.get(ent);
+      if (mes == null)
+         return null;
+      return mes.text;
+   }
+
+   public int getMemoryEditCaretPosition(SrcEntry ent) {
+      MemoryEditSession mes = memSessions == null ? null : memSessions.get(ent);
+      if (mes == null)
+         return -1;
+      return mes.caretPosition;
+   }
+
+   public String getMemoryEditSessionOrigText(SrcEntry ent) {
+      MemoryEditSession mes = memSessions == null ? null : memSessions.get(ent);
+      if (mes == null)
+         return null;
+      return mes.origText;
+   }
+
+   public MemoryEditSession getMemorySession(SrcEntry ent) {
+      return memSessions == null ? null : memSessions.get(ent);
+   }
+
+   public void changeMemoryEditSession(String text, JavaModel model, int caretPos) {
+      SrcEntry ent = model.srcFile;
+      HashMap<SrcEntry,MemoryEditSession> newMemSessions = null;
+      MemoryEditSession sess = null;
+      if (memSessions == null)
+         newMemSessions = new HashMap<SrcEntry, MemoryEditSession>();
+      else
+         sess = memSessions.get(ent);
+      if (sess == null) {
+         sess = new MemoryEditSession();
+         sess.origText = model.cachedModelText;
+         if (newMemSessions == null)
+            newMemSessions = new HashMap<SrcEntry, MemoryEditSession>(memSessions);
+         newMemSessions.put(ent, sess);
+      }
+      sess.text = text;
+      sess.model = model;
+      sess.caretPosition = caretPos;
+      setMemorySessionChanged(true);
+      if (newMemSessions != null) {
+         memSessions = newMemSessions;
+         Bind.sendChangedEvent(this, "memSessions");
+      }
+   }
+
+   public void cancelMemorySessionChanges() {
+      for (MemoryEditSession mes:memSessions.values()) {
+         mes.text = mes.origText;
+         mes.cancelled = true;
+         // Trigger the refresh event in the editor... as though the text changed back to it's original value even though technically the model text did not change
+         mes.model.markChanged();
+      }
+      // TODO: Do we have to restore any files for which we've saved something that did not update properly?
+      memSessions = new HashMap<SrcEntry,MemoryEditSession>();
+
+      setMemorySessionChanged(false);
+      Bind.sendChangedEvent(this, "memSessions");
    }
 
    public void layerSelected(Layer l, boolean addToSelection) {

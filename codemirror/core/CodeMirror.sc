@@ -4,16 +4,37 @@
 @sc.js.JSSettings(jsLibFiles="js/cmwrap.js", prefixAlias="sc_")
 class CodeMirror {
 
-  @sc.bind.Bindable
-  int changedCount;
+   interface IEditorEventListener {
+      void contentChanged();
+   }
 
-  static CodeMirror createFromTextArea(String textAreaId, String options) {
-     return new CodeMirror();
-  }
+   static CodeMirror createFromTextArea(String textAreaId, String options, IEditorEventListener listener) {
+      return new CodeMirror();
+   }
 
-  void updateContent(String text, String fileName) {
-  }
+   void updateContent(String text, String fileName) {
+   }
 
-  void setOption(String name, String value) {
-  }
+   void setOption(String name, String value) {
+   }
+
+   String getContent() {
+      return null;
+   }
+
+   void setCursorIndex(int ind) {
+   }
+
+   int getCursorIndex() {
+      return -1;
+   }
+
+   void clearErrors() {
+   }
+
+   void addError(String msg, int startIx, int endIx, boolean notFound) {
+   }
+
+   void refresh() {
+   }
 }

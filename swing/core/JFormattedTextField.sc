@@ -3,6 +3,7 @@ import javax.swing.event.DocumentListener;
 
 import sc.bind.Bind;
 
+@CompilerSettings(inheritProperties=false)
 @Component
 public class JFormattedTextField extends javax.swing.JFormattedTextField {
    static sc.type.IBeanMapper textProperty = sc.type.TypeUtil.getPropertyMapping(JFormattedTextField.class, "text");

@@ -39,7 +39,7 @@ import sc.js.URLPath;
   */
 @PathServlet(path="/sync")
 class SyncServlet extends HttpServlet {
-
+   
    public void service(javax.servlet.http.HttpServletRequest request, 
                        javax.servlet.http.HttpServletResponse response) 
                            throws IOException, ServletException {

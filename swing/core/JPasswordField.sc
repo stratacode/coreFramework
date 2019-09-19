@@ -3,6 +3,7 @@ import javax.swing.event.DocumentListener;
 
 import sc.bind.Bind;
 
+@CompilerSettings(inheritProperties=false)
 @Component
 public class JPasswordField extends javax.swing.JPasswordField {
    static sc.type.IBeanMapper textProperty = sc.type.TypeUtil.getPropertyMapping(JPasswordField.class, "text");

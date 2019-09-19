@@ -188,6 +188,16 @@ String.prototype.equalsIgnoreCase = function(o) {
    return this.toUpperCase() === o.toUpperCase();
 }
 
+// TODO: this assumes the regular expression works the same in Java. In JS, match returns the list of matches
+// but in Java it's an all-or-nothing deal. Maybe a better solution is to emulate the JS patterns in Java and
+// then the same library just use the native JS regexp when converted.
+String.prototype.matches = function(p) {
+   var res = this.match(new RegExp(p));
+   if (res == null || res.length != 1)
+      return false;
+   return res[0].length == length;
+}
+
 var Boolean_c = sc_newClass("java.lang.Boolean", Boolean, null, null);
 sc_addTypeAlias("java.lang.Boolean", "boolean");
 

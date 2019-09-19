@@ -5,6 +5,7 @@ import sc.type.IBeanMapper;
 import java.awt.event.FocusListener;
 import java.awt.event.FocusEvent;
 
+@CompilerSettings(inheritProperties=false)
 @Component
 public class JCheckBox extends javax.swing.JCheckBox implements ComponentStyle {
    private static IBeanMapper selectedProp = sc.type.TypeUtil.getPropertyMapping(JCheckBox.class, "selected");

@@ -1,5 +1,5 @@
 @Component
-@CompilerSettings(objectTemplate="javax.swing.JComponentInit", newTemplate="javax.swing.JComponentNew", dynChildManager="sc.swing.SwingDynChildManager")
+@CompilerSettings(objectTemplate="javax.swing.JComponentInit", newTemplate="javax.swing.JComponentNew", dynChildManager="sc.swing.SwingDynChildManager", inheritProperties=false)
 public class JToolBar extends javax.swing.JToolBar {
    static sc.type.IBeanMapper sizeProperty = sc.type.TypeUtil.getPropertyMapping(JToolBar.class, "size");
    static sc.type.IBeanMapper locationProperty = sc.type.TypeUtil.getPropertyMapping(JToolBar.class, "location");

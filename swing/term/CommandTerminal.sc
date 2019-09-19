@@ -127,7 +127,7 @@ class CommandTerminal extends JPanel implements FocusListener {
                            null,
                            null,
   };
-   String fontName = "Courier";
+   String fontName = "Courier"; 
    int fontStyle = Font.PLAIN;
    int fontSize = 12;
    font := new Font(fontName, fontStyle, fontSize);

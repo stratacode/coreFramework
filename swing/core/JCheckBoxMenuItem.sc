@@ -1,6 +1,7 @@
 import java.awt.event.ItemListener;
 import java.awt.event.ItemEvent;
 
+@CompilerSettings(inheritProperties=false)
 @Component
 public class JCheckBoxMenuItem extends javax.swing.JCheckBoxMenuItem implements ComponentStyle {
    private static sc.type.IBeanMapper selectedProp = sc.type.TypeUtil.getPropertyMapping(JCheckBoxMenuItem.class, "selected");
