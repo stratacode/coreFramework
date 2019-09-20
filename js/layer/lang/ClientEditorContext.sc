@@ -96,15 +96,27 @@ public class ClientEditorContext {
    }
 
    public boolean hasAnyMemoryEditSession(boolean memorySessionChanged) {
-      return memorySessionChanged || (memSessions != null && memSessions.size() > 0);
+      return memorySessionChanged || hasMemSessionDiffs();
+   }
+
+   public boolean hasMemSessionDiffs() {
+      if (memSessions == null)
+         return false;
+      for (MemoryEditSession sess:memSessions.values()) {
+         if (sess.text == null)
+            continue;
+         if (!DynUtil.equalObjects(sess.text, sess.origText))
+            return true;
+      }
+      return false;
    }
 
    /** Returns the model text to display - the extra modelText param is here for data binding purposes */
    public String getModelText(JavaModel model, String modelText) {
       MemoryEditSession mes = getMemorySession(model.getSrcFile());
-      if (mes == null)
+      if (mes == null || mes.text == null)
          return modelText;
-      return mes.getText();
+      return mes.text;
    }
 
    public String getMemoryEditSessionText(SrcEntry ent) {
@@ -119,6 +131,26 @@ public class ClientEditorContext {
       if (mes == null)
          return -1;
       return mes.caretPosition;
+   }
+
+   public void setMemoryEditCaretPosition(JavaModel model, int cp) {
+      SrcEntry ent = model.srcFile;
+      MemoryEditSession mes = memSessions == null ? null : memSessions.get(ent);
+      HashMap<SrcEntry, MemoryEditSession> newMemSessions = null;
+      if (mes == null) {
+         mes = new MemoryEditSession();
+         newMemSessions = new HashMap<SrcEntry,MemoryEditSession>();
+         if (memSessions != null)
+            newMemSessions.putAll(memSessions);
+         newMemSessions.put(ent, mes);
+      }
+      mes.model = model;
+      mes.caretPosition = cp;
+
+      if (newMemSessions != null) {
+         memSessions = newMemSessions;
+         Bind.sendChange(this, "memSessions", memSessions);
+      }
    }
 
    public String getMemoryEditSessionOrigText(SrcEntry ent) {
@@ -159,6 +191,8 @@ public class ClientEditorContext {
 
    public void cancelMemorySessionChanges() {
       for (MemoryEditSession mes:memSessions.values()) {
+         if (mes.text == null)
+            continue;
          mes.text = mes.origText;
          mes.cancelled = true;
          // Trigger the refresh event in the editor... as though the text changed back to it's original value even though technically the model text did not change

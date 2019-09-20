@@ -29,12 +29,15 @@ sc_CodeMirror_c.init = function() {
          if (changedObj.origin != "setValue")
             thisWrapper.listener.contentChanged();
       });
+      this.cm.on("cursorActivity", function(cm) {
+         thisWrapper.listener.cursorChanged();
+      });
    }
 }
 
 sc_CodeMirror_c.modesPerExt = {scj:'text/x-java', java:'text/x-java', sc:'text/x-stratacode', schtml:'application/x-jsp'};
 
-sc_CodeMirror_c.updateContent = function(text, fileName) {
+sc_CodeMirror_c.updateContent = function(text, fileName, cursorIndex) {
   var newTA = document.getElementById(this.id);
   var extIx = fileName.lastIndexOf('.');
   if (extIx != -1 && extIx != fileName.length - 1) {
@@ -59,6 +62,10 @@ sc_CodeMirror_c.updateContent = function(text, fileName) {
   if (this.cm) {
      this.cm.getDoc().setValue(text);
      this.reapplyErrors();
+     if (cursorIndex != -1)
+        this.setCursorIndex(cursorIndex)
+
+     this.cm.focus();
   }
 }
 
@@ -72,7 +79,7 @@ sc_CodeMirror_c.getContent = function() {
 sc_CodeMirror_c.getCursorIndex = function() {
    if (this.cm) {
       // cm.getCursor() returns {line,ch} whereas we use an index offset in the editor context
-      this.cm.indexFromPos(this.cm.getCursor());
+      return this.cm.indexFromPos(this.cm.getCursor());
    }
    return 0;
 }

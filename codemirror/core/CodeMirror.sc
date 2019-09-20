@@ -6,13 +6,14 @@ class CodeMirror {
 
    interface IEditorEventListener {
       void contentChanged();
+      void cursorChanged();
    }
 
    static CodeMirror createFromTextArea(String textAreaId, String options, IEditorEventListener listener) {
       return new CodeMirror();
    }
 
-   void updateContent(String text, String fileName) {
+   void updateContent(String text, String fileName, int cursorIndex) {
    }
 
    void setOption(String name, String value) {
