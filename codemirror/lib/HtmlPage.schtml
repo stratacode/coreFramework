@@ -15,6 +15,7 @@
    <script src="cm/mode/htmlmixed/htmlmixed.js"></script>
    <script src="cm/addon/mode/multiplex.js"></script>
    <script src="cm/mode/htmlembedded/htmlembedded.js"></script>
+   <script src="cm/addon/search/searchcursor.js"></script>
    <script src="cm/keymap/vim.js"></script>
 </head>
 </html>
