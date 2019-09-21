@@ -1,15 +1,56 @@
 
-function sc_CodeMirror(id, optStr, listener) {
+function sc_CodeMirror(id, listener) {
    this.id = id;
-   this.options = JSON.parse(optStr);
+   this.options = { lineNumbers: true,
+                    mode: "text/x-java",
+                    matchBrackets: true,
+                    keyMap: "vim",
+                    hintOptions: {hint: sc_CodeMirror_c.getHints},
+                    extraKeys: {"Ctrl-Space":"autocomplete"} };
+   //this.options = JSON.parse(optStr);
    this.cm = null;
    this.textarea = null;
    this.mode = null;
    this.listener = listener;
    this.errors = [];
+
+/*
+   CodeMirror.registerHelper("hint", "text/x-java", sc_CodeMirror_c.getHints);
+   CodeMirror.registerHelper("hint", "text/x-stratacode", sc_CodeMirror_c.getHints);
+   CodeMirror.registerHelper("hint", "text/x-jsp", sc_CodeMirror_c.getHints);
+*/
 }
 
 var sc_CodeMirror_c = sc_newClass("sc.codemirror.CodeMirror", sc_CodeMirror, jv_Object, null);
+
+sc_CodeMirror_c.getHints = function(cm, callback, options) {
+   var cur = cm.getCursor();
+   var thisWrapper = cm.scWrapper;
+   var token = cm.getTokenAt(cur);
+   var str = token.string;
+   var res;
+   if (str.trim().length == 0) {
+      res = cm.getHelper(cm.getCursor(), "hintWords");
+      callback.call(null, { list:res, from: cur, to: cur});
+   }
+   else {
+      var cursorPos = cm.indexFromPos(cur);
+      var tlen = str.length;
+      var prePos = cm.posFromIndex(cursorPos-tlen);
+
+      var remResult = thisWrapper.listener.getSuggestionsForPos(cursorPos);
+      remResult.responseListener = new sc_IResponseListener();
+      remResult.responseListener.response = function(resultList) {
+         var arr = resultList.toArray();
+         callback.call(null, {list:arr, from: prePos, to: cur});
+      };
+      remResult.responseListener.error = function(ec,e) {
+         console.error("Error retrieving suggestions: " + e);
+      };
+   }
+}
+
+sc_CodeMirror_c.getHints.async = true;
 
 sc_CodeMirror_c.createFromTextArea = function(id, optStr, listener) {
    var cm = new sc_CodeMirror(id, optStr, listener);
@@ -23,6 +64,7 @@ sc_CodeMirror_c.init = function() {
       this.cm = CodeMirror.fromTextArea(this.textarea, this.options);
 
       var thisWrapper = this;
+      this.cm.scWrapper = this;
 
       this.cm.on("change", function(cm, changedObj) {
          // Skip changes due to us changing the value

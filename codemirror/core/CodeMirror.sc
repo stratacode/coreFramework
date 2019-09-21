@@ -1,3 +1,4 @@
+import sc.dyn.RemoteResult;
 // This is the Java stub for the JS implementation in js/cmwrap.js. It may
 // actually run on the server but it doesn't have to do anything there
 // but avoid a null pointer exception by returning a valid value.
@@ -7,9 +8,11 @@ class CodeMirror {
    interface IEditorEventListener {
       void contentChanged();
       void cursorChanged();
+      // Begins a remote request to retrieve the suggestions for the given cursor position
+      RemoteResult getSuggestionsForPos(int cursorPos);
    }
 
-   static CodeMirror createFromTextArea(String textAreaId, String options, IEditorEventListener listener) {
+   static CodeMirror createFromTextArea(String textAreaId, IEditorEventListener listener) {
       return new CodeMirror();
    }
 
