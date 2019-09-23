@@ -36,13 +36,14 @@ sc_CodeMirror_c.getHints = function(cm, callback, options) {
    else {
       var cursorPos = cm.indexFromPos(cur);
       var tlen = str.length;
-      var prePos = cm.posFromIndex(cursorPos-tlen);
+      //var prePos = cm.posFromIndex(cursorPos-tlen);
 
       var remResult = thisWrapper.listener.getSuggestionsForPos(cursorPos);
       remResult.responseListener = new sc_IResponseListener();
-      remResult.responseListener.response = function(resultList) {
-         var arr = resultList.toArray();
-         callback.call(null, {list:arr, from: prePos, to: cur});
+      remResult.responseListener.response = function(completionResult) {
+         var arr = completionResult == null ? [] : completionResult.suggestions.toArray();
+         var startPos = completionResult == null ? cur : cm.posFromIndex(completionResult.completeStart);
+         callback.call(null, {list:arr, from: startPos, to: cur});
       };
       remResult.responseListener.error = function(ec,e) {
          console.error("Error retrieving suggestions: " + e);
