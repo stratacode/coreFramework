@@ -65,7 +65,9 @@ object ClientSyncDestination extends SyncDestination {
          useParams += "&";
       useParams += "lang=" + sendLanguage;
       // Never wait when we are posting data - aka a 'send' versus a 'sync'
-      if (waitTime != -1 && layerDef.length() == 0)
+      // Also don't wait until we know we are connected - so we'll do an extra sync at startup just to be sure we really are
+      // connected to the server.
+      if (waitTime != -1 && layerDef.length() == 0 && connected)
          useParams += "&waitTime=" + waitTime;
       if (SyncManager.trace) {
          System.out.println("Sync: POST /sync" + useParams);
