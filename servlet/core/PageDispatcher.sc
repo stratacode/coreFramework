@@ -124,6 +124,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       boolean resource;
       Set<String> syncTypes;
 
+      /* Set to true when the code has been updated on the fly and this PageEntry is not longer valid */
+      boolean removed = false;
+
       @Constant
       ScopeDefinition pageScope;
 
@@ -280,6 +283,17 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
        if (!handleRequest(request, response)) {
           response.sendError(404, "Page not found");
        }
+   }
+
+   public List<PageEntry> validatePageEntries(List<PageEntry> pageEnts, String uri, TreeMap<String,String> queryParams) {
+      for (int i = 0; i < pageEnts.size(); i++) {
+         PageEntry pageEnt = pageEnts.get(i);
+         // The types were updated and the type for this entry was modified since this request started
+         if (pageEnt.removed) {
+            return getPageEntries(uri, queryParams);
+         }
+      }
+      return pageEnts;
    }
 
    public List<PageEntry> getPageEntries(String uri, TreeMap<String,String> queryParams) {
@@ -1248,9 +1262,11 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
    public void typeRemoved(Object oldType) {
       for (Iterator<Map.Entry<String,PageEntry>> it = pages.entrySet().iterator(); it.hasNext(); ) {
          Map.Entry<String,PageEntry> ent = it.next();
-         if (ent.getValue().pageType == oldType) {
+         PageEntry pageEnt = ent.getValue();
+         if (pageEnt.pageType == oldType) {
             System.out.println("*** Removing page type: " + oldType);
             it.remove();
+            pageEnt.removed = true;
          }
       }
    }
