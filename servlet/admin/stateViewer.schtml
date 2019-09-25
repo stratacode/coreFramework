@@ -8,6 +8,10 @@
    import java.util.Map;
    import java.util.Map.Entry;
    import java.util.Arrays;
+   import sc.js.URLPath;
+
+   // This template is one of the few stateless pages, both because it's used as a diagnostic and to serve as a test/example of building stateless pages
+   // It behaves more like a traditional JSP page.
 %>
 <html scope="request" exec="server">
 
@@ -16,15 +20,17 @@
 <%
    for (ScopeDefinition currentScope:ScopeDefinition.scopes) {
       if (currentScope != null) {
+         String openParam = "open" + currentScope.getExternalName();
+         Boolean scopeOpen = (Boolean) URLPath.getQueryParam(pageURL, openParam);
+         if (scopeOpen == null)
+            scopeOpen = false;
+         ScopeContext scopeCtx = currentScope.getScopeContext(false);
+         Map<String,Object> values = scopeCtx == null ? null : scopeCtx.getValues();
          %>
-            <h3>Scope: <%= currentScope.externalName %></h3>
+            <div class="scopeHeader"><span class="scopeName"><%= currentScope.externalName %></span> scope(<%= values == null ? "not created" : values.size() %>)<a href='= URLPath.setQueryParam(pageURL, openParam, !scopeOpen)'><img src='= scopeOpen ? "images/listClose.png" : "images/listOpen.png"'/></a></div>
             <p>
                <%
-                  ScopeContext scopeCtx = currentScope.getScopeContext(false);
-                  if (scopeCtx == null)
-                     out.append("not created");
-                  else {
-                     Map<String,Object> values = scopeCtx.getValues();
+                  if (scopeCtx != null && scopeOpen) {
                      if (values == null) {
                         out.append("no values");
                      }
