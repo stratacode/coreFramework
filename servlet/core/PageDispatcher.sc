@@ -21,7 +21,6 @@ import java.util.TreeMap;
 import java.util.Iterator;
 import java.util.Arrays;
 
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.Lock;
 
 import sc.type.IBeanMapper;
@@ -413,15 +412,17 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                   // Temporary scopes - like request don't have to be locked because they are only used by one thread at a time.
                   ScopeContext lockScopeCtx = lockScopeDef.getScopeContext(true);
 
-                  ReentrantReadWriteLock rwLock = (ReentrantReadWriteLock) lockScopeCtx.getValue("_lock");
-                  if (rwLock == null) {
+                  //ReentrantReadWriteLock rwLock = (ReentrantReadWriteLock) lockScopeCtx.getValue("_lock");
+                  ServerLockState lockState = (ServerLockState) lockScopeCtx.getValue("_lock");
+                  if (lockState == null) {
                      synchronized (lockScopeCtx) {
-                        rwLock = (ReentrantReadWriteLock) lockScopeCtx.getValue("_lock");
-                        if (rwLock == null) {
-                           rwLock = new ReentrantReadWriteLock();
+                        lockState = (ServerLockState) lockScopeCtx.getValue("_lock");
+                        if (lockState == null) {
+                           lockState = new ServerLockState();
+                           lockState.lockInfoStr = sysLockInfo;
                            if (traceLocks)
                               System.out.println("Page: new lock created for scope: " + lockScope + getTraceInfo(session));
-                           lockScopeCtx.setValue("_lock", rwLock);
+                           lockScopeCtx.setValue("_lock", lockState);
                         }
                      }
                   }
@@ -430,8 +431,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
 
                   // TODO: provide some way to specify this request is a read-only request so we only acquire a read lock
                   // Build this into the scope definitions - so there's a default of read only for how we are using teh scope and override it per page?
-                  Lock lock = rwLock.writeLock();
-                  locks.add(lock);
+                  locks.add(lockState);
                }
             }
 
