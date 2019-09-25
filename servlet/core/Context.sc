@@ -310,7 +310,9 @@ class Context {
          }
          synchronized (ctxList) {
             windowId = ctxList.size();
-            windowCtx = new WindowScopeContext(windowId, Window.createNewWindow(requestURL, request.getServerName(), request.getServerPort(), request.getRequestURI(), request.getPathInfo(), request.getQueryString()));
+            String queryStr = request.getQueryString();
+            String fullURL = queryParams == null ? requestURL : requestURL + "?" + queryStr;
+            windowCtx = new WindowScopeContext(windowId, Window.createNewWindow(fullURL, request.getServerName(), request.getServerPort(), request.getRequestURI(), request.getPathInfo(), queryStr));
             windowCtx.init();
             ctxList.add(windowCtx);
 
