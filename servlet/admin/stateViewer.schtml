@@ -20,7 +20,7 @@
 <%
    for (ScopeDefinition currentScope:ScopeDefinition.scopes) {
       if (currentScope != null) {
-         String openParam = "open" + currentScope.getExternalName();
+         String openParam = "open_" + currentScope.getExternalName();
          Boolean scopeOpen = (Boolean) URLPath.getQueryParam(pageURL, openParam);
          if (scopeOpen == null)
             scopeOpen = false;
@@ -51,7 +51,8 @@
                         }
 
                         // Now dump out the contents of the sync context if we found one
-                        if (syncCtx != null && syncCtx.objectIndex.size() > 0) {
+                        if (syncCtx != null) {
+                            if (syncCtx.objectIndex.size() > 0) {
                            %>Synchronized objects<br/>
                             <table><tr><th>Name(constr args)</th><th>registered</th><th>onDemand</th><th>initialized</th></tr>
                            <%
@@ -70,6 +71,10 @@
                            } %>
                            </table>
                         <% }
+                           else {
+                              out.append("No synchronized objects");
+                           }
+                        }
                      }
                   }
                %>
