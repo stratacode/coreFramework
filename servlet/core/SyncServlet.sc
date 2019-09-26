@@ -57,6 +57,9 @@ class SyncServlet extends HttpServlet {
        This occurs typically after the client has tried to sync and found no session.
        */
       String reset = request.getParameter("reset");
+      String closeStr = request.getParameter("close");
+      boolean closeSession = closeStr != null && closeStr.equals("true");
+
       HttpSession session = request.getSession(false);
       String url = request.getParameter("url");
       String receiveLanguage = request.getParameter("lang"); // Protocol might be a better name here, though I suppose it's still a language?
@@ -84,6 +87,10 @@ class SyncServlet extends HttpServlet {
       boolean newSession = false;
       // Resetting the session - need to create it!
       if (session == null) {
+         if (closeSession) {
+            // This is a weird case - getting the close message after the session has expired
+            return true;
+         }
          session = request.getSession(true);
          newSession = true;
       }
@@ -93,7 +100,13 @@ class SyncServlet extends HttpServlet {
       // path info or query parameters in the URL.
       // For versioning - how about using the serverTime and clientTime when the sync was initiated.  There will be two time-lines since the clocks are not in skew, but with this approach we also can estimate the latency and time-skew between the
       // two (compute upper and lower bounds for both skew and latency on each for each request.  Refine the upper and lower guestimates and always use the mid-point?)
-      PageDispatcher.SyncSession syncSession = PageDispatcher.getSyncSession(session, url, true);
+      PageDispatcher.SyncSession syncSession = PageDispatcher.getSyncSession(session, url, !closeSession);
+
+      if (syncSession == null && closeSession) {
+         if (verbosePage)
+            System.out.println("Sync: Close session received with no session in place");
+         return true;
+      }
 
       StringBuilder traceBuffer = new StringBuilder();
       LayeredSystem sys = LayeredSystem.getCurrent();
@@ -133,8 +146,9 @@ class SyncServlet extends HttpServlet {
 
          int sz = pageEnts.size();
 
-         // Acquires the locks for the context of this page
+         // Acquires the locks for the context of this page and sets up the list of ScopeContexts (the CurrentScopeContext)
          curScopeCtx = pageDispatcher.initPageContext(ctx, url, pageEnts, session, sys);
+         locksAcquired = true;
 
          String syncGroup = request.getParameter("syncGroup");
          WindowScopeContext windowCtx = ctx.windowCtx;
@@ -143,16 +157,28 @@ class SyncServlet extends HttpServlet {
          // Wake up the previous listener - if any, so there's only one thread per window that's waiting at any given time.
          if (oldListener != null && oldListener.waiting) {
             if (verbosePage) 
-                System.out.println("Sync - waking up thread: " + oldListener.threadName + " from: " + PageDispatcher.getTraceInfo(session) + " " + getDebugInfo(request, response));
+                System.out.println("Sync - waking up thread: " + oldListener.threadName + " from: " + PageDispatcher.getTraceInfo(session) + " " + getDebugInfo(request, response) + (closeSession + " - session closed"));
             synchronized (oldListener) {
                if (oldListener.waiting) {
                   oldListener.replaced = true;
+                  if (closeSession)
+                     oldListener.closed = true;
                   oldListener.notify();
                }
             }
          }
          else if (oldListener != null && verbosePage)
-            System.out.println("Sync - not waking up thread: " + oldListener.threadName + " from: " + PageDispatcher.getTraceInfo(session) + " " + getDebugInfo(request, response));
+            System.out.println("Sync - not waking up thread: " + oldListener.threadName + " from: " + PageDispatcher.getTraceInfo(session) + " " + getDebugInfo(request, response) + (closeSession + " - session closed"));
+
+         if (closeSession) {
+            if (verbosePage)
+               System.out.println("Sync - closeSession from: " + PageDispatcher.getTraceInfo(session) + " " + getDebugInfo(request, response));
+            // TODO: we could potentially remove the window context here but it then the back button would not work. I think the window
+            // contexts can be seen as an in-memory record of the navigation structure as well. The key is that we don't leave a sync listener
+            // around once the user has navigated away from that window. We rely on the beacon/onunload listener from the browser to
+            // send the close=true sync.
+            return true;
+         }
 
          if (reset == null) {
             // Reads the POST data as a layer, applies that layer to the current context, and execs any jobs spawned
@@ -172,7 +198,6 @@ class SyncServlet extends HttpServlet {
             pageOutput = pageDispatcher.getPageOutput(ctx, url, pageEnts, curScopeCtx, isReset, false, sys, null);
             if (pageOutput == null)
                return true;
-            locksAcquired = true;
          }
 
          // For the reset=true case, we need to first render the pages from the default initial state, then apply
