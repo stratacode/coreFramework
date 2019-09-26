@@ -451,7 +451,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          CurrentScopeContext curScopeCtx = new CurrentScopeContext(scopeCtxs, locks);
          if (verbose)
             curScopeCtx.traceInfo = sysLockInfo + ": for" + getCtxTraceInfo(session);
-         // Associates this set of locks and scopes with this thread so binding operation know how to get back here if there's a cross-scope binding.
+         // Acquire the locks and associate them to this thread - binding operation that communicate with this scopeContext need to
+         // know how to get back here. This is true for cross-scope bindings - those which need to synchronize with different threads.
          CurrentScopeContext.pushCurrentScopeContext(curScopeCtx, true);
          ctx.curScopeCtx = curScopeCtx;
          return curScopeCtx;
