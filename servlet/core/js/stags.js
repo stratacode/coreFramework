@@ -1,9 +1,10 @@
 /**
 * stags.js: implements 'serverTags only' Javascript support.
-* This is a light version of tags.js, sharing code + structure.  Used when there is no Java code on the client for an schtml server page.
-* Because there's no Java code converted to JS, this page has less to do than tags.js and eliminates many signficiant dependencies (e.g. javasys.js).
-* It uses the same 'sync' protocol as the full JS runtime, including managing the 'serverTags' list received from the server.
-* That includes the list of DOM elements with event listeners on the server.  For each server tag, we'll create a corresponding tagObject and add listeners for those DOM events.  When the DOM events fire, a change
+* This is a lighter version of tags.js apis and features, some overlapping code + structure.  Used when there is no Java code on the client for an schtml server page.
+* Because there's no Java code converted to JS, this page has less to do than tags.js and eliminates many significant dependencies (e.g. javasys.js).
+* It uses the same 'sync' protocol as the full JS runtime, including creating a list of local tag objects representing the 'serverTags' list received from the server.
+* That includes the list of DOM elements with event listeners added on the server - i.e. the events we need to listen to on the client.
+* For each server tag, we'll create a corresponding tagObject and add listeners for those DOM events.  When the events fire, a change
 * to the synchronized state is queued up and 'doLater' to sync the change and receive the response set of changes from the server.
 * Those can include changes to the serverTags list or updates to the DOM elements.
 * Just like tags.js, tagObjects wrap DOM elements to shadow the state from the server
@@ -1516,6 +1517,14 @@ syncMgr = sc_SyncManager_c = {
 
       if (!anyChanges && syncMgr.waitTime !== -1) {
          url += "&waitTime=" + syncMgr.waitTime;
+         if (!syncMgr.exitListener) {
+            syncMgr.exitListener = true;
+            // Notifies the server this window is gone so it can close the sync connection. This is also one last time potentially to
+            // send a little bit of sync state to the server since it will process the request, close any pending sync requests, etc.
+            window.addEventListener("unload", function() {
+               navigator.sendBeacon(url + "&close=true", "");
+            }, false);
+         }
       }
       if (!anyChanges) {
          if (sc_SyncManager_c.trace)

@@ -36,29 +36,8 @@ object ClientSyncDestination extends SyncDestination {
    int waitTime = realTime ? 1200000 : -1;
 
    public void writeToDestination(String layerDef, String syncGroup, IResponseListener listener, String paramStr, CharSequence codeUpdates) {
-      String useParams = paramStr;
-      if (syncGroup != null) {
-         String syncParam = "syncGroup=" + syncGroup;
-         useParams = useParams == null ? syncParam : useParams + "&" + syncParam;
-      }
-      String urlParam = null;
-      Window w = Window.getWindow();
-      if (w != null)
-         urlParam = "url=" + CTypeUtil.escapeURLString(w.location.pathname);
-      if (useParams == null)
-         useParams = urlParam == null ? "" : "?" + urlParam;
-      else
-         useParams = "?" + useParams + (urlParam == null ? "" : "&" + urlParam);
+      String useParams = getIdParams(paramStr, syncGroup);
 
-
-      int winId = PTypeUtil.getWindowId();
-      if (winId != -1) {
-         if (useParams == null)
-            useParams = "?";
-         else
-            useParams += "&";
-         useParams += "windowId=" + winId;
-      }
       if (useParams == null)
          useParams = "?";
       else
@@ -75,11 +54,43 @@ object ClientSyncDestination extends SyncDestination {
       PTypeUtil.postHttpRequest("/sync" + useParams, layerDef, "text/plain", listener);
    }
 
+   // Returns the URL parameters needed to identify our session - shared by sync and sync-close
+   String getIdParams(String useParams, String syncGroup) {
+      if (syncGroup != null) {
+         String syncParam = "syncGroup=" + syncGroup;
+         useParams = useParams == null ? syncParam : useParams + "&" + syncParam;
+      }
+      String urlParam = null;
+      Window w = Window.getWindow();
+      if (w != null)
+         urlParam = "url=" + CTypeUtil.escapeURLString(w.location.pathname);
+      if (useParams == null)
+         useParams = urlParam == null ? "" : "?" + urlParam;
+      else
+         useParams = "?" + useParams + (urlParam == null ? "" : "&" + urlParam);
+      int winId = PTypeUtil.getWindowId();
+      if (winId != -1) {
+         if (useParams == null)
+            useParams = "?";
+         else
+            useParams += "&";
+         useParams += "windowId=" + winId;
+      }
+
+      return useParams;
+   }
+
    void init() {
       ScopeDefinition.initScopes();
       // On the client global and session are the same thing - i.e. one instance per user's session
       GlobalScopeDefinition.getGlobalScopeDefinition().aliases.addAll(Arrays.asList(new String[]{"session","window"}));
       SyncManager.addSyncDestination(this);
+
+      DynUtil.addSystemExitListener(new sc.obj.ISystemExitListener() {
+         void systemExiting() {
+            PTypeUtil.sendBeacon("/sync" + getIdParams("close=true", null), "");
+         }
+      });
    }
 
    // Apply changes from the server, either by evaluating JS or use the super method which uses the deserializer to apply it

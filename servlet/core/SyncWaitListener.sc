@@ -4,12 +4,20 @@ import sc.dyn.DynUtil;
 
 class SyncWaitListener implements IScopeChangeListener, ICodeUpdateListener {
    Context ctx;
-   String threadName; // debug only
    boolean waiting = false;
    boolean replaced = false;
+   boolean closed = false;
+
+   // debug only
+   String threadName;
+   long waitStartTime;
+   long lastWakeTime;
+
    SyncWaitListener(Context ctx) {
       this.ctx = ctx;
       threadName = DynUtil.getCurrentThreadString();
+      waitStartTime = System.currentTimeMillis();
+      lastWakeTime = -1;
    }
 
    synchronized void scopeChanged() {

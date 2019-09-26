@@ -961,6 +961,18 @@ sc_PTypeUtil_c.postHttpRequest = function(url, postData, contentType, listener) 
    httpReq.send(postData);
 }
 
+sc_PTypeUtil_c.sendBeacon = function(url, data) {
+  if (navigator.sendBeacon) {
+     navigator.sendBeacon(url, data);
+  }
+  else {
+     var httpReq = new XMLHttpRequest();
+     httpReq.open("POST", url, false);
+     httpReq.setRequestHeader("Content-Type", "text/plain;charset=UTF-8");
+     httpReq.send(data);
+  }
+}
+
 sc_PTypeUtil_c.addScheduledJob = function(runnable, delay, repeat) {
    return sc_addScheduledJob(runnable, runnable.run, delay, repeat);
 }
@@ -1318,4 +1330,10 @@ sc_DynUtil_c.compare = function(o1,o2) {
       res = 0;
    }
    return res;
+}
+
+sc_DynUtil_c.addSystemExitListener = function(listener) {
+   window.addEventListener("unload", function(event) {
+      listener.systemExiting();
+   }, false);
 }

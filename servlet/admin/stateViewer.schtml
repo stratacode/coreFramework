@@ -9,30 +9,121 @@
    import java.util.Map.Entry;
    import java.util.Arrays;
    import sc.js.URLPath;
+   import java.util.HashMap;
+   import java.util.HashSet;
 
    // This template is one of the few stateless pages, both because it's used as a diagnostic and to serve as a test/example of building stateless pages
    // It behaves more like a traditional JSP page.
 %>
 <html scope="request" exec="server">
+<%!
+   static class ScopeStateInfo {
+      List<ScopeContext> scopeCtxs;
+      boolean showCurrent;
+      String currentParam;
+   }
+%>
 
 <body>
-<h2>StrataCode Server State Viewer</h2>
+<h2>Server state</h2>
+   Each scope defines a lifecycle, determining how data is shared from one request to the next.
+   <ul>
+      <li>global is the root lifecycle, shared by all.
+      <li>session shares info by all requests made in the same browser session.
+      <li>appGlobal/appSession: URLs that refer to a specific HtmlPage define an application
+      <li>window stores info for all requests made by the same browser window/tab.
+      <li>request stores info available only for the duration of a given request
+   </ul>
+   <p/>
+   Each scope has one or more contexts.
+   Each scope context may have a sync context - a list of synchronized objects.
+   Each scope context may have a list of parent and child contexts.
+   <p/>
+   Window scope contexts track sync requests from browser windows.
 <%
+   HashMap<ScopeDefinition,ScopeStateInfo> scopeState = new HashMap<ScopeDefinition,ScopeStateInfo>();
+   for (ScopeDefinition currentScope:ScopeDefinition.scopes) {
+      List<ScopeContext> scopeCtxs = new ArrayList<ScopeContext>();
+      String currentParam = "cur_" + currentScope.getExternalName();
+      ScopeStateInfo stateInfo = new ScopeStateInfo();
+      stateInfo.scopeCtxs = scopeCtxs;
+      stateInfo.currentParam = currentParam;
+
+      Boolean showCurrent = (Boolean) URLPath.getQueryParam(pageURL, currentParam);
+      if (showCurrent == null)
+         showCurrent = false;
+      if (showCurrent || currentScope.parentScopes == null) {
+         ScopeContext scopeCtx = currentScope.getScopeContext(false);
+         scopeCtxs.add(scopeCtx);
+      }
+      else {
+         for (ScopeDefinition parentScope:currentScope.parentScopes) {
+            ScopeStateInfo parState = scopeState.get(parentScope);
+            if (parState == null) {
+               System.err.println("*** Scope list is out of order?");
+            }
+            else {
+               // Including just the child scopes that are selected in the parent scope (i.e. all or only the current one)
+               for (ScopeContext parCtx:parState.scopeCtxs) {
+                  HashSet<ScopeContext> childCtxs = parCtx.getChildContexts();
+                  if (childCtxs != null) {
+                     for (ScopeContext childCtx:childCtxs) {
+                        if (childCtx.getScopeDefinition() == currentScope) {
+                           // Because we might inherit this from multiple parents it could already be in there
+                           if (!scopeCtxs.contains(childCtx))
+                              scopeCtxs.add(childCtx);
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      }
+      stateInfo.showCurrent = showCurrent;
+      scopeState.put(currentScope, stateInfo);
+   }
    for (ScopeDefinition currentScope:ScopeDefinition.scopes) {
       if (currentScope != null) {
+         ScopeStateInfo stateInfo = scopeState.get(currentScope);
          String openParam = "open_" + currentScope.getExternalName();
          Boolean scopeOpen = (Boolean) URLPath.getQueryParam(pageURL, openParam);
          if (scopeOpen == null)
             scopeOpen = false;
-         ScopeContext scopeCtx = currentScope.getScopeContext(false);
-         Map<String,Object> values = scopeCtx == null ? null : scopeCtx.getValues();
+         List<ScopeContext> scopeCtxs = stateInfo.scopeCtxs;
          %>
-            <div class="scopeHeader"><span class="scopeName"><%= currentScope.externalName %></span> scope(<%= values == null ? "not created" : values.size() %>)<a href='= URLPath.setQueryParam(pageURL, openParam, !scopeOpen)'><img src='= scopeOpen ? "images/listClose.png" : "images/listOpen.png"'/></a></div>
-            <p>
+            <div class="scopeHeader">
+               <a href='= URLPath.setQueryParam(pageURL, openParam, !scopeOpen)'><img class="openCloseImage" src='= scopeOpen ? "images/listClose.png" : "images/listOpen.png"'/></a><span class="scopeName"><%= currentScope.externalName %></span> scope (<%= scopeCtxs.size() %> scope context<%= scopeCtxs.size() > 1 ? "s" : "" %>)
+            </div>
+         <%
+         if (!scopeOpen)
+            continue;
+      if (!currentScope.isGlobal() && (stateInfo.showCurrent || scopeCtxs.size() > 1)) { %>
+            <div class="scopeBody">
+               <%= stateInfo.showCurrent ? "Only " + currentScope.getExternalName() + " scope contexts for the current page" : "All " + currentScope.getExternalName() + " scope contexts" %> - <a href='= URLPath.setQueryParam(pageURL, stateInfo.currentParam, !stateInfo.showCurrent)'><%= stateInfo.showCurrent ? "Show all scope contexts" : "Show scope contexts for current page only" %></a><p/>
+            </div>
+      <% }
+         for (ScopeContext scopeCtx:scopeCtxs) {
+            Map<String,Object> values = scopeCtx == null ? null : scopeCtx.getValues();
+            String ctxOpenParam = "openCtx_" + scopeCtx.getId();
+            Boolean isCtxOpen = (Boolean) URLPath.getQueryParam(pageURL, ctxOpenParam);
+            if (isCtxOpen == null)
+               isCtxOpen = false;
+            if (stateInfo.showCurrent)
+               isCtxOpen = true; // There should only be one and it might change each time so need to open it or it might change on the next request
+            %>
+            <div class="scopeCtxHeader">
+               <a href='= URLPath.setQueryParam(pageURL, ctxOpenParam, !isCtxOpen)'><img class="openCloseImage" src='= isCtxOpen ? "images/listClose.png" : "images/listOpen.png"'/></a><%= scopeCtx == null ? "not created" : scopeCtx.traceId %> (<%= values == null ? "n/a" : values.size() %> <%= values == null || values.size() > 1 ? "entries" : "entry" %>)
+            </div>
+
+            <div class="scopeBody">
                <%
-                  if (scopeCtx != null && scopeOpen) {
-                     if (values == null) {
-                        out.append("no values");
+                  if (scopeCtx != null && isCtxOpen) { %>
+                     <div class="scopeBodyHeader">Scope info</div>
+                     <div class="scopeBodyContent" style="white-space:pre"><%= scopeCtx.traceInfo %></div>
+                     <div class="scopeBodyHeader">Scope values</div>
+                     <%
+                     if (values == null || values.size() == 0) {
+                        out.append("<div class='scopeBodyContent'>no values</div>");
                      }
                      else {
                         SyncContext syncCtx = null;
@@ -43,9 +134,8 @@
                               continue;
                            }
                            %>
-                              <div>
-                                 <span class="key"><%= ent.key %></span>
-                                 <span class="value"> <%= ent.value %></span>
+                              <div class="scopeBodyContent">
+                                 <span class="key"><%= ent.key %></span> = <span class="value"> <%= ent.value %></span>
                               </div>
                            <%
                         }
@@ -53,8 +143,8 @@
                         // Now dump out the contents of the sync context if we found one
                         if (syncCtx != null) {
                             if (syncCtx.objectIndex.size() > 0) {
-                           %>Synchronized objects<br/>
-                            <table><tr><th>Name(constr args)</th><th>registered</th><th>onDemand</th><th>initialized</th></tr>
+                           %><div class="scopeBodyHeader">Synchronized objects</div>
+                            <table class="scopeBodyContent"><tr><th>Name(constr args)</th><th>registered</th><th>onDemand</th><th>initialized</th></tr>
                            <%
                            for (Map.Entry<String,Object> ent:syncCtx.objectIndex.entrySet()) {
                               InstInfo instInfo = syncCtx.getInstInfo(ent.value);
@@ -72,17 +162,44 @@
                            </table>
                         <% }
                            else {
-                              out.append("No synchronized objects");
+                              out.append("<div class='scopeBodyContent'>sync enabled: no synchronized objects</div>");
                            }
                         }
                      }
                   }
                %>
-            </p>
+            </div>
          <%
+         }
       }
    }
 %>
+<style type="text/css">
+   .openCloseImage {
+      vertical-align: middle;
+   }
+
+   .scopeHeader {
+      padding-left: 20px;
+   }
+
+   .scopeCtxHeader {
+      padding-left: 40px;
+   }
+
+   .scopeBody {
+      padding-left: 60px;
+   }
+
+   .scopeBodyHeader {
+      font-weight: bold;
+   }
+
+   .scopeBodyContent {
+      padding-left: 20px;
+   }
+
+</style>
 </body>
 
 </html>
