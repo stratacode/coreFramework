@@ -26,20 +26,13 @@
 
 <body>
 <h2>Server state</h2>
-   Each scope defines a lifecycle, determining how data is shared from one request to the next.
-   <ul>
-      <li>global is the root lifecycle, shared by all.
-      <li>session shares info by all requests made in the same browser session.
-      <li>appGlobal/appSession: URLs that refer to a specific HtmlPage define an application
-      <li>window stores info for all requests made by the same browser window/tab.
-      <li>request stores info available only for the duration of a given request
-   </ul>
+   Each server process in the layered system manages state using a list of scopes.
+   Each scope defines the rules for a lifecycle of state and what data is available from one request to the next.
    <p/>
-   Each scope has one or more contexts.
-   Each scope context may have a sync context - a list of synchronized objects.
-   Each scope context may have a list of parent and child contexts.
-   <p/>
-   Window scope contexts track sync requests from browser windows.
+   A scope manages one or more scopeContexts to store information.
+   Each scope context may have a sync context - an index of synchronized objects defined in that scope.
+   Each scope context has a list of parent and child contexts. At any given time, a thread can access the list of
+   scope contexts available with the CurrentScopeContext.
 <%
    HashMap<ScopeDefinition,ScopeStateInfo> scopeState = new HashMap<ScopeDefinition,ScopeStateInfo>();
    for (ScopeDefinition currentScope:ScopeDefinition.scopes) {
@@ -92,7 +85,7 @@
          List<ScopeContext> scopeCtxs = stateInfo.scopeCtxs;
          %>
             <div class="scopeHeader">
-               <a href='= URLPath.setQueryParam(pageURL, openParam, !scopeOpen)'><img class="openCloseImage" src='= scopeOpen ? "images/listClose.png" : "images/listOpen.png"'/></a><span class="scopeName"><%= currentScope.externalName %></span> scope (<%= scopeCtxs.size() %> scope context<%= scopeCtxs.size() > 1 ? "s" : "" %>)
+               <a href='= URLPath.setQueryParam(pageURL, openParam, !scopeOpen)'><img class="openCloseImage" src='= scopeOpen ? "images/listClose.png" : "images/listOpen.png"'/></a><span class="scopeName"><%= currentScope.externalName %></span> scope (<%= scopeCtxs.size() %> scope context<%= scopeCtxs.size() > 1 ? "s" : "" %>)<span class="infoBox"><img src="images/info.gif"/><div class="infoToolTip"><%= currentScope.description %></div></span>
             </div>
          <%
          if (!scopeOpen)
@@ -197,6 +190,31 @@
 
    .scopeBodyContent {
       padding-left: 20px;
+   }
+
+   .infoBox {
+     position: relative;
+   }
+
+   .infoBox .infoToolTip {
+
+      position: absolute;
+      top: 15px;
+      left: 15px;
+
+      visibility: hidden;
+      width: 350px;
+      background-color: #248;
+      color: #fff;
+
+      padding: 5px;
+      border-radius: 3px;
+
+      z-index: 1;
+   }
+
+   .infoBox:hover .infoToolTip {
+      visibility: visible;
    }
 
 </style>
