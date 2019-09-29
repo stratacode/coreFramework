@@ -183,7 +183,7 @@ class SyncServlet extends HttpServlet {
          if (reset == null) {
             // Reads the POST data as a layer, applies that layer to the current context, and execs any jobs spawned
             // by the layer.
-            applySyncLayer(ctx, request, receiveLanguage, session, url, syncGroup, false);
+            applySyncLayer(ctx, request, receiveLanguage, pageEnt, session, url, syncGroup, false);
          }
 
          StringBuilder pageOutput;
@@ -203,7 +203,7 @@ class SyncServlet extends HttpServlet {
          // For the reset=true case, we need to first render the pages from the default initial state, then apply
          // the reset sync from the client.
          if (reset != null) {
-            applySyncLayer(ctx, request, receiveLanguage, session, url, syncGroup, true);
+            applySyncLayer(ctx, request, receiveLanguage, pageEnt, session, url, syncGroup, true);
 
             pageEnts = pageDispatcher.validatePageEntries(pageEnts, url, queryParams);
 
@@ -246,7 +246,7 @@ class SyncServlet extends HttpServlet {
             }
 
             // Now collect up all changes and write them as the response layer.  TODO: should this be request scoped?
-            SyncResult syncRes = mgr.sendSync(syncGroup, WindowScopeDefinition.scopeId, false, codeUpdates, ctx.curScopeCtx.syncTypeFilter);
+            SyncResult syncRes = mgr.sendSync(syncGroup, pageEnt.pageScope.scopeId, false, false, codeUpdates, ctx.curScopeCtx.syncTypeFilter);
 
             // If there is nothing to send back to the client now, we have a waitTime supplied, and we do not have to send back the session cookie we can wait for changes for "real time" response to the client
             if ((codeUpdates == null || codeUpdates.length() == 0) && waitTime != -1 && !syncRes.anyChanges && syncRes.errorMessage == null && !newSession) {
@@ -385,7 +385,7 @@ class SyncServlet extends HttpServlet {
       return true;
    }
 
-   private void applySyncLayer(Context ctx, HttpServletRequest request, String receiveLanguage, HttpSession session, String url, String syncGroup, boolean isReset) throws IOException {
+   private void applySyncLayer(Context ctx, HttpServletRequest request, String receiveLanguage, PageDispatcher.PageEntry pageEnt, HttpSession session, String url, String syncGroup, boolean isReset) throws IOException {
       int len = request.getContentLength();
       boolean noLength = false;
       if (len == -1) {
@@ -406,7 +406,7 @@ class SyncServlet extends HttpServlet {
          }
 
           // Apply changes from the client.
-         ServletSyncDestination.applySyncLayer(bufStr, receiveLanguage, isReset, "client");
+         ServletSyncDestination.applySyncLayer(bufStr, receiveLanguage, pageEnt.pageScope, isReset, "client");
       }
       ctx.execLaterJobs();
    }

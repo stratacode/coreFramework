@@ -3,6 +3,7 @@ import sc.sync.SyncDestination;
 import sc.type.PTypeUtil;
 import sc.obj.GlobalScopeDefinition;
 import sc.obj.AppGlobalScopeDefinition;
+import sc.obj.RequestScopeDefinition;
 
 @sc.js.JSSettings(jsModuleFile="js/sync.js", prefixAlias="sc_", requiredModule=true)
 class ClientSyncManager extends SyncManager {
@@ -16,11 +17,19 @@ class ClientSyncManager extends SyncManager {
 
    recordInitial = false;        // By default, let the server restore the initial state and only record the changes made from the initial state.  This is used to restore the server session when it gets lost.0
 
+   /** Set at code init time to true if there's no session for this sync */
+   static boolean statelessServer = false;
+   static boolean defaultRealTime = true;
+
    ClientSyncManager(SyncDestination dest) {
       super(dest);
 
       GlobalScopeDefinition.getGlobalScopeDefinition().supportsChangeEvents = true;
       AppGlobalScopeDefinition.getAppGlobalScopeDefinition().supportsChangeEvents = true;
+      RequestScopeDefinition.getRequestScopeDefinition().supportsChangeEvents = true;
+
+      if (!defaultRealTime)
+         dest.realTime = defaultRealTime;
 
       if (dest.realTime) {
          // Once the client has fully initialized itself, we'll schedule the first sync to get us connected when in real time mode.
@@ -76,10 +85,14 @@ class ClientSyncManager extends SyncManager {
    }
 
    void autoSync() {
+      // If there is no session management for this connection, need to 'reset' on every request to create
+      // the session and apply the change. To get real time, effectively every sync request will hold the state
+      // and listeners it needs during the 'wait' so it's not entirely stateless. But if the client is not waiting
+      // on the server it's like a traditional request/response.
       if (autoSyncDest == null)
-         sendSync(autoSyncGroup, false);
+         sendSyncToAll(autoSyncGroup, statelessServer, false);
       else {
-         sendSync(autoSyncDest, autoSyncGroup, false, null, null);
+         sendSync(autoSyncDest, autoSyncGroup, statelessServer, false, null, null);
       }
       lastSentTime = System.currentTimeMillis();
    }

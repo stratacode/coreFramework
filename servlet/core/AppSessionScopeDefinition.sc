@@ -55,4 +55,8 @@ object AppSessionScopeDefinition extends ScopeDefinition {
    public ScopeDefinition getScopeDefinition() {
       return AppSessionScopeDefinition;
    }
+
+   public String getDescription() {
+      return "Stores info specific to a browser session for a particular application (usually the 'base url of the page'). Info persists using the app server's session. ";
+   }
 }

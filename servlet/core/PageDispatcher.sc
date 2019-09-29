@@ -126,8 +126,10 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       /* Set to true when the code has been updated on the fly and this PageEntry is not longer valid */
       boolean removed = false;
 
-      @Constant
-      ScopeDefinition pageScope;
+      // When a session is used, the page scope is window to track the lifecycle of the browser window.
+      // But for request or other temporary scopes, need to use the scope of the page class and
+      // enable the 'stateless' flag so sync turns into a reset on each client request.
+      @Constant ScopeDefinition pageScope;
 
       // Stores the list of query parameters (if any) for the given page - created with @QueryParam
       @Constant
@@ -561,8 +563,14 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             insts.add(inst);
 
             if (verbose) {
+               String startStr;
+               if (newInst) {
+                  startStr = " new page " + (isObject ? "object" : "instance") + " " + pageEnt.pageScope + " sync: " + pageEnt.doSync + " start: ";
+               }
+               else
+                  startStr = " cached start: ";
                String pageTypeStr = (initial ? "Page" : (reset ? "Sync: reset session" : "Sync"));
-               System.out.println(pageTypeStr + " start: " + uri + getTraceInfo(session));
+               System.out.println(pageTypeStr + startStr + uri + getTraceInfo(session));
             }
 
             if (doSync)
@@ -678,11 +686,14 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       boolean needsDyn = false;
       Element mainPage = null, mainHead = null, mainBody = null;
       boolean doSync = false;
+      boolean stateless = false;
 
       boolean origSyncTypes = false;
 
       OutputCtx outCtx = new OutputCtx();
       outCtx.validateCache = isPageView;
+
+      int syncScopeId = WindowScopeDefinition.scopeId;
 
       WindowScopeContext wctx = ctx.getWindowScopeContext(true);
       ServerTagManager mgr = (ServerTagManager) wctx.getValue("sc.js.PageServerTagManager");
@@ -710,8 +721,17 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          if (inst instanceof Element && pageEnt.urlPage) {
             needsDyn = true;
 
-            if (pageEnt.doSync || pageEnt.hasServerTags || testMode)
+            if (pageEnt.doSync || pageEnt.hasServerTags || testMode) {
                doSync = true;
+
+               // For request scope, we don't store state on the server so
+               if (pageEnt.pageScope != null && pageEnt.pageScope.isTemporary()) {
+                  stateless = true;
+                  syncScopeId = pageEnt.pageScope.scopeId;
+                  if (!needsInitialSync)
+                     needsInitialSync = true;
+               }
+            }
 
             if (pageEnt.mimeType != null)
                ctx.mimeType = pageEnt.mimeType;
@@ -875,9 +895,11 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          if (doSync) {
             SyncManager syncMgr = SyncManager.getSyncManager("jsHttp");
             if (!syncMgr.syncDestination.realTime)
-               sb.append("   if (typeof sc_SyncManager_c != 'undefined') sc_SyncManager_c.syncDestination.realTime = false;\n");
+               sb.append("   if (typeof sc_ClientSyncManager_c != 'undefined') sc_ClientSyncManager_c.defaultRealTime = false;\n");
+            if (stateless)
+               sb.append("   if (typeof sc_ClientSyncManager_c != 'undefined') sc_ClientSyncManager_c.statelessServer = true;\n");
 
-            CharSequence initSync = syncMgr.getInitialSync(WindowScopeDefinition.scopeId, resetSync, "js", ctx.curScopeCtx.syncTypeFilter);
+            CharSequence initSync = syncMgr.getInitialSync(syncScopeId, resetSync, "js", ctx.curScopeCtx.syncTypeFilter);
             // Here are in injecting code into the generated script for debugging - if you enable logging on the server, it's on in the client automatically
             if (SyncManager.trace) {
                sb.append("   if (typeof sc_SyncManager_c != 'undefined') sc_SyncManager_c.trace = true;\n");

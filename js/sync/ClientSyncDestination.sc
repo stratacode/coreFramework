@@ -82,8 +82,8 @@ object ClientSyncDestination extends SyncDestination {
 
    void init() {
       ScopeDefinition.initScopes();
-      // On the client global and session are the same thing - i.e. one instance per user's session
-      GlobalScopeDefinition.getGlobalScopeDefinition().aliases.addAll(Arrays.asList(new String[]{"session","window"}));
+      // On the client global, session etc are the same thing - i.e. one instance per user's session
+      GlobalScopeDefinition.getGlobalScopeDefinition().aliases.addAll(Arrays.asList(new String[]{"session","window","appSession","appGlobal","request"}));
       SyncManager.addSyncDestination(this);
 
       DynUtil.addSystemExitListener(new sc.obj.ISystemExitListener() {
@@ -93,15 +93,15 @@ object ClientSyncDestination extends SyncDestination {
       });
    }
 
-   // Apply changes from the server, either by evaluating JS or use the super method which uses the deserializer to apply it
-   public boolean applySyncLayer(String toApply, String receiveLanguage, boolean isReset, String detail) {
+   // Apply changes received from the server, either by evaluating JS or use the super method which uses the deserializer to apply the sync response
+   public boolean applySyncLayer(String toApply, String receiveLanguage, ScopeDefinition syncScope, boolean applyingRemoteReset, String detail) {
       if (receiveLanguage == null && toApply != null && !toApply.startsWith("sync:"))
          receiveLanguage = "js";
       if (SyncManager.trace) {
          if (toApply == null || toApply.length() == 0)
             System.out.println("No changes in server response");
          else
-            System.out.println("Applying server " + detail + ": " + (receiveLanguage == null ? "changes" : receiveLanguage) + ": '" + toApply + "'" + (isReset ? "reset" : "") +"\n");
+            System.out.println("Applying server " + detail + ": " + (receiveLanguage == null ? "changes" : receiveLanguage) + ": '" + toApply + "'" + (applyingRemoteReset ? " applying remote reset" : "") +"\n");
       }
       if (receiveLanguage != null && receiveLanguage.equals("js")) {
          DynUtil.evalScript(toApply);
@@ -115,7 +115,7 @@ object ClientSyncDestination extends SyncDestination {
          return false;
       }
       else {
-         return super.applySyncLayer(toApply, receiveLanguage, isReset, detail);
+         return super.applySyncLayer(toApply, receiveLanguage, syncScope, applyingRemoteReset, detail);
       }
    }
 

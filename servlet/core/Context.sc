@@ -129,8 +129,10 @@ class Context {
 
    void updateWindowContext(WindowScopeContext winCtx) {
       windowCtx = winCtx;
-      if (winCtx != null)
+      if (winCtx != null) {
+         winCtx.lastRequestTime = System.currentTimeMillis();
          PTypeUtil.setWindowId(winCtx.windowId);
+      }
       else
          PTypeUtil.clearThreadLocal("windowId");
    }
@@ -309,11 +311,17 @@ class Context {
             }
          }
          synchronized (ctxList) {
-            windowId = ctxList.size();
+            Integer nextWindowId = (Integer) session.getAttribute("_nextWindowId");
+            if (nextWindowId == null)
+               nextWindowId = 0;
+            session.setAttribute("_nextWindowId", nextWindowId+1);
+
+            windowId = nextWindowId;
             String queryStr = request.getQueryString();
             String fullURL = queryParams == null ? requestURL : requestURL + "?" + queryStr;
             windowCtx = new WindowScopeContext(windowId, Window.createNewWindow(fullURL, request.getServerName(), request.getServerPort(), request.getRequestURI(), request.getPathInfo(), queryStr));
             windowCtx.init();
+            windowCtx.lastRequestTime = System.currentTimeMillis();
             ctxList.add(windowCtx);
 
             SyncManager.addSyncInst(windowCtx.window, true, false, "window", null);
@@ -321,10 +329,52 @@ class Context {
             if (verbose) {
                System.out.println("Window scope context created with id: " + windowId + " for: " + getTraceInfo());
             }
+
+            // First we look for the first non-waiting window to remove. Then we just stop the waiter and remove it anyway.
+            if (!enforceMaxWindows(ctxList, false))
+               enforceMaxWindows(ctxList, true);
          }
          PTypeUtil.setWindowId(windowId);
       }
       return windowCtx;
+   }
+
+   // Removes the oldest window in the session. If stopWaitingWindows is false, we skip windows where there's
+   // still a waiting thread since it's more likely they will be active still in case there are multiple tabs.
+   // Once we hit the max though and
+   private boolean enforceMaxWindows(ArrayList<WindowScopeContext> ctxList, boolean stopWaitingWindows) {
+      int numCtxs = ctxList.size();
+      WindowScopeContext toRem = null;
+      int toRemIx = -1;
+      if (numCtxs > WindowScopeDefinition.maxWindowsPerSession) {
+         // Look through the window scope contexts and find the least recently used one that does not have a sync request waiting
+         for (int i = 0; i < numCtxs; i++) {
+            WindowScopeContext wsc = ctxList.get(i);
+            SyncWaitListener syncListener = wsc.waitingListener;
+            if (stopWaitingWindows || syncListener == null || !syncListener.waiting) {
+               if (toRem == null || (wsc.lastRequestTime == -1 || (toRem.lastRequestTime > wsc.lastRequestTime))) {
+                  toRem = wsc;
+                  toRemIx = i;
+                  if (toRem.lastRequestTime == -1)
+                     break;
+               }
+            }
+         }
+      }
+      if (toRem != null) {
+         toRem.scopeDestroyed(null);
+         if (verbose)
+            System.out.println("Removing window scope: " + windowId + " for: " + toRem.getTraceId() + " - exceeded max windows per session: " + numCtxs);
+         ctxList.remove(toRemIx);
+
+         SyncWaitListener syncListener = toRem.waitingListener;
+         if (syncListener != null && syncListener.waiting) {
+            syncListener.closed = true;
+            syncListener.notify();
+         }
+         return true;
+      }
+      return false;
    }
 
    void write(String str) {

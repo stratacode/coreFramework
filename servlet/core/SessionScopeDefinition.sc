@@ -42,4 +42,8 @@ object SessionScopeDefinition extends ScopeDefinition {
    public ScopeDefinition getScopeDefinition() {
       return SessionScopeDefinition;
    }
+
+   public String getDescription() {
+      return "Stores info specific to a browser session";
+   }
 }

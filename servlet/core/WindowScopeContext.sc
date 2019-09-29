@@ -17,6 +17,8 @@ public class WindowScopeContext extends BaseScopeContext {
 
    SyncWaitListener waitingListener;
 
+   long lastRequestTime = -1;
+
    public WindowScopeContext(int windowId, Window window) {
       this.windowId = windowId;
       this.window = window;
@@ -29,7 +31,6 @@ public class WindowScopeContext extends BaseScopeContext {
    public String getId() {
       return "window:" + String.valueOf(windowId);
    }
-
 
    public Window getWindow() {
       return window;
@@ -52,6 +53,8 @@ public class WindowScopeContext extends BaseScopeContext {
    public String getTraceInfo() {
       StringBuilder sb = new StringBuilder();
       sb.append(super.getTraceInfo());
+      if (lastRequestTime != -1)
+         sb.append("lastRequest = " + PerfMon.getTimeDelta(lastRequestTime));
       if (window != null) {
          if (window.innerWidth != Window.DefaultWidth)
             sb.append("innerWidth = " + window.innerWidth + "\n");
