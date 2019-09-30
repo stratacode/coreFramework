@@ -1,3 +1,4 @@
+import java.util.Arrays;
 class WatershedRectMarkerFilter extends ImageProcessor {
    Mat markerTagImg;
    Mat markerImg;
@@ -5,26 +6,34 @@ class WatershedRectMarkerFilter extends ImageProcessor {
    Mat outImg;
    Mat contourImg;
 
-   //List<List<Rect>> markerRects = new ArrayList<List<Rect>>();
-   int[][][] featurePts = {
-      // define feature as list of markers
-      //{startx,starty},{endx,endy} for each marker
-      {
-        // background
-        {0,0},{50,50},
-        {950,0},{1000,50},
-        {0,950},{50,1000},
-        {950,950},{1000,1000}
-      },
-      {
-        // foot
-        {400,400}, {600,850}
-      },
-      {
-        // paper
-        {175,175}, {250,250},
-        {725,725}, {800,800}
+   static class FeatureRect {
+      int x1, y1, x2, y2;
+      FeatureRect(int x1, int y1, int x2, int y2) {
+         this.x1 = x1;
+         this.y1 = y1;
+         this.x2 = x2;
+         this.y2 = y2;
       }
+   }
+
+   static class MarkerFeature {
+      List<FeatureRect> rects;
+      MarkerFeature(List<FeatureRect> rects) {
+         this.rects = rects;
+      }
+   }
+
+   List<MarkerFeature> markerFeatures = {
+       // background
+       new MarkerFeature(new ArrayList<FeatureRect>(Arrays.asList(
+                 new FeatureRect[]{new FeatureRect(0,0,500,25), new FeatureRect(500,0,1000,25),
+                 new FeatureRect(0, 950, 50, 1000), new FeatureRect(950,950,1000,1000)}))),
+             // foot
+       new MarkerFeature(new ArrayList<FeatureRect>(Arrays.asList(
+                 new FeatureRect[]{new FeatureRect(400,400, 600, 850)}))),
+           // paper
+       new MarkerFeature(new ArrayList<FeatureRect>(Arrays.asList(
+                 new FeatureRect[]{new FeatureRect(125, 300, 200, 375), new FeatureRect(125, 300, 200, 375), new FeatureRect(800, 725, 875, 800)})))
    };
 
    List<Scalar> markerColors = {
@@ -34,6 +43,8 @@ class WatershedRectMarkerFilter extends ImageProcessor {
                                 new Scalar(230, 230, 230) // paper
                               };
 
+   markerFeatures =: refresh();
+
    boolean refresh() {
       if (inMat == null)
          return false;
@@ -42,16 +53,16 @@ class WatershedRectMarkerFilter extends ImageProcessor {
       Size inSize = new Size(w, h);
       markerTagImg = Mat.zeros(inSize, CvType.CV_32S);
 
-      int numFeatures = featurePts.length;
+      int numFeatures = markerFeatures.size();
 
       for (int f = 0; f < numFeatures; f++) {
-         int[][] rlpts = featurePts[f];
+         MarkerFeature feature = markerFeatures.get(f);
          Scalar markerValue = new Scalar(f+1);
-         for (int rl = 0; rl < rlpts.length; rl += 2) {
-            int[] start = rlpts[rl];
-            int[] end = rlpts[rl+1];
-            Imgproc.rectangle(markerTagImg, new Point(convertX(start[0]), convertY(start[1])),
-                                            new Point(convertX(end[0]), convertY(end[1])),
+         int numRects = feature.rects.size();
+         for (int ri = 0; ri < numRects; ri ++) {
+            FeatureRect fr = feature.rects.get(ri);
+            Imgproc.rectangle(markerTagImg, new Point(convertX(fr.x1), convertY(fr.y1)),
+                                            new Point(convertX(fr.x2), convertY(fr.y2)),
                                             markerValue, Core.FILLED);
          }
       }
