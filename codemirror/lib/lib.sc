@@ -1,5 +1,5 @@
 // To install: npm install codemirror
-package sc.html.tag;
+package sc.html;
 
 
 codemirror.lib extends html.schtml {

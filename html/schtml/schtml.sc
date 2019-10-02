@@ -1,3 +1,5 @@
+import sc.html.EditablePage;
+
 /** 
    html.schtml defines default tag objects for the sc.html.tag package that provide nice defaults for
    schtml applications - e.g. session scope pages, load the JS after the body etc.  Most apps will extend this
