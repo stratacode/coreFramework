@@ -19,7 +19,7 @@ public class SwingBindingManager extends BindingManager {
    public void sendEvent(IListener listener, int event, Object obj, IBeanMapper prop, Object eventDetail) {
       BindingContext curCtx = BindingContext.getBindingContext();
       if (curCtx != bindingContext && curCtx != null) {
-         if (curCtx.defaultSyncType == IListener.SyncType.QUEUED) {
+         if (curCtx.queueEnabledForEvent(event)) {
             curCtx.queueEvent(event, obj, prop, listener, eventDetail);
             return;
          }

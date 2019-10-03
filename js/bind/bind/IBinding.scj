@@ -10,7 +10,7 @@ public interface IBinding {
 
    void removeBindingListener(Object eventObject, IListener listener, int event);
 
-   void invalidateBinding(Object object, boolean sendEvent, boolean invalidateParams);
+   void invalidateBinding(Object object, boolean sendEvent, int event, boolean invalidateParams);
 
    boolean applyBinding(Object obj, Object value, IBinding src, boolean refresh, boolean pendingChild);
 

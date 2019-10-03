@@ -28,6 +28,10 @@ import sc.obj.IScopeEventListener;
 public class BindingContext implements IScopeEventListener {
    BindingEvent queuedEvents;
 
+   public BindingContext(IListener.SyncType defaultSyncType) {
+      this.defaultSyncType = defaultSyncType;
+   }
+
    public static void setBindingContext(BindingContext ctx) {
       PTypeUtil.setThreadLocal("bindingContext", ctx);
    }
@@ -258,5 +262,19 @@ public class BindingContext implements IScopeEventListener {
 
    public void startContext() {
       dispatchEvents(null);
-  }
+   }
+
+   public boolean queueEnabledForEvent(int event) {
+      if (event == IListener.VALUE_CHANGED)
+         System.out.println("*** Warning - should be called with validate or invalidate only - not both flags set");
+      switch (defaultSyncType) {
+         case QUEUED:
+            return true;
+         case QUEUE_VALIDATE_EVENTS:
+            return event == IListener.VALUE_VALIDATED;
+         case IMMEDIATE:
+            return false;
+      }
+      return false;
+   }
 }

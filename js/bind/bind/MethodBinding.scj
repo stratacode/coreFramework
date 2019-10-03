@@ -272,9 +272,9 @@ public class MethodBinding extends AbstractMethodBinding implements IResponseLis
       return method != null && DynUtil.isRemoteMethod(method);
    }
 
-   public void invalidateBinding(Object object, boolean sendEvent, boolean invalidateForRefresh) {
+   public void invalidateBinding(Object object, boolean sendEvent, int event, boolean invalidateForRefresh) {
       if (invalidateForRefresh && isRefreshDisabled())
          return;
-      super.invalidateBinding(object, sendEvent, invalidateForRefresh);
+      super.invalidateBinding(object, sendEvent, event, invalidateForRefresh);
    }
 }

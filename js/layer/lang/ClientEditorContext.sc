@@ -113,7 +113,10 @@ public class ClientEditorContext {
 
    /** Returns the model text to display - the extra modelText param is here for data binding purposes */
    public String getModelText(JavaModel model, String modelText) {
-      MemoryEditSession mes = getMemorySession(model.getSrcFile());
+      if (model == null)
+         return modelText;
+      SrcEntry srcFile = model.getSrcFile();
+      MemoryEditSession mes = getMemorySession(srcFile);
       if (mes == null || mes.text == null)
          return modelText;
       return mes.text;

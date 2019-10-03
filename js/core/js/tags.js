@@ -27,6 +27,7 @@ function js_HTMLElement() {
    else
       console.error("Unrecognized constructor for tag object");
    this.repeatVarName = null;
+   this.repeatListener = null;
    this.serverRepeat = false;
    this.HTMLClass = null;
    this.visible = true;
@@ -34,6 +35,10 @@ function js_HTMLElement() {
    this.invisTags = null;
    this.initState = 0;
    this.changedCount = 0;
+
+   // If this is a repeat wrapper, add a listener for the 'repeat' property change
+   if (this.isRepeatTag())
+      this.initRepeatListener();
 }
 
 js_indexPattern = "/index.html";
@@ -139,8 +144,26 @@ js_Element_c.getNameForChild = function(obj) {
 }
 
 js_Element_c.getChildForName = function(name) {
+   if (!this.isRepeatTag())
+       return null;
+
+   // If we are looking up a child name as part of a sync layer, or other situations where a sync queue is involved,
+   // when this tag has received a change event, we the repeat value is possibly invalid and depends on an event in
+   // the queue. So when we flush these events, the setRepeat method is called or otherwise our value is updated so
+   // we can sync the list, then return the list item.
+   if (!this.repeatTagsValid || !this.bodyValid) {
+      var sync = typeof sc_SyncManager_c != "undefined";
+      var bindCtx = sc_BindingContext_c.getBindingContext();
+      if (sync && bindCtx != null) {
+         sc_SyncManager_c.flushSyncQueue();
+         bindCtx.dispatchEvents(null);
+      }
+      this.refreshRepeat(false);
+   }
+
    if (this.repeatTags == null)
       return null;
+
    var uix = name.lastIndexOf('_');
    if (uix === -1)
       return null;
@@ -214,6 +237,13 @@ js_Element_c.getRelPrefix = function(srcRelPath) {
       }
    }
    return relPath.toString();
+}
+
+js_Element_c.isRepeatTag = function() {
+   if (this.replaceWith !== null)
+      return this.replaceWith.isRepeatTag();
+
+   return this.repeat !== null || sc_instanceOf(this, js_IRepeatWrapper);
 }
 
 // Hide this node in the editor - paralles the same annotation on Element in Java
@@ -439,9 +469,9 @@ js_HTMLElement_c.destroy = function() {
    if (this.replaceWith != null) {
       this.replaceWith = null; // TODO: anything else we need to do here?
    }
-   if (this.repeatListener !== undefined) {
-      sc_Bind_c.removeListener(this, "repeat", this.repeatListener, sc_IListener_c.VALUE_VALIDATED);
-      delete this.repeatListener;
+   if (this.repeatListener) {
+      sc_Bind_c.removeListener(this, "repeat", this.repeatListener, sc_IListener_c.VALUE_INVALIDATED);
+      this.repeatListener = null;
    }
    if (this.getObjChildren) {
       var children = this.getObjChildren(false);
@@ -820,21 +850,24 @@ js_HTMLElement_c.getReplaceWith = function() {
    return this.replaceWith;
 }
 
+js_HTMLElement_c.initRepeatListener = function() {
+   if (!this.repeatListener) {
+      this.repeatListener = new js_RepeatListener(this);
+      sc_Bind_c.addListener(this, "repeat", this.repeatListener, sc_IListener_c.VALUE_INVALIDATED);
+   }
+}
+
 js_HTMLElement_c.setRepeat = function(r) {
    var oldR = this.repeat;
    if (oldR === r)
       return;
    if (this.repeatListener && sc_instanceOf(oldR, sc_IChangeable)) {
-      sc_Bind_c.removeListener(oldR, null, this.repeatListener, sc_IListener_c.VALUE_CHANGED);
+      sc_Bind_c.removeListener(oldR, null, this.repeatListener, sc_IListener_c.VALUE_INVALIDATED);
    }
    if (r !== null) {
-      if (this.repeatListener === undefined) {
-         this.repeatListener = new js_RepeatListener(this);
-         sc_Bind_c.addListener(this, "repeat", this.repeatListener, sc_IListener_c.VALUE_VALIDATED);
-      }
-
+      this.initRepeatListener();
       if (sc_instanceOf(r, sc_IChangeable))
-         sc_Bind_c.addListener(r, null, this.repeatListener, sc_IListener_c.VALUE_CHANGED);
+         sc_Bind_c.addListener(r, null, this.repeatListener, sc_IListener_c.VALUE_INVALIDATED);
    }
    this.repeat = r;
    if (r !== null && this.repeatTags === undefined) {
@@ -3244,6 +3277,12 @@ function js_RepeatListener(scObj) {
 
 js_RepeatListener_c = sc_newClass("sc.lang.html.RepeatListener", js_RepeatListener, sc_AbstractListener, null);
 
+js_RepeatListener_c.valueInvalidated = function(obj, prop, detail, apply) {
+   var scObj = this.scObj;
+   scObj.invalidateRepeatTags();
+}
+
+/*
 js_RepeatListener_c.valueValidated = function(obj, prop, detail, apply) {
    var scObj = this.scObj;
    // When an update occurs to the repeat element, check if we need to refresh the list
@@ -3251,6 +3290,7 @@ js_RepeatListener_c.valueValidated = function(obj, prop, detail, apply) {
       scObj.invalidateRepeatTags();
    }
 }
+*/
 
 function js_IRepeatWrapper() {}
 
