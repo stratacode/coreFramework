@@ -593,9 +593,12 @@ sc_DynUtil_c.getPropertyValue = function(obj, prop, ignoreError) {
 sc_DynUtil_c.setPropertyValue = function(obj, prop, val) {
    var setMethod = obj[sc_setName(prop)];
    if (setMethod !== undefined)
-      setMethod.call(obj, val); 
-   else
+      setMethod.call(obj, val);
+   // all properties should be initialized to null
+   else if (obj[prop] !== undefined)
       obj[prop] = val;
+   else
+      throw new jv_IllegalArgumentException("No property: " + prop + " for obj: " + sc_DynUtil_c.getInstanceName(obj));
 }
 
 sc_DynUtil_c.setAndReturn = function(obj, prop, val) {
