@@ -114,13 +114,13 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       Parselet patternParselet;
       Pattern urlPattern;
       Object pageType;
-      boolean urlPage; // TODO: rename this to dynamic page or something?
+      boolean dynContentPage;
       int priority;
       String lockScope; // The scope name to use for locking.  if null, use the type's scope as the scope for the lock.
       String mimeType;
       boolean doSync; // Set to true during compilation based on whether there's a client/server sync'ing - matching js to java classes
       boolean hasServerTags; // There's no client tag object but there is one or more serverTags in the server version.  Server tags also need sync
-      boolean resource;
+      boolean resource; // Set to true for pages like .css pages that are resources. Similar to !dynContentPage but sccss is both a resource and a dynContentPage
       Set<String> syncTypes;
 
       /* Set to true when the code has been updated on the fly and this PageEntry is not longer valid */
@@ -220,13 +220,15 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
    }
 
    /**
-    * This method is usually called from generated code, attached to an annotation via a mixin-template. It register 
+    * This method is usually called from generated code, attached to an annotation via a mixin-template. It register
     * a pattern with a page type of an object to handle the request or a class to be created to handle the
-    * request.  The priority will typically be provided as the layer position, in case one type overrides another.
-    * We are not guaranteed these get called in any order so need to use the priority to decide who gets to listen on that
-    * pattern.
+    * request.  The priority will typically be provided as the layer position, in case one type overrides another type registered in the earlier layer.
+    * We are not guaranteed these get called in any order so need to use the priority to decide who gets to listen on that pattern.
+    * The keyName is a unique name for this PageEntry. The pattern is written in the SC Pattern language for matching against the URL and
+    * extracting values from the URL.
+    * The doSync flag indicates whether sync is enabled or disabled for this page.
     */
-   public static void addPage(String keyName, String pattern, Object pageType, boolean urlPage, boolean doSync, boolean isResource, int priority, String lockScope, List<QueryParamProperty> queryParamProps, Set<String> syncTypes) {
+   public static void addPage(String keyName, String pattern, Object pageType, boolean dynContentPage, boolean doSync, boolean isResource, int priority, String lockScope, List<QueryParamProperty> queryParamProps, Set<String> syncTypes) {
       PageEntry ent = new PageEntry();
       ent.keyName = keyName;
       ent.pattern = pattern;
@@ -235,7 +237,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       ent.patternParselet = (Parselet) ent.urlPattern.getParselet(language, pageType);
       ent.pageType = pageType;
       ent.priority = priority;
-      ent.urlPage = urlPage;
+      ent.dynContentPage = dynContentPage;
       ent.resource = isResource;
       ent.doSync = doSync;
       // TODO: should we add an annotation for this - some page objects may not have server tags so we could avoid some work for them.
@@ -268,7 +270,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          String dir = pattern.equals(indexPattern) ? "" : pattern.substring(0,pattern.length() - indexPattern.length());
          if (verbose)
             System.out.println("PageDispatcher: adding index page for: " + (dir.length() == 0 ? "doc root" : dir));
-         addPage(dir + "_index_", dir + "/", pageType, urlPage, doSync, isResource, priority, lockScope, queryParamProps, syncTypes);
+         addPage(dir + "_index_", dir + "/", pageType, dynContentPage, doSync, isResource, priority, lockScope, queryParamProps, syncTypes);
       }
    }
 
@@ -368,7 +370,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
 // first we'll loop through all page objects and figure out which scopes and locks are needed for this request
 // that way we can acquire locks "all or none" to avoid deadlocks.
       for (PageEntry pageEnt:pageEnts) {
-         if (pageEnt.urlPage) {
+         if (pageEnt.dynContentPage) {
 
             Object pageType = pageEnt.pageType;
 
@@ -496,7 +498,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
 
       int i = 0;
       for (PageEntry pageEnt:pageEnts) {
-         if (pageEnt.urlPage) {
+         if (pageEnt.dynContentPage) {
             // Enable sync for the page if it needsSync, or if sync is enabled and we are in test mode (so we can control the client with test scripts).
             // The syncEnabled flag is set based on whether the js.sync layer is present.  If the client has no js.sync layer (syncEnabled=false), it won't
             // have loaded the syncManager and so we can't do the client/server/sync
@@ -718,7 +720,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          }
 
          Object inst = insts.get(i);
-         if (inst instanceof Element && pageEnt.urlPage) {
+         if (inst instanceof Element && pageEnt.dynContentPage) {
             needsDyn = true;
 
             if (pageEnt.doSync || pageEnt.hasServerTags || testMode) {
@@ -968,7 +970,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
 
             PageEntry pageEnt = pageEnts.get(0);
 
-            isUrlPage = pageEnt.urlPage;
+            isUrlPage = pageEnt.dynContentPage;
 
             // Must be set before we call Context.initContext
             if (isUrlPage)
@@ -1246,6 +1248,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       return pageOutput;
    }
 
+   /** This is called when a type is dynamically changed in the system - i.e. the source is changed and the system is refreshed to pick up the change. */
    public void updateType(Object oldType, Object newType) {
       typeRemoved(oldType);
       typeCreated(newType);

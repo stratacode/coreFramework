@@ -11,9 +11,4 @@ public js.layer extends js.schtml, js.sync {
 
    finalLayer = true;
    buildLayer = true;
-
-   void start() {
-      if (activated) // this sync class is not easily discoverable due to replaceWith so added this hook to make it pass the syncTypeFilter
-         sc.sync.SyncManager.addGlobalSyncTypeName("sc.lang.JLineInterpreter");
-   }
 }
