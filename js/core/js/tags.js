@@ -2427,6 +2427,14 @@ js_HtmlPage_c.getPageBaseURL = js_Page_c.getPageBaseURL = function() {
    return this.pageURL.substring(0, ix);
 }
 
+js_HtmlPage_c.getPageVisitCount = js_Page_c.getPageVisitCount = function() {
+   return this.pageVisitCount;
+}
+
+js_HtmlPage_c.setPageVisitCount = js_Page_c.setPageVisitCount = function(vc) {
+   this.pageVisitCount = vc;
+}
+
 js_HtmlPage_c.getQueryParamProperties = js_Page_c.getQueryParamProperties = function() {
    return this.queryParamProperties;
 }
