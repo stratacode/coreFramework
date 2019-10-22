@@ -1634,27 +1634,43 @@ syncMgr = sc_SyncManager_c = {
                      delim = null;
                      break;
                   }
-                  if (c == '\\' && avix < stlen - 1) {
-                     avix++;
-                     var nc = startTagTxt.charAt(avix);
-                     if (nc == '"' || nc == '\'' || nc == '\\')
-                        c = nc;
-                     else {
-                        var esc = true;
-                        if (nc == 'n') {
-                           attVal += '\n';
-                        }
-                        else if (nc == 't') {
-                           attVal += '\t';
-                        }
-                        else if (nc == 'r') {
-                           attVal += '\r';
-                        }
+                  if (avix < stlen - 1) {
+                     if (c == '\\') {
+                        avix++;
+                        var nc = startTagTxt.charAt(avix);
+                        if (nc == '"' || nc == '\'' || nc == '\\')
+                           c = nc;
                         else {
-                           sc_logError("Unrecognized escape");
-                           return;
+                           var esc = true;
+                           if (nc == 'n') {
+                              attVal += '\n';
+                           }
+                           else if (nc == 't') {
+                              attVal += '\t';
+                           }
+                           else if (nc == 'r') {
+                              attVal += '\r';
+                           }
+                           else {
+                              sc_logError("Unrecognized escape");
+                              return;
+                           }
+                           continue;
                         }
-                        continue;
+                     }
+                     else if (c == '&') {
+                        var lix = startTagTxt.indexOf(';', avix);
+                        if (lix != -1) {
+                           var ln = startTagTxt.substring(avix+1, lix);
+                           if (ln === "quot") {
+                              avix += 5;
+                              c = '"';
+                           }
+                           else if (ln === "amp") {
+                              avix += 4;
+                              c = '&';
+                           }
+                        }
                      }
                   }
                   attVal += c;

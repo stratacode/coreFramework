@@ -16,10 +16,12 @@ public class PageInit extends BasePageInit implements ServletContextListener, Ht
        // For servlets, the request is chained off of the window as well as 'global'
        RequestScopeDefinition.addParentScope(WindowScopeDefinition);
        LayeredSystem sys = LayeredSystem.getCurrent();
-       // Call back to the layered system to let it know the sync types etc are initialized.  We might need to init the sync for the command interpreter
+       if (sys != null && sys.options.testMode)
+          Context.testMode = true;
 
        PageDispatcher.initPageEntries();
 
+       // Call back to the layered system to let it know the sync types etc are initialized.  We might need to init the sync for the command interpreter
        if (sys != null)
           sys.runtimeInitialized();
     }

@@ -20,7 +20,7 @@ public class SwingBindingManager extends BindingManager {
       BindingContext curCtx = BindingContext.getBindingContext();
       if (curCtx != bindingContext && curCtx != null) {
          if (curCtx.queueEnabledForEvent(event)) {
-            curCtx.queueEvent(event, obj, prop, listener, eventDetail);
+            curCtx.queueEvent(event, obj, prop, listener, eventDetail, null);
             return;
          }
          else {
@@ -32,7 +32,7 @@ public class SwingBindingManager extends BindingManager {
          super.sendEvent(listener, event, obj, prop, eventDetail);
       }
       else {
-         bindingContext.queueEvent(event, obj, prop, listener, eventDetail);
+         bindingContext.queueEvent(event, obj, prop, listener, eventDetail, null);
 
          if (!handlerRegistered) {
             handlerRegistered = true;

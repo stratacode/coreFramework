@@ -10,5 +10,5 @@ public js.layer extends js.schtml, js.sync {
    compiledOnly = true;
 
    finalLayer = true;
-   buildLayer = true;
+   //buildLayer = true;
 }

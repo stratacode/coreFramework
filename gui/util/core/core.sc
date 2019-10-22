@@ -5,5 +5,5 @@ import sc.gui.util.UIColor;
 import sc.gui.util.UIIcon;
 
 public gui.util.core {
-   codeType = sc.layer.CodeType.Application;
+   codeType = sc.layer.CodeType.Framework;
 }

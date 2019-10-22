@@ -8,6 +8,8 @@ import sc.dyn.DynUtil;
 import java.util.HashMap;
 import sc.util.PerfMon;
 
+import sc.obj.CurrentScopeContext;
+
 public class WindowScopeContext extends BaseScopeContext {
    // The integer identifying this window in this session - from 0 as the first page in the session
    public int windowId;
@@ -77,5 +79,13 @@ public class WindowScopeContext extends BaseScopeContext {
          sb.append("\n");
       }
       return sb.toString();
+   }
+
+   public void removeScopeContext() {
+      String scopeContextName = (String) getValue("scopeContextName");
+      if (scopeContextName != null) {
+         if (!CurrentScopeContext.remove(scopeContextName))
+            System.err.println("*** Failed to remove CurrentScopeContext for scopeContextName: " + scopeContextName);
+      }
    }
 }

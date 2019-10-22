@@ -10,5 +10,5 @@ public js.appPerPage.main extends meta {
 
    // Need the build layer to be after we install the tag classes - or somehow ensure upstream
    // tag classes don't get injected into downstream layers
-   buildLayer = true;
+   //buildLayer = true;
 }

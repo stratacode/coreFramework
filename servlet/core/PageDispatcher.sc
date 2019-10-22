@@ -425,7 +425,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                            lockState = new ServerLockState();
                            lockState.lockInfoStr = sysLockInfo;
                            if (traceLocks)
-                              System.out.println("Page: new lock created for scope: " + lockScope + getTraceInfo(session));
+                              System.out.println("Page: new lock created for scope: " + lockScope + ": " + ctx);
                            lockScopeCtx.setValue("_lock", lockState);
                         }
                      }
@@ -570,9 +570,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                   startStr = " new page " + (isObject ? "object" : "instance") + " " + pageEnt.pageScope + " sync: " + pageEnt.doSync + " start: ";
                }
                else
-                  startStr = " cached start: ";
+                  startStr = " cached page";
                String pageTypeStr = (initial ? "Page" : (reset ? "Sync: reset session" : "Sync"));
-               System.out.println(pageTypeStr + startStr + uri + getTraceInfo(session));
+               System.out.println(pageTypeStr + startStr + ": " + ctx);
             }
 
             if (doSync)
@@ -1028,15 +1028,20 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                }
 
                if (verbose)
-                  System.out.println("Page complete: session: " + getTraceInfo(session) + traceBuffer + " for " + getRuntimeString(startTime));
+                  System.out.println("Page complete: " + ctx + traceBuffer + " for " + getRuntimeString(startTime));
 
                // We don't want to register a command context for the '.css' page - i.e. pageEnt.resource = true
                if (sys != null && isUrlPage && (pageEnt.doSync || pageEnt.hasServerTags || (testMode && !pageEnt.resource))) {
                   // In test mode only we accept the scopeContextName parameter, so we can attach to a specific request's scope context from the test script
                   String scopeContextName = !sys.options.testMode ? null : request.getParameter("scopeContextName");
-                  // If the command line interpreter is enabled, use a scopeContextName so the command line is sync'd up to the scope of the page page we rendered
-                  if (scopeContextName == null && sys.commandLineEnabled())
-                     scopeContextName = "defaultCmdContext";
+                  // If the command line interpreter is enabled, use a scopeContextName so the command line is sync'd up to CurrentScopeContext
+                  // of the first real page. It's not designed to use the same ScopeContextName for different pages since they do not
+                  // have the same scopes.
+                  if (scopeContextName == null && sys.commandLineEnabled()) {
+                     CurrentScopeContext defaultCtx = CurrentScopeContext.get("defaultCmdContext");
+                     if (defaultCtx == null)
+                        scopeContextName = "defaultCmdContext";
+                  }
                   if (scopeContextName != null) {
                      CurrentScopeContext currentCtx = CurrentScopeContext.getCurrentScopeContext();
                      CurrentScopeContext.register(scopeContextName, currentCtx);

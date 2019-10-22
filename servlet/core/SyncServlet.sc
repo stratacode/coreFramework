@@ -142,7 +142,7 @@ class SyncServlet extends HttpServlet {
          ctx = Context.initContext(request, response, PageDispatcher.buildRequestURL(request, url), url, null);
 
          if (verbosePage) 
-            System.out.println("Sync request: " + url + PageDispatcher.getTraceInfo(session) + " " + getDebugInfo(request, response));
+            System.out.println("Sync request: " + ctx + " " + getDebugInfo(request, response));
 
          int sz = pageEnts.size();
 
@@ -157,7 +157,7 @@ class SyncServlet extends HttpServlet {
          // Wake up the previous listener - if any, so there's only one thread per window that's waiting at any given time.
          if (oldListener != null && oldListener.waiting) {
             if (verbosePage) 
-                System.out.println("Sync - waking up thread: " + oldListener.threadName + " from: " + PageDispatcher.getTraceInfo(session) + " " + getDebugInfo(request, response) + (closeSession + " - session closed"));
+                System.out.println("Sync - waking up thread: " + oldListener.threadName + " from: " + ctx + " " + getDebugInfo(request, response) + (closeSession + " - session closed"));
             synchronized (oldListener) {
                if (oldListener.waiting) {
                   oldListener.replaced = true;
@@ -168,15 +168,21 @@ class SyncServlet extends HttpServlet {
             }
          }
          else if (oldListener != null && verbosePage)
-            System.out.println("Sync - not waking up thread: " + oldListener.threadName + " from: " + PageDispatcher.getTraceInfo(session) + " " + getDebugInfo(request, response) + (closeSession + " - session closed"));
+            System.out.println("Sync - not waking up thread: " + oldListener.threadName + " from: " + ctx + " " + getDebugInfo(request, response) + (closeSession ? " - session closed" : ""));
 
          if (closeSession) {
             if (verbosePage)
-               System.out.println("Sync - closeSession from: " + PageDispatcher.getTraceInfo(session) + " " + getDebugInfo(request, response));
-            // TODO: we could potentially remove the window context here but it then the back button would not work. I think the window
-            // contexts can be seen as an in-memory record of the navigation structure as well. The key is that we don't leave a sync listener
-            // around once the user has navigated away from that window. We rely on the beacon/onunload listener from the browser to
-            // send the close=true sync.
+               System.out.println("Sync - closeSession from: " + ctx + " " + getDebugInfo(request, response));
+
+            // TODO: we could potentially remove the window context here but I think it's good to keep it around for cached back button support. I think the window
+            // contexts can be seen as an in-memory record of the navigation structure as well and so useful for the server to understand the
+            // browser history. Close session prevents sync listeners from hanging around once the user has navigated away and we remove
+            // the scopeContext so that we don't send sync events to this scopeContextName or tie up the command-line interpreter.
+            // The browser uses the beacon (or onunload) listener to trigger the closeSession request.
+            if (ctx != null && ctx.windowCtx != null) {
+               ctx.windowCtx.removeScopeContext();
+            }
+
             return true;
          }
 
@@ -269,7 +275,7 @@ class SyncServlet extends HttpServlet {
                      if (!Context.shuttingDown) { // Don't wait if the server is in the midst of shutting down
                         if (verbosePage) {
                            sleepStartTime = System.currentTimeMillis();
-                           System.out.println("Sync wait: " + url + (scopeContextName == null ? "" : " (scopeContextName: " + scopeContextName + ")") + " time: " + waitTime + PageDispatcher.getTraceInfo(session) + " " + getDebugInfo(request, response));
+                           System.out.println("Sync wait: " + ctx + (scopeContextName == null ? "" : " (scopeContextName: " + scopeContextName + ")") + " time: " + waitTime + PageDispatcher.getTraceInfo(session) + " " + getDebugInfo(request, response));
                         }
 
                         if (scopeContextName != null) {
@@ -301,7 +307,7 @@ class SyncServlet extends HttpServlet {
 
                if (Context.shuttingDown) {
                    if (verbosePage)
-                      System.out.println("Sync woke - shutdown: " + url + PageDispatcher.getTraceInfo(session) + (sleepStartTime == 0 ? "" : " after " + (System.currentTimeMillis() - sleepStartTime) + " millis") + " " + getDebugInfo(request, response));
+                      System.out.println("Sync woke - shutdown: " + ctx + (sleepStartTime == 0 ? "" : " after " + (System.currentTimeMillis() - sleepStartTime) + " millis") + " " + getDebugInfo(request, response));
                    // Sending the 410 - resource gone - response here to signal that we do not want the client to poll again.  If we are planning
                    // on restarting, send the 205 - reset which means send all of your data on the next request cause your session is gone
                    int resultCode = Context.restarting ? 205 : 410;
@@ -312,7 +318,7 @@ class SyncServlet extends HttpServlet {
                // Make sure we're still the first SyncServlet request waiting...
                if (windowCtx.waitingListener == listener && !listener.replaced) {
                   if (verbosePage)
-                     System.out.println("Sync woke - acquiring locks: " + url + PageDispatcher.getTraceInfo(session) + " after " + (System.currentTimeMillis() - sleepStartTime) + " millis " + getDebugInfo(request, response));
+                     System.out.println("Sync woke - acquiring locks: " + ctx + " after " + (System.currentTimeMillis() - sleepStartTime) + " millis " + getDebugInfo(request, response));
 
                   curScopeCtx.startScopeContext(true);
 
@@ -326,12 +332,12 @@ class SyncServlet extends HttpServlet {
                   if (windowCtx.waitingListener == listener && !listener.replaced) {
                      repeatSync = true;
                      if (SyncManager.trace || PageDispatcher.trace)
-                        System.out.println("Sync woke: " + url + PageDispatcher.getTraceInfo(session) + " after " + (System.currentTimeMillis() - sleepStartTime) + " millis" + (interrupted ? " *** interrupted" : "") + " " + getDebugInfo(request, response));
+                        System.out.println("Sync woke: " + ctx + " after " + (System.currentTimeMillis() - sleepStartTime) + " millis" + (interrupted ? " *** interrupted" : "") + " " + getDebugInfo(request, response));
                   }
                }
                if (!repeatSync) {
                   if (SyncManager.trace || PageDispatcher.trace)
-                     System.out.println("Sync woke: " + url +  PageDispatcher.getTraceInfo(session) + " after " + (System.currentTimeMillis() - sleepStartTime) + " millis"  + (interrupted ? " *** interrupted and" : "") + " replaced - returning empty sync: " + " " + getDebugInfo(request, response));
+                     System.out.println("Sync woke: " + ctx + " after " + (System.currentTimeMillis() - sleepStartTime) + " millis"  + (interrupted ? " *** interrupted and" : "") + " replaced - returning empty sync: " + " " + getDebugInfo(request, response));
                }
             }
          } while (repeatSync);
@@ -339,7 +345,7 @@ class SyncServlet extends HttpServlet {
          syncSession.lastSyncTime = System.currentTimeMillis();
 
          if (verbosePage)
-            System.out.println("Sync end: " + url + PageDispatcher.getTraceInfo(session) + (traceBuffer.length() > 0 ? (": " + traceBuffer) : "") + " for " + PageDispatcher.getRuntimeString(startTime) + " " + getDebugInfo(request, response));
+            System.out.println("Sync end: " + ctx + (traceBuffer.length() > 0 ? (": " + traceBuffer) : "") + " for " + PageDispatcher.getRuntimeString(startTime) + " " + getDebugInfo(request, response));
       }
       catch (RuntimeIOException exc) {
          // For the case where the client side just is closed while we are waiting to write.  Only log this as a verbose message for now because it messages up autotests
@@ -349,11 +355,11 @@ class SyncServlet extends HttpServlet {
       }
       catch (RuntimeException exc) {
          if (sys == null) {
-            System.err.println("Sync request error: " + url + PageDispatcher.getTraceInfo(session) + exc);
+            System.err.println("Sync request error: " + ctx + exc);
             exc.printStackTrace();
          }
          else {
-            sys.error("Sync request error: " + url + PageDispatcher.getTraceInfo(session) + exc.toString());
+            sys.error("Sync request error: " + ctx + exc.toString());
             exc.printStackTrace();
          }
       }
@@ -364,7 +370,7 @@ class SyncServlet extends HttpServlet {
             if (ctx != null) {
                if (!locksAcquired && ctx.hasDoLaterJobs()) {
                   if (verbosePage)
-                     System.out.println("Reacquiring locks for post-page processing: " + PageDispatcher.getTraceInfo(session));
+                     System.out.println("Reacquiring locks for post-page processing: " + ctx);
                   curScopeCtx.acquireLocks();
                   locksAcquired = true;
                }
@@ -402,7 +408,7 @@ class SyncServlet extends HttpServlet {
 
       if (bufStr.length() > 0) {
          if (SyncManager.trace || PageDispatcher.trace) {
-            System.out.println("Client " + (isReset ? "reset" : "sync") + ": " + url + PageDispatcher.getTraceInfo(session) + ":\n" + bufStr + "");
+            System.out.println("Client " + (isReset ? "reset" : "sync") + ": " + ctx + ":\n" + bufStr + "");
          }
 
           // Apply changes from the client.
@@ -413,7 +419,9 @@ class SyncServlet extends HttpServlet {
 
    private String getDebugInfo(HttpServletRequest request, HttpServletResponse response) {
       try {
-         return "response closed: " + response.getWriter().checkError();
+         if (response.getWriter().checkError())
+            return "*** response closed***";
+         return "";
       }
       catch (IOException exc) {
          return "response error: " + exc.toString();

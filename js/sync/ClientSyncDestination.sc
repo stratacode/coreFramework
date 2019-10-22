@@ -65,7 +65,7 @@ object ClientSyncDestination extends SyncDestination {
       if (w != null)
          urlParam = "url=" + CTypeUtil.escapeURLString(w.location.pathname);
       if (useParams == null)
-         useParams = urlParam == null ? "" : "?" + urlParam;
+         useParams = urlParam == null ? null : "?" + urlParam;
       else
          useParams = "?" + useParams + (urlParam == null ? "" : "&" + urlParam);
       int winId = PTypeUtil.getWindowId();

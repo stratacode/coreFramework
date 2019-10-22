@@ -53,6 +53,7 @@ class Context {
 
    static boolean verbose = false;
    static boolean trace = false;
+   static boolean testMode = false;
 
    Context(HttpServletRequest req, HttpServletResponse res, String requestURL, String requestURI, TreeMap<String,String> queryParams) {
       request = req;
@@ -75,8 +76,6 @@ class Context {
          if (session != null)
             return session;
          HttpSession sess = request.getSession(true);
-         if (verbose && sess != null && session == null)
-            System.out.println("Using session id " + sess.getId() + " with trace id: " + DynUtil.getTraceObjId(sess.getId()) + " on thread: " + DynUtil.getCurrentThreadString());
          session = sess;
          return sess;
       }
@@ -124,6 +123,8 @@ class Context {
       windowCtx = getWindowScopeContext(true);
       windowCtx.windowId = windowId;
       updateWindowContext(windowCtx);
+      if (verbose && session != null)
+         System.out.println("Request for existing window: " + windowId + " session id: " + session.getId() + "/" + DynUtil.getTraceObjId(session.getId()) + " on thread: " + DynUtil.getCurrentThreadString());
       return windowCtx;
    }
 
@@ -246,11 +247,7 @@ class Context {
       if (ctxList != null) {
          for (WindowScopeContext winScope:ctxList) {
             winScope.scopeDestroyed(null);
-            String scopeContextName = (String) winScope.getValue("scopeContextName");
-            if (scopeContextName != null) {
-               if (!CurrentScopeContext.remove(scopeContextName))
-                  System.err.println("*** Failed to remove CurrentScopeContext for scopeContextName: " + scopeContextName);
-            }
+            winScope.removeScopeContext();
          }
          ctxList.clear();
          session.removeAttribute("_windowContexts");
@@ -316,7 +313,19 @@ class Context {
                nextWindowId = 0;
             session.setAttribute("_nextWindowId", nextWindowId+1);
 
-            windowId = nextWindowId;
+            if (!testMode) {
+               String sessionId = session.getId();
+               // Include some integer based on the session id in the windowId to make it resilient to restarts.
+               // Although windowId only has to be unique within a given session and is not used for authentication access - that's
+               // done at the session level, if a server restarts, an old tab with windowId=0 would get confused with a new one
+               int sessionPart = 0;
+               for (int i = 0; i < sessionId.length(); i++)
+                  sessionPart += sessionId.charAt(i);
+               sessionPart = sessionPart % 1000000 * 100;
+               windowId = sessionPart + nextWindowId;
+            }
+            else
+               windowId = nextWindowId;
             String queryStr = request.getQueryString();
             String fullURL = queryParams == null ? requestURL : requestURL + "?" + queryStr;
             windowCtx = new WindowScopeContext(windowId, Window.createNewWindow(fullURL, request.getServerName(), request.getServerPort(), request.getRequestURI(), request.getPathInfo(), queryStr));
@@ -327,7 +336,7 @@ class Context {
             SyncManager.addSyncInst(windowCtx.window, true, false, "window", null);
 
             if (verbose) {
-               System.out.println("Window scope context created with id: " + windowId + " for: " + getTraceInfo());
+               System.out.println("New window: " + windowId + " session id:" + session.getId() + "/" + DynUtil.getTraceObjId(session.getId()) + " thread: " + DynUtil.getCurrentThreadString());
             }
 
             // First we look for the first non-waiting window to remove. Then we just stop the waiter and remove it anyway.
@@ -454,5 +463,24 @@ class Context {
             return null; // Should we have grabbed the query params before now?
       }
       return queryParams.get(queryParam);
+   }
+
+   String toString() {
+      StringBuilder sb = new StringBuilder();
+      if (requestURI != null) {
+         sb.append("url:");
+         sb.append(requestURI);
+         sb.append(" ");
+      }
+      sb.append("thread:" + DynUtil.getCurrentThreadString());
+      if (windowCtx != null) {
+         sb.append(" ");
+         sb.append(windowCtx);
+      }
+      if (session != null) {
+         sb.append(" session:");
+         sb.append(DynUtil.getTraceId(session.getId()));
+      }
+      return sb.toString();
    }
 }

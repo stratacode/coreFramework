@@ -1,4 +1,3 @@
-// Pull in the log4 layer
 log4j.core extends sys.std {
    compiledOnly = true;
    hidden = true;
