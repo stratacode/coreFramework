@@ -8,9 +8,14 @@ import sc.util.ComponentList;
 
 import sc.util.TextUtil;
 
-import sc.bind.Bind;
+import sc.dyn.DynUtil;
 
-import sc.dyn.DynUtil; // for the dispose method primarily
+// these are here mostly for the generated code for properties and objects
+import sc.type.IBeanMapper;
+import sc.obj.TypeSettings;
+import sc.bind.Bind;
+import sc.bind.IBinding;
+import sc.bind.BindingDirection;
 
 @sc.js.JSSettings(jsModuleFile="js/scutil.js", prefixAlias="sc_")
 util extends sys.std {
