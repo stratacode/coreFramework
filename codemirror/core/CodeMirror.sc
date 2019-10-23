@@ -1,7 +1,9 @@
 import sc.dyn.RemoteResult;
-// This is the Java stub for the JS implementation in js/cmwrap.js. It may
-// actually run on the server but it doesn't have to do anything there
-// but avoid a null pointer exception by returning a valid value.
+// For the JS version, this class is replaced by the native code in cmwrap.js.
+
+// TODO: The server only version is not yet implemented. I think we can use DynUtil.evalScript invoke the code in cmwrap.js and
+// it would not be very difficult. Basically create a wrapper on the remote side and just call methods on it. We also need a way
+// to know we are in server only mode or at least make sure the code here works in sync with the client version.
 @sc.js.JSSettings(jsLibFiles="js/cmwrap.js", prefixAlias="sc_")
 class CodeMirror {
 

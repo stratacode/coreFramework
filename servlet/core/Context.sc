@@ -43,6 +43,9 @@ class Context {
 
    CurrentScopeContext curScopeCtx = null;
 
+   /** The top-level pageInstance(s) for diagnostics */
+   List<Object> pageInsts;
+
    String requestURL;
    String requestURI;
 

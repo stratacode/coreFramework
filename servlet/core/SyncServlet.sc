@@ -377,6 +377,17 @@ class SyncServlet extends HttpServlet {
                ctx.execLaterJobs();
                Context.clearContext();
                sc.type.PTypeUtil.setAppId(null);
+
+               if (ctx.toInvokeLater != null && ctx.toInvokeLater.size() > 0) {
+                  System.err.println("*** Error - Invoke later jobs remain in completed context!");
+               }
+
+               if (ctx.pageInsts != null) {
+                  for (Object pageInst:ctx.pageInsts) {
+                     if (pageInst instanceof Element && ((Element) pageInst).refreshTagsScheduled)
+                        System.err.println("*** Error - completed sync with refreshTagsScheduled");
+                  }
+               }
             }
          }
          catch (RuntimeException exc) {

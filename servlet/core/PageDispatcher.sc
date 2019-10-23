@@ -1221,6 +1221,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       StringBuilder pageOutput = null;
       try {
          List<Object> insts = pageDispatcher.initPageObjects(ctx, url, pageEnts, ctx.session, curScopeCtx, false, initSync, resetSync, sys);
+         ctx.pageInsts = insts;
 
          if (insts != null) {
          /*

@@ -14,7 +14,10 @@ class ServletScheduler implements sc.dyn.IScheduler {
       Context ctx = Context.getCurrentContext();
 
       // No current request - schedule this job to run before the next one
+      // TODO: why do we need this?  It seems like a dangerous thing if code were to hit this code path and be running
+      // jobs in the wrong context.
       if (ctx == null) {
+         System.err.println("Warning: scheduling servlet job with no request context - will invoke on next request");
          synchronized(invokeNextRequestLock) {
             toInvokeNextRequest.add(sj);
          }
