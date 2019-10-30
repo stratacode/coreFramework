@@ -486,3 +486,15 @@ jv_Collections_c.sort = function(list) {
    }
 }
 
+jv_Collections_c.emptyList = function() {
+   if (!jv_emptyList)
+      jv_emptyList = new jv_ArrayList_c();
+   return jv_emptyList;
+}
+
+jv_Collections_c.singletonList = function(arg) {
+   var res = new jv_ArrayList_c();
+   res.add(arg);
+   return res;
+}
+
