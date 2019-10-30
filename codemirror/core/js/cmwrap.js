@@ -105,8 +105,9 @@ sc_CodeMirror_c.updateContent = function(text, fileName, cursorIndex) {
   if (this.cm) {
      this.cm.getDoc().setValue(text);
      this.reapplyErrors();
-     if (cursorIndex != -1)
-        this.setCursorIndex(cursorIndex)
+     if (cursorIndex != -1) {
+        this.setCursorIndex(cursorIndex);
+     }
 
      this.cm.focus();
   }
@@ -129,7 +130,13 @@ sc_CodeMirror_c.getCursorIndex = function() {
 
 sc_CodeMirror_c.setCursorIndex = function(ind) {
    if (this.cm) {
-      this.cm.setCursor(this.cm.posFromIndex(ind));
+      var pos = this.cm.posFromIndex(ind);
+      this.cm.setCursor(pos);
+      var range = {
+          from:{line:pos.line-10, ch:pos.ch},
+          to:{line:pos.line+10, ch:pos.ch}
+       };
+      this.cm.scrollIntoView(range);
    }
 }
 
