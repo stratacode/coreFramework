@@ -17,6 +17,6 @@ public class MemoryEditSession implements sc.obj.IObjectId {
    public boolean cancelled; // Set to true when this edit session has been reverted
 
    String getObjectId() {
-     return "MS_" + (model == null ? "null" : sc.type.CTypeUtil.escapeIdentifierString(model.getLayer().getLayerName() + "__" + model.srcFile.relFileName));
+     return "MES_" + (model == null ? "null" : sc.type.CTypeUtil.escapeIdentifierString(model.getLayer().getLayerName() + "__" + model.srcFile.relFileName));
    }
 }

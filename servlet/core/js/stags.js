@@ -1561,7 +1561,7 @@ syncMgr = sc_SyncManager_c = {
    },
    // For readability in the logs, flexibility in code-gen and efficiency in rendering we send the start tag txt all at once so
    // there's work here in parsing it and updating the DOM.
-   // NOTE: replicated in tags.js so keep these two in sync
+   // NOTE: close replica in tags.js so keep these two in sync
    setStartTagTxt:function(elem, startTagTxt) {
       if (!startTagTxt.startsWith("<")) {
          sc_logError("invalid start tag txt");

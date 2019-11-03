@@ -11,9 +11,9 @@ class VariableDefinition extends Statement implements IVariableInitializer {
    @GetSet
    Layer layer;
    @GetSet
-   String comment;
-   @GetSet
    String variableTypeName;
    @GetSet
    boolean indexedProperty;
+   @GetSet
+   boolean writable;
 }

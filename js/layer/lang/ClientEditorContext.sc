@@ -25,7 +25,7 @@ public class ClientEditorContext {
    public LayeredSystem system;
 
    JavaModel pendingModel = null;
-   LinkedHashSet<JavaModel> changedModels = new LinkedHashSet<JavaModel>();
+   LinkedHashMap<String,JavaModel> changedModels = new LinkedHashMap<String,JavaModel>();
    LinkedHashMap<SrcEntry, List<ModelError>> errorModels = new LinkedHashMap<SrcEntry, List<ModelError>>();
 
    ArrayList<BodyTypeDeclaration> currentTypes = new ArrayList<BodyTypeDeclaration>();
@@ -53,6 +53,7 @@ public class ClientEditorContext {
    }
 
    private List<String> createInstTypeNames;
+   private List<String> createInstClassNames;
 
    private boolean memorySessionChanged = false;
    @Bindable(manual=true)
@@ -72,7 +73,22 @@ public class ClientEditorContext {
 
    public void setCreateInstTypeNames(List<String> nl) {
       createInstTypeNames = nl;
+      createInstClassNames = null;
       Bind.sendChangedEvent(this, "createInstTypeNames");
+      Bind.sendChangedEvent(this, "createInstClassNames");
+   }
+
+   @Bindable(manual=true)
+   public List<String> getCreateInstClassNames() {
+      if (createInstClassNames == null) {
+         if (createInstTypeNames == null)
+            return null;
+         createInstClassNames = new ArrayList<String>(createInstTypeNames.size());
+         for (int i = 0; i < createInstTypeNames.size(); i++) {
+            createInstClassNames.add(CTypeUtil.getClassName(createInstTypeNames.get(i)));
+         }
+      }
+      return createInstClassNames;
    }
 
    public boolean isCreateInstType(String typeName) {
@@ -87,7 +103,7 @@ public class ClientEditorContext {
    }
    public void updateCurrentLayer(Layer l) {
       changeCurrentLayer(l);
-      currentLayers = l.getSelectedLayers();
+      currentLayers = l == null ? Collections.emptyList() : l.getSelectedLayers();
    }
 
    @sc.obj.ManualGetSet
@@ -103,7 +119,7 @@ public class ClientEditorContext {
       if (memSessions == null)
          return false;
       for (MemoryEditSession sess:memSessions.values()) {
-         if (sess.text == null)
+         if (sess.text == null || sess.origText == null)
             continue;
          if (!DynUtil.equalObjects(sess.text, sess.origText))
             return true;
@@ -177,11 +193,13 @@ public class ClientEditorContext {
          sess = memSessions.get(ent);
       if (sess == null) {
          sess = new MemoryEditSession();
-         sess.origText = model.cachedModelText;
          if (newMemSessions == null)
             newMemSessions = new HashMap<SrcEntry, MemoryEditSession>(memSessions);
          newMemSessions.put(ent, sess);
       }
+      if (sess.origText == null)
+         sess.origText = model.cachedModelText;
+
       sess.text = text;
       sess.model = model;
       sess.caretPosition = caretPos;

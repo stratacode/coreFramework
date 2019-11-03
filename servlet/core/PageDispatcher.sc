@@ -130,6 +130,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       // But for request or other temporary scopes, need to use the scope of the page class and
       // enable the 'stateless' flag so sync turns into a reset on each client request.
       @Constant ScopeDefinition pageScope;
+      // This is the actual scope used in the page
+      @Constant ScopeDefinition typeScope;
 
       // Stores the list of query parameters (if any) for the given page - created with @QueryParam
       @Constant
@@ -211,11 +213,26 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          if (pageScope != null)
             return;
          String scopeName = DynUtil.getScopeNameForType(pageType);
-         // This is the scope used for server tags - for request, it needs to be request but otherwise it's window.
-         if (scopeName != null && scopeName.equals("request"))
-            pageScope = ScopeDefinition.getScopeByName(scopeName);
+         if (scopeName != null)
+            typeScope = ScopeDefinition.getScopeByName(scopeName);
          else
+            typeScope = WindowScopeDefinition;
+
+         // This is the scope used for server tags - for request, it needs to be request but otherwise it's window.
+         if (scopeName != null && scopeName.equals("request")) {
+            pageScope = typeScope;
+         }
+         else {
             pageScope = WindowScopeDefinition;
+         }
+      }
+
+      public String getAppId() {
+         if (resource) {
+            throw new UnsupportedOperationException();
+         }
+         else
+            return keyName;
       }
    }
 
@@ -567,7 +584,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             if (verbose) {
                String startStr;
                if (newInst) {
-                  startStr = " new page " + (isObject ? "object" : "instance") + " " + pageEnt.pageScope + " sync: " + pageEnt.doSync + " start: ";
+                  startStr = " new page " + (isObject ? "object" : "instance") + " " + pageEnt.typeScope + " sync: " + pageEnt.doSync + " start: ";
                }
                else
                   startStr = " cached page";
@@ -947,8 +964,41 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       return sb;
    }
 
-   public boolean handleRequest(javax.servlet.http.HttpServletRequest request, 
-                                javax.servlet.http.HttpServletResponse response) 
+   private void setAppId(PageEntry pageEnt, HttpServletRequest request) throws IOException {
+       if (pageEnt.resource) {
+          String referrer = request.getHeader("Referer"); // yes, it is misspelled
+          String origReferrer = referrer;
+          if (referrer != null) {
+             int ix = referrer.indexOf("://");
+             if (ix != -1) {
+                int stIx = referrer.indexOf("/", ix+3);
+                if (stIx == -1)
+                   referrer = "/";
+                else
+                   referrer = referrer.substring(stIx);
+             }
+             ix = referrer.indexOf("?");
+             if (ix != -1)
+                referrer = referrer.substring(0,ix);
+             List<PageEntry> refPageEnts = getPageEntries(referrer, null);
+             if (refPageEnts != null) {
+                for (PageEntry refPageEnt:refPageEnts) {
+                   if (!refPageEnt.resource) {
+                      PTypeUtil.setAppId(refPageEnt.getAppId());
+                      return;
+                   }
+                }
+             }
+             throw new IOException("No matching request for resource with referer: " + origReferrer);
+          }
+          else
+             throw new IOException("Invalid request for resource without referer");
+       }
+       else
+          PTypeUtil.setAppId(pageEnt.getAppId());
+   }
+
+   public boolean handleRequest(HttpServletRequest request, HttpServletResponse response)
                            throws IOException, ServletException {
       Context ctx = null;  
       String uri = request.getRequestURI();
@@ -973,8 +1023,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             isUrlPage = pageEnt.dynContentPage;
 
             // Must be set before we call Context.initContext
-            if (isUrlPage)
-               PTypeUtil.setAppId(pageEnt.keyName);
+            if (isUrlPage) {
+               setAppId(pageEnt, request);
+            }
 
             ctx = Context.initContext(request, response, request.getRequestURL().toString(), request.getRequestURI().toString(), queryParams);
 
@@ -1283,6 +1334,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          addPage(templatePathName, pattern, newType, isURLPage, needsSync, isResource,
                  DynUtil.getLayerPosition(newType), lockScope, QueryParamProperty.getQueryParamProperties(newType), syncTypes);
       }
+      initPageEntries();
    }
 
    public static String getMimeType(String pattern) {

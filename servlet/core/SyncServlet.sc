@@ -247,11 +247,11 @@ class SyncServlet extends HttpServlet {
 
             CharSequence codeUpdates = null;
             // TODO: add "code update" as a feature of the sync manager using the 'js' language - move this code into ServletSyncDestination.
-            if (syncSession.lastSyncTime != -1 && sys != null && (refresh != null || sys.options.autoRefresh)) {
+            if (syncSession.lastSyncTime != -1 && sys != null && (refresh != null || sys.options.autoRefresh) && !closeSession) {
                codeUpdates = sys.refreshJS(syncSession.lastSyncTime);
             }
 
-            // Now collect up all changes and write them as the response layer.  TODO: should this be request scoped?
+            // Now collect up all changes and write them as the response layer.
             SyncResult syncRes = mgr.sendSync(syncGroup, pageEnt.pageScope.scopeId, false, false, codeUpdates, ctx.curScopeCtx.syncTypeFilter);
 
             // If there is nothing to send back to the client now, we have a waitTime supplied, and we do not have to send back the session cookie we can wait for changes for "real time" response to the client

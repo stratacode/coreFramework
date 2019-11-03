@@ -1863,17 +1863,6 @@ js_HTMLElement_c.processEvent = function(elem, event, listener) {
       console.log("Unable to find scObject to update in eventHandler");
 }
 
-js_HTMLElement_c.getOffsetWidth = function() {
-   if (this.element == null)
-      return 0;
-   return this.element.offsetWidth;
-}
-
-js_HTMLElement_c.getOffsetHeight = function() {
-   if (this.element == null)
-      return 0;
-   return this.element.offsetHeight;
-}
 
 js_HTMLElement_c.getClientWidth = function() {
    if (this.element == null)
@@ -2762,7 +2751,7 @@ js_Element_c.scheduleRefresh = function() {
 
 // For readability in the logs, flexibility in code-gen and efficiency in rendering we send the start tag txt all at once so
 // there's work here in parsing it and updating the DOM.
-// NOTE: replicated in tags.js so keep these two in sync
+// NOTE: close replica in stags.js so keep these two in sync
 js_Element_c.setStartTagTxt = function(startTagTxt) {
    var elem = this.element;
    if (elem != null) {
@@ -2837,27 +2826,45 @@ js_Element_c.setStartTagTxt = function(startTagTxt) {
                      delim = null;
                      break;
                   }
-                  if (c == '\\' && avix < stlen - 1) {
-                     avix++;
-                     var nc = startTagTxt.charAt(avix);
-                     if (nc == '"' || nc == '\'' || nc == '\\')
-                        c = nc;
-                     else {
-                        var esc = true;
-                        if (nc == 'n') {
-                           attVal += '\n';
-                        }
-                        else if (nc == 't') {
-                           attVal += '\t';
-                        }
-                        else if (nc == 'r') {
-                           attVal += '\r';
-                        }
+                  if (avix < stlen - 1) {
+                  /*
+                     if (c == '\\') {
+                        avix++;
+                        var nc = startTagTxt.charAt(avix);
+                        if (nc == '"' || nc == '\'' || nc == '\\')
+                           c = nc;
                         else {
-                           console.error("Unrecognized escape");
-                           return;
+                           var esc = true;
+                           if (nc == 'n') {
+                              attVal += '\n';
+                           }
+                           else if (nc == 't') {
+                              attVal += '\t';
+                           }
+                           else if (nc == 'r') {
+                              attVal += '\r';
+                           }
+                           else {
+                              // Just a backslash without escaping anything
+                              avix--;
+                              attVal += c;
+                           }
+                           continue;
                         }
-                        continue;
+                     }
+                     else */ if (c == '&') {
+                        var lix = startTagTxt.indexOf(';', avix);
+                        if (lix != -1) {
+                           var ln = startTagTxt.substring(avix+1, lix);
+                           if (ln === "quot") {
+                              avix += 5;
+                              c = '"';
+                           }
+                           else if (ln === "amp") {
+                              avix += 4;
+                              c = '&';
+                           }
+                        }
                      }
                   }
                   attVal += c;
@@ -2867,6 +2874,7 @@ js_Element_c.setStartTagTxt = function(startTagTxt) {
                console.error("Unclosed string with: " + delim);
                return;
             }
+            attName = attName.toLowerCase();
             newAtts[attName] = attVal;
             newAttsArr.push(attName);
             attName = "";
@@ -2900,20 +2908,24 @@ js_Element_c.setStartTagTxt = function(startTagTxt) {
          newAtts[attName] = true;
          newAttsArr.push(attName);
       }
+      var isInput = tagName === "input";
       for (var i = 0; i < newAttsArr.length; i++) {
          var newAttName = newAttsArr[i];
-         var oldVal = elem.getAttribute(newAttName);
+         var oldVal = isInput && newAttName === "value" ? elem.value : elem.getAttribute(newAttName);
          var newVal = newAtts[newAttName];
          if (oldVal == null) {
             if (newVal == true && elem.hasAttribute(newAttName))
                elem.removeAttribute(newAttName);
          }
          if (oldVal == null || !oldVal.equals(newVal)) {
-            if (newVal == true)
-               elem.setAttribute(newAttName, true);
-            else
-               elem.setAttribute(newAttName, newVal);
+            if (isInput && newAttName === "value") {
+               elem.value = newVal;
+            }
+            elem.setAttribute(newAttName, newVal);
          }
+         // Not sure why, but for some reason this is necessary for the innerHTML to be updated as is used in the test scripts for execServer - it may not be a great use case since we are updating the html of the DOM nodes individually
+         else if (isInput && newAttName === "value")
+            elem.setAttribute("value", newVal);
       }
       for (var i = 0; i < oldAtts.length; i++) {
          var oldAttName = oldAtts[i].name;
@@ -3442,8 +3454,11 @@ function js_BaseURLParamProperty(enclType, propName, propType, req) {
 js_BaseURLParamProperty_c = sc_newClass("sc.lang.html.BaseURLParamProperty", js_BaseURLParamProperty, null, null);
 
 js_BaseURLParamProperty_c.setPropertyValue = function(pageInst, ev) {
-   if (this.propType == Number_c)
+   if (this.propType == Number_c) {
+      if (ev == null || ev.length == 0)
+         return; // if we have no value, just don't set the number
       ev = Number.parseInt(ev);
+   }
    else if (this.propType != String_c) {
       console.error("No converter for query param property type: " + this.propName + ": " + this.propType);
       return;

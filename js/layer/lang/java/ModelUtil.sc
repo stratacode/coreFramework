@@ -169,7 +169,7 @@ public class ModelUtil {
       return DynUtil.getTypeName(type, false);
    }
 
-   public static Object getArrayComponentType(Object arrType) {
+   public static Object getArrayOrListComponentType(Object arrType) {
       return DynUtil.getComponentType(arrType);
    }
 
@@ -271,7 +271,7 @@ public class ModelUtil {
    }
 
    public static boolean sameTypes(Object t1, Object t2) {
-      return DynUtil.getTypeName(t1, false).equals(DynUtil.getTypeName(t2, false));
+      return ModelUtil.getTypeName(t1).equals(ModelUtil.getTypeName(t2));
    }
 
    public static String getOperator(Object prop) {
