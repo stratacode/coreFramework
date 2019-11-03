@@ -487,13 +487,11 @@ jv_Collections_c.sort = function(list) {
 }
 
 jv_Collections_c.emptyList = function() {
-   if (!jv_emptyList)
-      jv_emptyList = new jv_ArrayList_c();
-   return jv_emptyList;
+   return new jv_ArrayList();
 }
 
 jv_Collections_c.singletonList = function(arg) {
-   var res = new jv_ArrayList_c();
+   var res = new jv_ArrayList();
    res.add(arg);
    return res;
 }
