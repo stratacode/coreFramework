@@ -10,13 +10,16 @@
    %>   <%= initStatement %><%
    } %>
 };
-<% } %><% if (needsClassInit) { %><%=
+<% } %><%
+    // Doing clUpdate after updating the instances for the addSyncType call that wants the properties to be defined by then.
+    if (needsInit) { %>
+sc_DynUtil_c.updateInstances("<%= javaTypeName %>");
+    <% }
+    if (needsClassInit) { %><%=
    runtimeTypeName %>_c._clUpdate = function() {
 <% for (JSStatement initStatement:staticInitStatements) {
    %>   <%= initStatement %><% }
 %>};
 <%= runtimeTypeName %>_c._clUpdate();
 <% }
-   if (needsInit) { %>
-sc_DynUtil_c.updateInstances("<%= javaTypeName %>");
-<% } %>
+%>
