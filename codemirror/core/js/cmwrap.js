@@ -5,6 +5,7 @@ function sc_CodeMirror(id, listener) {
                     mode: "text/x-java",
                     matchBrackets: true,
                     keyMap: "vim",
+                    theme: "sc",
                     hintOptions: {hint: sc_CodeMirror_c.getHints},
                     extraKeys: {"Ctrl-Space":"autocomplete"} };
    //this.options = JSON.parse(optStr);
@@ -131,11 +132,16 @@ sc_CodeMirror_c.getCursorIndex = function() {
 sc_CodeMirror_c.setCursorIndex = function(ind) {
    if (this.cm) {
       var pos = this.cm.posFromIndex(ind);
+      var numLines = this.cm.doc.lineCount();
+      if (pos.line >= numLines)
+         pos.line = numLines - 1;
       this.cm.setCursor(pos);
+      var min = pos.line > 10 ? pos.line - 10 : 0;
+      var max = Math.min(pos.line+10, numLines-1);
       var range = {
-          from:{line:pos.line-10, ch:pos.ch},
-          to:{line:pos.line+10, ch:pos.ch}
-       };
+         from:{line:min, ch:pos.ch},
+         to:{line:max, ch:pos.ch}
+      };
       this.cm.scrollIntoView(range);
    }
 }
