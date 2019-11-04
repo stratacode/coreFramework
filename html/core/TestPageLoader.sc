@@ -78,7 +78,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
       // layer and that would simplify this logic and add the ability to
       // use server tags without sync.
       clientSync = sys.serverEnabled && (jsPeer == null || sys.syncEnabled);
-      System.out.println("TestPageLoader initialized with clientSync: " + clientSync + " headless: " + headless + " for urls: " + urlPaths + " saving results in: " + sys.options.testResultsDir);
+      System.out.println("TestPageLoader initialized with clientSync: " + clientSync + " headless: " + headless + " for urls: " + urlPaths);
    }
 
    AsyncProcessHandle openBrowser(String url, String pageResultsFile) {
@@ -309,7 +309,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
          }
          numLoaded++;
       }
-      System.out.println("- Done loading: " + numLoaded + " pages" + (indexSkipped ? " - skipIndexPage set" : "") + " results in: " + sys.options.testResultsDir);
+      System.out.println("- Done loading: " + numLoaded + " pages" + (indexSkipped ? " - skipIndexPage set" : ""));
    }
 
    public void saveClientConsole(URLPath urlPath, String scopeContextName) {
