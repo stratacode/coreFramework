@@ -625,6 +625,7 @@ sc_DynUtil_c.getPropertyNames = function(type) {
       console.error("No property names defined for type - use @CompilerSettings(needsPropertyNames=true): " + sc_DynUtil_c.getTypeName(type));
       return null;
    }
+   sc_initArray(String_c, 1, pns);
    return pns;
 }
 
