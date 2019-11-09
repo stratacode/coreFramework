@@ -9,6 +9,7 @@ import sc.obj.ScopeDefinition;
 import sc.obj.ScopeContext;
 import sc.obj.RequestScopeDefinition;
 import sc.obj.CurrentScopeContext;
+import sc.util.PerfMon;
 
 import sc.type.PTypeUtil;
 import sc.lang.html.Window;
@@ -42,6 +43,9 @@ class Context {
    WindowScopeContext windowCtx = null;
 
    CurrentScopeContext curScopeCtx = null;
+
+   // For diagnostics only
+   String threadName = DynUtil.getCurrentThreadString();
 
    /** The top-level pageInstance(s) for diagnostics */
    List<Object> pageInsts;
@@ -84,7 +88,7 @@ class Context {
       }
       catch (IllegalStateException exc) {
          if (verbose)
-            System.out.println("Response is committed error trying to get session");
+            log("response is committed error trying to get session");
       }
       return null;
    }
@@ -127,7 +131,7 @@ class Context {
       windowCtx.windowId = windowId;
       updateWindowContext(windowCtx);
       if (verbose && session != null)
-         System.out.println("Request for existing window: " + windowId + " session id: " + session.getId() + "/" + DynUtil.getTraceObjId(session.getId()) + " on thread: " + DynUtil.getCurrentThreadString());
+         log("cached window");
       return windowCtx;
    }
 
@@ -261,7 +265,7 @@ class Context {
       Context ctx = Context.initContext(session);
 
       if (verbose)
-         System.out.println("Session invalidated: " + ctx.getTraceInfo());
+         ctx.log("session invalidated");
 
       // Now do the attributes in the session
       try {
@@ -316,19 +320,8 @@ class Context {
                nextWindowId = 0;
             session.setAttribute("_nextWindowId", nextWindowId+1);
 
-            if (!testMode) {
-               String sessionId = session.getId();
-               // Include some integer based on the session id in the windowId to make it resilient to restarts.
-               // Although windowId only has to be unique within a given session and is not used for authentication access - that's
-               // done at the session level, if a server restarts, an old tab with windowId=0 would get confused with a new one
-               int sessionPart = 0;
-               for (int i = 0; i < sessionId.length(); i++)
-                  sessionPart += sessionId.charAt(i);
-               sessionPart = sessionPart % 1000000 * 100;
-               windowId = sessionPart + nextWindowId;
-            }
-            else
-               windowId = nextWindowId;
+            int sessionPart = getSessionWindowIdPart();
+            windowId = sessionPart + nextWindowId;
             String queryStr = request.getQueryString();
             String fullURL = queryParams == null ? requestURL : requestURL + "?" + queryStr;
             windowCtx = new WindowScopeContext(windowId, Window.createNewWindow(fullURL, request.getServerName(), request.getServerPort(), request.getRequestURI(), request.getPathInfo(), queryStr));
@@ -339,7 +332,7 @@ class Context {
             SyncManager.addSyncInst(windowCtx.window, true, false, "window", null);
 
             if (verbose) {
-               System.out.println("New window: " + windowId + " session id:" + session.getId() + "/" + DynUtil.getTraceObjId(session.getId()) + " thread: " + DynUtil.getCurrentThreadString());
+               log("new window");
             }
 
             // First we look for the first non-waiting window to remove. Then we just stop the waiter and remove it anyway.
@@ -351,9 +344,24 @@ class Context {
       return windowCtx;
    }
 
-   // Removes the oldest window in the session. If stopWaitingWindows is false, we skip windows where there's
-   // still a waiting thread since it's more likely they will be active still in case there are multiple tabs.
-   // Once we hit the max though and
+   private final static int WindowIdSeparatorScale = 100;
+
+   // Include some integer based on the session id in the windowId to make it resilient to restarts.
+   // Although windowId only has to be unique within a given session and is not used for authentication access - that's
+   // done at the session level, if a server restarts, an old tab with windowId=0 would get confused with a new one
+   // A side benefit is that we can tell when we're getting a request from a session we don't recognize and flag
+   // that in the logs
+   private int getSessionWindowIdPart() {
+      if (testMode) // TODO: This makes the tests more consistent, we might run into problems if we start testing restart
+         return 0;
+      String sessionId = session.getId();
+      int sessionPart = 0;
+      for (int i = 0; i < sessionId.length(); i++)
+         sessionPart += sessionId.charAt(i);
+      sessionPart = sessionPart % 1000000 * WindowIdSeparatorScale;
+      return sessionPart;
+   }
+
    private boolean enforceMaxWindows(ArrayList<WindowScopeContext> ctxList, boolean stopWaitingWindows) {
       int numCtxs = ctxList.size();
       WindowScopeContext toRem = null;
@@ -376,7 +384,7 @@ class Context {
       if (toRem != null) {
          toRem.scopeDestroyed(null);
          if (verbose)
-            System.out.println("Removing window scope: " + windowId + " for: " + toRem.getTraceId() + " - exceeded max windows per session: " + numCtxs);
+            log("removing window scope: " + windowId + " for: " + toRem.getTraceId() + " - exceeded max windows per session: " + numCtxs);
          ctxList.remove(toRemIx);
 
          SyncWaitListener syncListener = toRem.waitingListener;
@@ -471,19 +479,49 @@ class Context {
    String toString() {
       StringBuilder sb = new StringBuilder();
       if (requestURI != null) {
-         sb.append("url:");
+         sb.append("app:");
          sb.append(requestURI);
-         sb.append(" ");
-      }
-      sb.append("thread:" + DynUtil.getCurrentThreadString());
-      if (windowCtx != null) {
-         sb.append(" ");
-         sb.append(windowCtx);
       }
       if (session != null) {
          sb.append(" session:");
          sb.append(DynUtil.getTraceId(session.getId()));
       }
+      // For normal windows, log just the simple integer id 0, 1, etc but when we see that the sessionIdpart
+      // does not match, it means this window was created from a different session and so it's been a restart or
+      // failover so highlight that here in the context
+      if (windowCtx != null) {
+         int winId = windowCtx.windowId;
+         int winSessionIdPart = (winId / WindowIdSeparatorScale) * WindowIdSeparatorScale;
+         if (winSessionIdPart == getSessionWindowIdPart()) {
+            sb.append(" window:");
+            sb.append(windowCtx.windowId % WindowIdSeparatorScale);
+         }
+         else {
+            sb.append(" window:");
+            sb.append(windowCtx.windowId);
+            sb.append("(recovered)"); // created in a different session so must have been restored
+         }
+      }
+      sb.append(" thread:" + threadName);
       return sb.toString();
+   }
+
+   static long lastLogTime = -1;
+
+   static String getTimeString() {
+      long now = System.currentTimeMillis();
+      if (lastLogTime == -1)
+         lastLogTime = now;
+      String res = PerfMon.formatTime(now) + PerfMon.getTimeDelta(lastLogTime, now);
+      lastLogTime = now;
+      return res;
+   }
+
+   public void log(String message) {
+      System.out.println(getTimeString() + " " + toString() + " - " + message);
+   }
+
+   public static void logForRequest(HttpServletRequest request, String message) {
+      System.out.println(getTimeString() + "app:" + request.getRequestURI() + " - " + message);
    }
 }

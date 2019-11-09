@@ -67,11 +67,12 @@ class SyncServlet extends HttpServlet {
          receiveLanguage = SyncManager.defaultLanguage;
       /** Refresh of true says to do a code-refresh before the sync.  This defaults based on the server default but you can override whether you want to check for code changes on each sync or not. */
       String refresh = request.getParameter("refresh");
+      String detailStr = "";
 
       // If we are not resetting already and this session has not rendered this page, we are in a reset situation - tell the client to send all of the data it has
       if (reset == null && (session == null || !PageDispatcher.syncInitialized(session, url))) {
          if (SyncManager.trace)
-            System.out.println("Sync request received with no sync session in place - sending reset-content response");
+            Context.logForRequest(request, "sync request received with no sync session in place - sending reset-content response");
          // Send a 205 error - reset content when there's no session for the client to sync again.  Either the session
          // timed out or the server was restarted.   The client can handle that by sync'ing it's data back to the
          // server, to effectively re-create the session.
@@ -119,7 +120,9 @@ class SyncServlet extends HttpServlet {
       SyncWaitListener waitListener = null;
       boolean removeCodeUpdateListener = false;
 
-      Context ctx = null;
+      boolean enableLog = SyncManager.trace || PageDispatcher.trace;
+
+         Context ctx = null;
       try {
          TreeMap<String,String> queryParams = Context.initQueryParams(request);
          List<PageDispatcher.PageEntry> pageEnts = pageDispatcher.getPageEntries(url, queryParams);
@@ -141,8 +144,8 @@ class SyncServlet extends HttpServlet {
          // This sets up the Context object that wraps the request, response, session and find the existing window scope
          ctx = Context.initContext(request, response, PageDispatcher.buildRequestURL(request, url), url, null);
 
-         if (verbosePage) 
-            System.out.println("Sync request: " + ctx + " " + getDebugInfo(request, response));
+         //if (verbosePage)
+         //   ctx.log("sync request " + getDebugInfo(request, response));
 
          int sz = pageEnts.size();
 
@@ -157,7 +160,7 @@ class SyncServlet extends HttpServlet {
          // Wake up the previous listener - if any, so there's only one thread per window that's waiting at any given time.
          if (oldListener != null && oldListener.waiting) {
             if (verbosePage) 
-                System.out.println("Sync - waking up thread: " + oldListener.threadName + " from: " + ctx + " " + getDebugInfo(request, response) + (closeSession + " - session closed"));
+                ctx.log("sync request: waking up: " + oldListener.ctx + " " + getDebugInfo(request, response) + (closeSession ? " (session close)" : ""));
             synchronized (oldListener) {
                if (oldListener.waiting) {
                   oldListener.replaced = true;
@@ -167,12 +170,12 @@ class SyncServlet extends HttpServlet {
                }
             }
          }
-         else if (oldListener != null && verbosePage)
-            System.out.println("Sync - not waking up thread: " + oldListener.threadName + " from: " + ctx + " " + getDebugInfo(request, response) + (closeSession ? " - session closed" : ""));
+         //else if (oldListener != null && verbosePage)
+         //   System.out.println("Sync request: not waking up old listener: " + oldListener.threadName + " from: " + ctx + " " + getDebugInfo(request, response) + (closeSession ? " - closing session" : ""));
 
          if (closeSession) {
             if (verbosePage)
-               System.out.println("Sync - closeSession from: " + ctx + " " + getDebugInfo(request, response));
+               ctx.log("sync - closing session " + getDebugInfo(request, response));
 
             // TODO: we could potentially remove the window context here but I think it's good to keep it around for cached back button support. I think the window
             // contexts can be seen as an in-memory record of the navigation structure as well and so useful for the server to understand the
@@ -233,6 +236,10 @@ class SyncServlet extends HttpServlet {
             }
          }
 
+         if (enableLog && waitTime == -1) {
+            detailStr = appendDetail(detailStr, "no wait");
+         }
+
          final SyncWaitListener listener = new SyncWaitListener(ctx);
 
          if (sys != null && sys.options.autoRefresh) {
@@ -249,6 +256,10 @@ class SyncServlet extends HttpServlet {
             // TODO: add "code update" as a feature of the sync manager using the 'js' language - move this code into ServletSyncDestination.
             if (syncSession.lastSyncTime != -1 && sys != null && (refresh != null || sys.options.autoRefresh) && !closeSession) {
                codeUpdates = sys.refreshJS(syncSession.lastSyncTime);
+               if (enableLog) {
+                  if (codeUpdates != null)
+                     detailStr = appendDetail(detailStr, "*code updates: " + codeUpdates.length());
+               }
             }
 
             // Now collect up all changes and write them as the response layer.
@@ -275,7 +286,7 @@ class SyncServlet extends HttpServlet {
                      if (!Context.shuttingDown) { // Don't wait if the server is in the midst of shutting down
                         if (verbosePage) {
                            sleepStartTime = System.currentTimeMillis();
-                           System.out.println("Sync wait: " + ctx + (scopeContextName == null ? "" : " (scopeContextName: " + scopeContextName + ")") + " time: " + waitTime + PageDispatcher.getTraceInfo(session) + " " + getDebugInfo(request, response));
+                           ctx.log("sync waiting for " + waitTime + " millis " + (scopeContextName == null ? "" : " (scopeContextName: " + scopeContextName + ")") + " " + getDebugInfo(request, response));
                         }
 
                         if (scopeContextName != null) {
@@ -307,7 +318,7 @@ class SyncServlet extends HttpServlet {
 
                if (Context.shuttingDown) {
                    if (verbosePage)
-                      System.out.println("Sync woke - shutdown: " + ctx + (sleepStartTime == 0 ? "" : " after " + (System.currentTimeMillis() - sleepStartTime) + " millis") + " " + getDebugInfo(request, response));
+                      ctx.log("sync woke - shutdown: " + (sleepStartTime == 0 ? "" : " after " + (System.currentTimeMillis() - sleepStartTime) + " millis") + " " + getDebugInfo(request, response));
                    // Sending the 410 - resource gone - response here to signal that we do not want the client to poll again.  If we are planning
                    // on restarting, send the 205 - reset which means send all of your data on the next request cause your session is gone
                    int resultCode = Context.restarting ? 205 : 410;
@@ -318,7 +329,7 @@ class SyncServlet extends HttpServlet {
                // Make sure we're still the first SyncServlet request waiting...
                if (windowCtx.waitingListener == listener && !listener.replaced) {
                   if (verbosePage)
-                     System.out.println("Sync woke - acquiring locks: " + ctx + " after " + (System.currentTimeMillis() - sleepStartTime) + " millis " + getDebugInfo(request, response));
+                     ctx.log("sync woke - acquiring locks: " + " after " + (System.currentTimeMillis() - sleepStartTime) + " millis " + getDebugInfo(request, response));
 
                   curScopeCtx.startScopeContext(true);
 
@@ -331,13 +342,21 @@ class SyncServlet extends HttpServlet {
                   // checking again now that we have the locks
                   if (windowCtx.waitingListener == listener && !listener.replaced) {
                      repeatSync = true;
-                     if (SyncManager.trace || PageDispatcher.trace)
-                        System.out.println("Sync woke: " + ctx + " after " + (System.currentTimeMillis() - sleepStartTime) + " millis" + (interrupted ? " *** interrupted" : "") + " " + getDebugInfo(request, response));
+                     if (enableLog) {
+                        ctx.log("sync woke: " + " after " + (System.currentTimeMillis() - sleepStartTime) + " millis" +
+                                 (interrupted ? " ***interrupted" : "") + detailStr + " " + getDebugInfo(request, response));
+                     }
                   }
                }
                if (!repeatSync) {
-                  if (SyncManager.trace || PageDispatcher.trace)
-                     System.out.println("Sync woke: " + ctx + " after " + (System.currentTimeMillis() - sleepStartTime) + " millis"  + (interrupted ? " *** interrupted and" : "") + " replaced - returning empty sync: " + " " + getDebugInfo(request, response));
+                  if (enableLog) {
+                     detailStr = appendDetail(detailStr, "after " + (System.currentTimeMillis() - sleepStartTime) + " millis");
+                     if (interrupted)
+                        detailStr = appendDetail(detailStr, "***interrupted");
+                     detailStr = appendDetail(detailStr, "cancelled");
+                     if (closeSession)
+                        detailStr = appendDetail(detailStr, "session closed");
+                  }
                }
             }
          } while (repeatSync);
@@ -345,7 +364,7 @@ class SyncServlet extends HttpServlet {
          syncSession.lastSyncTime = System.currentTimeMillis();
 
          if (verbosePage)
-            System.out.println("Sync end: " + ctx + (traceBuffer.length() > 0 ? (": " + traceBuffer) : "") + " for " + PageDispatcher.getRuntimeString(startTime) + " " + getDebugInfo(request, response));
+            ctx.log("sync end" + detailStr + (traceBuffer.length() > 0 ? (": " + traceBuffer) : "") + " " + getDebugInfo(request, response));
       }
       catch (RuntimeIOException exc) {
          // For the case where the client side just is closed while we are waiting to write.  Only log this as a verbose message for now because it messages up autotests
@@ -402,6 +421,12 @@ class SyncServlet extends HttpServlet {
       return true;
    }
 
+   private String appendDetail(String s1, String s2) {
+      if (s1.length() == 0)
+         return ": " + s2;
+      return s1 + ", " + s2;
+   }
+
    private void applySyncLayer(Context ctx, HttpServletRequest request, String receiveLanguage, PageDispatcher.PageEntry pageEnt, HttpSession session, String url, String syncGroup, boolean isReset) throws IOException {
       int len = request.getContentLength();
       boolean noLength = false;
@@ -419,7 +444,7 @@ class SyncServlet extends HttpServlet {
 
       if (bufStr.length() > 0) {
          if (SyncManager.trace || PageDispatcher.trace) {
-            System.out.println("Client " + (isReset ? "reset" : "sync") + ": " + ctx + ":\n" + bufStr + "");
+            ctx.log("sync request: apply changes from client " + (isReset ? "reset" : "sync") + ":\n" + bufStr + "");
          }
 
           // Apply changes from the client.
@@ -438,4 +463,10 @@ class SyncServlet extends HttpServlet {
          return "response error: " + exc.toString();
       }
    }
+
+   public void log(String mesg) {
+      System.err.println("*** Use Context.log instead of the servlet log method");
+      super.log(mesg);
+   }
+
 }

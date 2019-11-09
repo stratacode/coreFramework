@@ -28,6 +28,7 @@ import sc.type.IBeanMapper;
 import sc.util.StringUtil;
 import sc.util.TextUtil;
 import sc.util.PerfMon;
+import sc.type.CTypeUtil;
 import sc.type.PTypeUtil;
 import sc.dyn.DynUtil;
 import sc.dyn.ITypeChangeListener;
@@ -115,6 +116,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       Pattern urlPattern;
       Object pageType;
       boolean dynContentPage;
+      String pageTypeName;
       int priority;
       String lockScope; // The scope name to use for locking.  if null, use the type's scope as the scope for the lock.
       String mimeType;
@@ -253,6 +255,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       ent.urlPattern = patternRes;
       ent.patternParselet = (Parselet) ent.urlPattern.getParselet(language, pageType);
       ent.pageType = pageType;
+      // Name used for logs
+      ent.pageTypeName = CTypeUtil.getClassName(DynUtil.getTypeName(pageType, false));
       ent.priority = priority;
       ent.dynContentPage = dynContentPage;
       ent.resource = isResource;
@@ -471,7 +475,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       if (scopeCtxs.size() > 0) {
          CurrentScopeContext curScopeCtx = new CurrentScopeContext(scopeCtxs, locks);
          if (verbose)
-            curScopeCtx.traceInfo = sysLockInfo + ": for" + getCtxTraceInfo(session);
+            curScopeCtx.traceInfo = sysLockInfo;
          // Acquire the locks and associate them to this thread - binding operation that communicate with this scopeContext need to
          // know how to get back here. This is true for cross-scope bindings - those which need to synchronize with different threads.
          CurrentScopeContext.pushCurrentScopeContext(curScopeCtx, true);
@@ -583,13 +587,14 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
 
             if (verbose) {
                String startStr;
+               String detailStr = pageEnt.pageTypeName + " " + pageEnt.typeScope + (pageEnt.doSync ? " (sync) " : " (no sync)");
                if (newInst) {
-                  startStr = " new page " + (isObject ? "object" : "instance") + " " + pageEnt.typeScope + " sync: " + pageEnt.doSync + " start: ";
+                  startStr = ": new " + (isObject ? "object" : "instance");
                }
                else
-                  startStr = " cached page";
-               String pageTypeStr = (initial ? "Page" : (reset ? "Sync: reset session" : "Sync"));
-               System.out.println(pageTypeStr + startStr + ": " + ctx);
+                  startStr = ": cached";
+               String pageTypeStr = (initial ? "page" : (reset ? "sync: reset session" : "sync"));
+               ctx.log(pageTypeStr + " request" + startStr + " " + detailStr);
             }
 
             if (doSync)
@@ -663,28 +668,6 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       if (pageObj instanceof HtmlPage) {
          ((HtmlPage) pageObj).pageDispatcher = this;
       }
-   }
-
-   static String getRuntimeString(long startTime) {
-      return TextUtil.format("#.##", (((System.currentTimeMillis() - startTime))/1000.0)) + " secs.";
-   }
-
-   static String getSessionTraceInfo(HttpSession session) {
-      return " session: " + (session == null ? "<none>" : DynUtil.getTraceObjId(session.getId())); 
-   }
-
-   static String getCtxTraceInfo(HttpSession session) {
-      return getSessionTraceInfo(session) + " thread: " + DynUtil.getCurrentThreadString();
-   }
-
-   static String getTraceInfo(HttpSession session) {
-      return getCtxTraceInfo(session) + " at " + getTimeString();
-   }
-
-   // Here we print the time since the PageDispatcher started since that's perhaps the easiest basic way to follow "elapsed time" in the context of a server process.
-   // I could imagine having an option to show this relative to start-session or start-thread time or even displaying multiple time spaces in the same log to diagnose different scenarios
-   static String getTimeString() {
-      return PerfMon.getTimeDelta(serverStartTime);
    }
 
    public StringBuilder getInitialSync(List<Object> insts, Context ctx, String uri, List<PageEntry> pageEnts, StringBuilder traceBuffer) {
@@ -919,9 +902,11 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                sb.append("   if (typeof sc_ClientSyncManager_c != 'undefined') sc_ClientSyncManager_c.statelessServer = true;\n");
 
             CharSequence initSync = syncMgr.getInitialSync(syncScopeId, resetSync, "js", ctx.curScopeCtx.syncTypeFilter);
-            // Here are in injecting code into the generated script for debugging - if you enable logging on the server, it's on in the client automatically
+
             if (SyncManager.trace) {
                sb.append("   if (typeof sc_SyncManager_c != 'undefined') sc_SyncManager_c.trace = true;\n");
+               if (initSync !=null && initSync.length() > 0)
+                  ctx.log("initial sync:\n" + (initSync == null ? "" :initSync));
             }
             if (SyncManager.verbose) {
                sb.append("   if (typeof sc_SyncManager_c != 'undefined') sc_SyncManager_c.verbose = true;\n");
@@ -957,7 +942,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             traceBuffer.append("----- \n");
          }
          else if (verbose) {
-            traceBuffer.append(" url=" + uri + " pageSize: " + pageBodySize + " initSyncSize: " + initSyncSize);
+            traceBuffer.append(" size html: " + pageBodySize + " sync: " + initSyncSize);
          }
       }
 
@@ -1013,9 +998,6 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
 
          if (pageEnts != null && pageEnts.size() > 0) {
             int sz = pageEnts.size();
-            if (verbose)
-               System.out.println("Page request: " + uri + " matched: " + sz + " objects" + getTraceInfo(session));
-
             List<Object> insts = null;
 
             PageEntry pageEnt = pageEnts.get(0);
@@ -1029,6 +1011,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
 
             ctx = Context.initContext(request, response, request.getRequestURL().toString(), request.getRequestURI().toString(), queryParams);
 
+            //if (verbose)
+            //   log(ctx, "page request: " + uri + " matched: " + sz + " objects");
+
             LayeredSystem sys = LayeredSystem.getCurrent();
             if (sys != null && sys.options.autoRefresh) {
                if (sys.rebuild()) {
@@ -1036,7 +1021,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                   pageEnts = getPageEntries(uri, queryParams);
                   if (pageEnts == null || pageEnts.size() == 0) { // The URL mapping we originally mapped must have been removed?
                       if (verbose)
-                         System.out.println("Page request: " + uri + " previously matched a page but after refresh, page is gone!");
+                         ctx.log("Page request: " + uri + " previously matched a page but after refresh, page is gone!");
                      return false;
                   }
                }
@@ -1079,7 +1064,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                }
 
                if (verbose)
-                  System.out.println("Page complete: " + ctx + traceBuffer + " for " + getRuntimeString(startTime));
+                  ctx.log("page complete: " + traceBuffer);
 
                // We don't want to register a command context for the '.css' page - i.e. pageEnt.resource = true
                if (sys != null && isUrlPage && (pageEnt.doSync || pageEnt.hasServerTags || (testMode && !pageEnt.resource))) {
@@ -1382,5 +1367,10 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       builder.append("/");
       builder.append(uri);
       return builder.toString();
+   }
+
+   public void log(String mesg) {
+      System.err.println("*** Use Context.log instead of the servlet log method");
+      super.log(mesg);
    }
 }
