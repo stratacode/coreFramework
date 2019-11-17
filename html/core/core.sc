@@ -54,7 +54,7 @@ html.core extends sys.std {  // Extending sys.std because we override the standa
       processInAllLayers = true;
       srcPathTypes = {null, "web"};
 
-      extensions = {"html", "jpg", "png", "gif", "pdf", "css", "js", "jsp", "xml", "properties", "tag"};
+      extensions = {"html", "jpg", "png", "gif", "pdf", "css", "js", "jsp", "xml", "properties", "tag", "svg"};
    }
 
    object cssLanguage extends sc.lang.CSSLanguage {
