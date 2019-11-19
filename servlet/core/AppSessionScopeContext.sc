@@ -11,7 +11,8 @@ import java.util.LinkedHashMap;
 class AppSessionScopeContext extends ScopeContext implements HttpSessionBindingListener {
    HttpSession session;
    String appId;
-   LinkedHashMap<String,Object> valuesMap;
+   protected LinkedHashMap<String,Object> valuesMap;
+   protected LinkedHashMap<String,Object> refMap;
 
    AppSessionScopeContext(HttpSession session, String appId) {
       this.session = session;
@@ -47,6 +48,12 @@ class AppSessionScopeContext extends ScopeContext implements HttpSessionBindingL
          valuesMap = new LinkedHashMap<String,Object>();
       }
       valuesMap.put(key, value);
+   }
+
+   public void setValueByRef(String name, Object value) {
+      if (refMap == null)
+         refMap = new LinkedHashMap<String,Object>();
+      refMap.put(name, value);
    }
 
    public Map<String,Object> getValues() {
