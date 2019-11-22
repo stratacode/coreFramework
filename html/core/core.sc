@@ -1,6 +1,8 @@
 package sc.html;
 
 import sc.html.URL;
+import sc.html.QueryParam;
+import sc.html.URLParam;
 import sc.html.MainInit;
 
 import sc.lang.html.Element;
@@ -184,5 +186,4 @@ html.core extends sys.std {  // Extending sys.std because we override the standa
          addTypeGroupDependency("runTest.scsh", "runTest", "urlTypes");
       }
    }
-
 }
