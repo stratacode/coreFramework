@@ -1,5 +1,9 @@
 package sc.js;
 
+/**
+  The main framework layer for java to javascript - combining the web framework and the java classes
+  TODO: ideally the web framework (tags.js) would be separable from the core/java stuff. This layer merges them together
+ */
 public js.core extends html.core, js.prebuild, js.sys, js.util, sys.sccore {
    compiledOnly = true;
 

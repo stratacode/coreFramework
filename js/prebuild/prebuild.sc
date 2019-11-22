@@ -1,6 +1,11 @@
 package sc.js;
 
+/** This framework layer defines the default JSTypeTemplate, used for converting a Java type to Javascript */
 js.prebuild {
+   /*
+    * Make this a build layer so we pre-compile the template rather than interpreting it. Because it has no dependencies, it's built before
+    * the other layers and because it's final the compiled classes are available to the runtime so we pick up the compiled version of the template
+    */
    buildLayer = true;
    finalLayer = true;
    compiledOnly = true;
