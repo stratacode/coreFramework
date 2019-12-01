@@ -674,7 +674,6 @@ js_Input_c.domChanged = function(origElem, newElem) {
       js_Button_c.domChanged.call(this, origElem, newElem);
       return;
    }
-   js_HTMLElement_c.domChanged.call(this, origElem, newElem);
    if (origElem !== null) {
       sc_removeEventListener(origElem, 'change', js_Input_c.doChangeEvent);
       sc_removeEventListener(origElem, 'keyup', js_Input_c.doChangeEvent);
@@ -683,6 +682,9 @@ js_Input_c.domChanged = function(origElem, newElem) {
       sc_addEventListener(newElem, 'change', js_Input_c.doChangeEvent);
       sc_addEventListener(newElem, 'keyup', js_Input_c.doChangeEvent);
    }
+   // We want the doChangeEvent to fire here before the change event fires on the DOM so that value is set
+   // before the changeEvent property.
+   js_HTMLElement_c.domChanged.call(this, origElem, newElem);
 }
 
 js_Input_c.updateFromDOMElement = function(newElem) {
