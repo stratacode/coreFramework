@@ -81,6 +81,12 @@ public class ModelUtil {
          return DynUtil.getAnnotationValue(def, annotName, valName);
    }
 
+   // For get/set methods, on the server this checks both for the annotation but on the client this
+   // is not needed as the metadata should be merged into the VariableDefinition
+   public static Object getPropertyAnnotationValue(Object def, String annotName, String valName) {
+      return getAnnotationValue(def, annotName, valName);
+   }
+
    public static String getInnerTypeName(Object type) {
       if (type instanceof TypeDeclaration)
          return ((TypeDeclaration)type).typeName; // TODO: should be the full inner type name
