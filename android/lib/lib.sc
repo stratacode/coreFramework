@@ -100,7 +100,7 @@ android.lib extends util {
       if (sdkDir == null) {
          // TODO: replace macosx with something we pull out of the system for linux and windows
          sc.repos.RepositoryPackage pkg = addRepositoryPackage("androidSDK", "url", "http://dl.google.com/android/android-sdk_r23.0.2-macosx.zip", true);
-         sdkDir = sc.util.FileUtil.concat(pkg.installedRoot, "android-sdk-macosx");
+         sdkDir = FileUtil.concat(pkg.installedRoot, "android-sdk-macosx");
 
          if (!(new java.io.File(sdkDir).isDirectory())) {
             disabled = true;
@@ -123,7 +123,7 @@ android.lib extends util {
       if (!cmdFile.canExecute())
          cmdFile.setExecutable(true, true);
 
-      platformDir = sc.util.FileUtil.concat(sdkDir, "platforms", platformTarget);
+      platformDir = FileUtil.concat(sdkDir, "platforms", platformTarget);
       java.io.File platformFile = new java.io.File(platformDir);
       if (!(platformFile.isDirectory())) {
          System.out.println("No file - " + platformFile + " - updating android SDK for platform target: " + platformTarget + " build tools version: " + buildToolsVersion);
@@ -131,9 +131,9 @@ android.lib extends util {
          // it's possible to do this self-install.  So instead we take out the -u option and force the user to deal with it.
          // It looks like android list --extended provides the set of filters that are valid.  Not the --all ones so that limits which packages you can
          // install from the command line.  Hopefully they'll fix it.   For now we'll prompt you...
-         //String res = sc.util.FileUtil.exec("yes\n", true, androidCmd, "update", "sdk", "-u", "-s", "-t", "tools,platform-tools,android-19,build-tools-19.0.3");
+         //String res = FileUtil.exec("yes\n", true, androidCmd, "update", "sdk", "-u", "-s", "-t", "tools,platform-tools,android-19,build-tools-19.0.3");
          System.out.println("Please choose the latest Platform Tools, Build Tools, SDK Platform API Level 19 and the System image armeabi-v7s then install packages, then close the window to continue");
-         String res = sc.util.FileUtil.exec(null, false, androidCmd, "update", "sdk", "-s", "-t", "tools,platform-tools");
+         String res = FileUtil.exec(null, false, androidCmd, "update", "sdk", "-s", "-t", "tools,platform-tools");
 
          if (!(platformFile.isDirectory())) {
             disabled = true;
@@ -142,13 +142,13 @@ android.lib extends util {
       }
 
       // Include android.jar into the external class path.  We can't load classes like java.lang.AutoCloseable 
-      externalClassPath = sc.util.FileUtil.concat(platformDir, "android.jar");
+      externalClassPath = FileUtil.concat(platformDir, "android.jar");
 
       if (!(new java.io.File(externalClassPath).canRead())) {
          throw new IllegalArgumentException("*** Android SDK is missing a readable android.jar at: " + externalClassPath);
       }
 
-      String adbCommand = sc.util.FileUtil.concat(sdkDir, "platform-tools", "adb");
+      String adbCommand = FileUtil.concat(sdkDir, "platform-tools", "adb");
 
       sc.layer.LayeredSystem system = getLayeredSystem();
 
@@ -160,7 +160,7 @@ android.lib extends util {
 
       // Don't worry about the emulator unless we are running an application
       if (activated) {
-         String listAvdResult = sc.util.FileUtil.exec(null, false, androidCmd, "list", "avd");
+         String listAvdResult = FileUtil.exec(null, false, androidCmd, "list", "avd");
          int avdIx = listAvdResult == null ? -1 : listAvdResult.indexOf(":");
          if (avdIx == -1)
             throw new IllegalArgumentException("*** Can't list android devices");
@@ -173,7 +173,7 @@ android.lib extends util {
          if (nameIndex == -1) {
             System.out.println("Creaing new android emulator device (avd): SCTest:");
             // newline here as the input string answers "no" to the creating device profile question
-            String createDeviceResult = sc.util.FileUtil.exec("\n", true, androidCmd, "create", "avd", "--name", "SCTest", 
+            String createDeviceResult = FileUtil.exec("\n", true, androidCmd, "create", "avd", "--name", "SCTest", 
                                                               "--target", platformTarget, "--abi", "default/armeabi-v7a");
             if (createDeviceResult == null)
                System.err.println("*** Failed to create android test device: SCTest");
@@ -187,11 +187,11 @@ android.lib extends util {
          }
 
          System.out.println("List running emulators");
-         String listDevicesResult = sc.util.FileUtil.exec(null, true, adbCommand, "devices");
+         String listDevicesResult = FileUtil.exec(null, true, adbCommand, "devices");
          if (listDevicesResult == null)
             System.err.println("*** Failed to run the adb list devices command");
          else {
-            String emulatorCmd = sc.util.FileUtil.concat(sdkDir, "tools", "emulator");
+            String emulatorCmd = FileUtil.concat(sdkDir, "tools", "emulator");
             /*
             java.io.File emulatorFile = new java.io.File(emulatorCmd);
             if (!emulatorFile.canExecute())
@@ -202,25 +202,25 @@ android.lib extends util {
             int firstLine = listDevicesResult.indexOf(pattern);
             if (firstLine == -1 || listDevicesResult.substring(firstLine + pattern.length()).trim().length() == 0) {
                System.out.println("Running emulator for: " + deviceName);
-               sc.util.FileUtil.fork(null, true, emulatorCmd, "-avd", deviceName);
+               FileUtil.fork(null, true, emulatorCmd, "-avd", deviceName);
             }
             else
                System.out.println("Emulator already running: " + listDevicesResult);
          }
 
          // Copies scrt.jar into the android libs directory
-         system.runtimeLibsDir = sc.util.FileUtil.concat(system.buildDir, "libs");
+         system.runtimeLibsDir = FileUtil.concat(system.buildDir, "libs");
       }
 
       // First make the gen folder if necessary
-      system.addPreBuildCommand(sc.layer.BuildPhase.Prepare, this, "mkdir", "-p", sc.util.FileUtil.concat(system.buildDir, "gen"), sc.util.FileUtil.concat(system.buildDir, "res"));
+      system.addPreBuildCommand(BuildPhase.Prepare, this, "mkdir", "-p", FileUtil.concat(system.buildDir, "gen"), FileUtil.concat(system.buildDir, "res"));
       // Then run the aapt command which requires it 
-      system.addPreBuildCommand(sc.layer.BuildPhase.Process, this, sc.util.FileUtil.concat(sdkDir,"build-tools/" + buildToolsVersion + "/aapt"),
+      system.addPreBuildCommand(BuildPhase.Process, this, FileUtil.concat(sdkDir,"build-tools/" + buildToolsVersion + "/aapt"),
                                 "package", "-m", "-J", "gen", "-M", "AndroidManifest.xml", "-S", "res", "-I", externalClassPath);
 
-      system.addPostBuildCommand(sc.layer.BuildPhase.Process, this, adbCommand, "wait-for-device");
-      // Change debug to release for the production install or just comment this out and run ant by hand in the build directory
-      system.addPostBuildCommand(sc.layer.BuildPhase.Process, this, antCommand, "debug", "install");
+      system.addPostBuildCommand(BuildPhase.Process, this, adbCommand, "wait-for-device");
+      // TODO: Need option to change debug to release for the production install. For now, you can comment this out and run ant by hand in the build directory
+      system.addPostBuildCommand(BuildPhase.Process, this, antCommand, "debug", "install");
    }
 
    public void validate() {
