@@ -16,7 +16,7 @@ sys.sccore {
 
       if (activated) { // if we are in the IDE (not activated), it's better to find the source files in the source modules configured in intelliJ
          // Pick up the src files for this layer from the system's corert directory
-         String rtSrcDir = system.getStrataCodeRuntimePath(true, true);
+         String rtSrcDir = system.getStrataCodeRuntimePath(RuntimeModuleType.CoreRuntime, true);
          preCompiledSrcPath = rtSrcDir;
 
          if (rtSrcDir == null)
