@@ -53,6 +53,9 @@ class Context {
    String requestURL;
    String requestURI;
 
+   String redirectURL;
+   String requestError;
+
    /** Set to true when the server is in the midst of a shutdown */
    static boolean shuttingDown = false;
    /** Set this to true when the server will restart */
@@ -518,10 +521,87 @@ class Context {
    }
 
    public void log(String message) {
-      System.out.println(getTimeString() + " " + toString() + " - " + message);
+      String line = getTimeString() + " " + toString() + " - " + message;
+      outputLine(line);
+   }
+
+   public void error(String message) {
+      String line = "Error: " + getTimeString() + " " + toString() + " - " + message;
+      outputLine(line);
+   }
+
+   private void outputLine(String line) {
+      if (request != null)
+         request.getServletContext().log(line);
+      else if (session != null)
+         session.getServletContext().log(line);
+      else
+         System.err.println("Context missing request/session with error: " + line);
    }
 
    public static void logForRequest(HttpServletRequest request, String message) {
-      System.out.println(getTimeString() + "app:" + request.getRequestURI() + " - " + message);
+      String line = getTimeString() + "app:" + request.getRequestURI() + " - " + message;
+      request.getServletContext().log(line);
+      //System.out.println(line);
+   }
+
+   /** Returns useful info in string form to identify the details of the particular request */
+   public String getRequestDetail() {
+      StringBuilder sb = new StringBuilder();
+      sb.append(request.getRemoteAddr());
+      Enumeration<String> hdrNames = request.getHeaderNames();
+      boolean first = true;
+      while (hdrNames.hasMoreElements()) {
+         if (!first) {
+            sb.append("\n   ");
+         }
+         else
+            first = false;
+         String hdrName = hdrNames.nextElement();
+         sb.append(hdrName + ": " + request.getHeader(hdrName));
+      }
+      sb.append("\n");
+      return sb.toString();
+   }
+
+   private void requestCompleteError() {
+      if (requestComplete) {
+         if (redirectURL != null)
+            throw new IllegalArgumentException("Response already redirected to: " + redirectURL);
+         else if (requestError != null)
+            throw new IllegalArgumentException("Attempt to redirect after error response: " + requestError);
+         else
+            throw new IllegalArgumentException("Attempt to redirect on completed request");
+      }
+   }
+
+   public void sendRedirect(String toURL) {
+      try {
+         requestCompleteError();
+         if (verbose)
+            log("Redirecting to: " + toURL);
+         redirectURL = toURL;
+         requestComplete = true;
+         response.sendRedirect(toURL);
+      }
+      catch (IOException exc) {
+         if (verbose)
+            log("IOException in sendRedirect(" + toURL + ")" + exc);
+      }
+   }
+
+   public void sendError(int errorCode, String msg) {
+      try {
+         requestCompleteError();
+         if (verbose)
+            log("Response error code: " + errorCode + " message:" + msg);
+         requestError = msg;
+         requestComplete = true;
+         response.sendError(errorCode, msg);
+      }
+      catch (IOException exc) {
+         if (verbose)
+            log("IOException in sendError(" + errorCode + ", " + msg);
+      }
    }
 }

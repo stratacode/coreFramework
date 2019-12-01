@@ -98,8 +98,6 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
 
    static public boolean verbose = false, trace = false, traceLocks = false, testMode = false;
 
-   static public boolean defaultPageCache = true;
-
    public static long serverStartTime = System.currentTimeMillis();
 
    private FilterConfig filterConfig;
@@ -345,6 +343,10 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             }
             if (matchedEnts != null) {
                int i;
+
+               System.out.println("Warning: multiple page entries matched URL: " + uri + " pattern1=" + pageEnt.pattern + " and pattern2 = " + matchedEnts.get(0).pattern);
+               // TODO: is there a use case for merging the multiple matches? right now we are just using the first one.
+               /*
                for (i = 0; i < matchedEnts.size(); i++) {
                   PageEntry prevEnt = matchedEnts.get(i);
                   if (prevEnt.priority > pageEnt.priority)
@@ -354,7 +356,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                   matchedEnts.add(pageEnt);
                else
                   matchedEnts.add(i, pageEnt);
+
                return matchedEnts;
+               */
             }
             else {
                matchedEnts = new ArrayList<PageEntry>();
@@ -403,6 +407,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                if (verbose)
                   System.out.println("*** No scope defined for page type: " + pageType + " matched by url: " + uri + " - using request scope");
                scopeDef = RequestScopeDefinition.getRequestScopeDefinition();
+               scopeCtx = scopeDef.getScopeContext(true);
             }
             scopeName = scopeDef.name;
             if (scopeName == null)
@@ -621,12 +626,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                         System.err.println("*** Error setting property: " +  qpp.propName + " for: " + inst);
                         if (verbose)
                            exc.printStackTrace();
-                        try {
-                           ctx.response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid parameter: " + qpp.paramName);
-                        }
-                        catch (IOException ioexc) {
-                        }
-                        ctx.requestComplete = true;
+                        ctx.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid parameter: " + qpp.paramName);
                      }
                   }
                }
@@ -661,12 +661,12 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
    }
 
    public void initPageInst(Element pageObj) {
-      // TODO: should the page object's cache mode be settable someplace?  This could be set into the HtmlPage's class but that seems less
-      // flexible.   Might want to control this with a startup option?
-      if (defaultPageCache)
-         pageObj.cache = sc.lang.html.CacheMode.Enabled;
-      if (pageObj instanceof HtmlPage) {
-         ((HtmlPage) pageObj).pageDispatcher = this;
+
+      if (pageObj instanceof IPage) {
+         IPage page = (IPage) pageObj;
+         if (page.cache == null)
+            page.cache = sc.lang.html.CacheMode.Enabled;
+         page.pageDispatcher = this;
       }
    }
 
@@ -686,7 +686,6 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
 
       int i = 0;
       boolean needsDyn = false;
-      Element mainPage = null, mainHead = null, mainBody = null;
       boolean doSync = false;
       boolean stateless = false;
 
@@ -702,7 +701,6 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       ServerTagContext stCtx = new ServerTagContext(mgr);
 
       for (PageEntry pageEnt:pageEnts) {
-
          // Merge the set of sync types for each of the matching page entries - using the original set for the common case where this is only one
          // but not creating a new HashSet for 2 and more
          if (pageEnt.syncTypes != null) {
@@ -720,8 +718,10 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          }
 
          Object inst = insts.get(i);
-         if (inst instanceof Element && pageEnt.dynContentPage) {
+         if (inst instanceof IPage && pageEnt.dynContentPage) {
             needsDyn = true;
+
+            IPage page = (IPage) inst;
 
             if (pageEnt.doSync || pageEnt.hasServerTags || testMode) {
                doSync = true;
@@ -738,80 +738,56 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             if (pageEnt.mimeType != null)
                ctx.mimeType = pageEnt.mimeType;
 
-            Element page = (Element) inst;
-
             // Part of the API to help track individual page views - increment this value which may trigger bindings in the page
-            if (isPageView && page instanceof sc.lang.html.HtmlPage)
-               ((HtmlPage)page).pageVisitCount++;
+            if (isPageView)
+               page.pageVisitCount++;
 
-            if (pageEnts.size() < 2) {
-               // Using isPageView for the accessBindings and validateCache flag in the OutputCtx for outputing the body.
-               // If we are accessing a tagObject defined in a parent scope like appSession, from a child scope like window
-               // and the page has cached it's output we want to avoid a complete refresh, but still access all bindings
-               // in this context. This will run accessHook to notify the sync system, perform authentication checks, and add this
-               // CurrentScopeContext to any bindings so we know to notify this context. The accessBindings
-               // call does all of that and more - it will check any bindings for us so using that for now as it's a close
-               // enough fit and should only hide problems we would otherwise have to debug (not sure if that's good or bad)
-               // This will force us to call outputBody on all tag objects and incrementally updated the innerHTML and startTagTxt
-               // properties of children that have changed.  It will also make necessary "accessSyncInst" calls in resolving
-               // child objects of the page.
-               if (isPageView && page.bodyCache != null && page.cacheEnabled) {
-                  //PerfMon.enabled = true;
+            // Using isPageView for the accessBindings and validateCache flag in the OutputCtx for outputing the body.
+            // If we are accessing a tagObject defined in a parent scope like appSession, from a child scope like window
+            // and the page has cached it's output we want to avoid a complete refresh, but still access all bindings
+            // in this context. This will run accessHook to notify the sync system, perform authentication checks, and add this
+            // CurrentScopeContext to any bindings so we know to notify this context. The accessBindings
+            // call does all of that and more - it will check any bindings for us so using that for now as it's a close
+            // enough fit and should only hide problems we would otherwise have to debug (not sure if that's good or bad)
+            // This will force us to call outputBody on all tag objects and incrementally updated the innerHTML and startTagTxt
+            // properties of children that have changed.  It will also make necessary "accessSyncInst" calls in resolving
+            // child objects of the page.
+            if (isPageView && page.pageCached) {
+               //PerfMon.enabled = true;
+               //PerfMon.clear();
+               PerfMon.start("accessBindings");
+               try {
+                  Bind.accessBindings(page, true);
+               }
+               finally {
+                  PerfMon.end("accessBindings");
+                  //PerfMon.dump();
                   //PerfMon.clear();
-                  PerfMon.start("accessBindings");
-                  try {
-                     Bind.accessBindings(page, true);
-                  }
-                  finally {
-                     PerfMon.end("accessBindings");
-                     //PerfMon.dump();
-                     //PerfMon.clear();
-                     //PerfMon.enabled = false;
-                  }
-               }
-
-               sb = page.output(outCtx);
-            }
-            else {
-               Element headElem = (Element) DynUtil.getProperty(page, "head");
-               Element bodyElem = (Element) DynUtil.getProperty(page, "body");
-               if (i == 0) {
-                  headSB = new StringBuilder();
-                  bodySB = new StringBuilder();
-                  sb = new StringBuilder();
-
-                  page.outputStartTag(sb, outCtx);
-                  if (headElem != null) {
-                     headElem.outputStartTag(headSB, outCtx);
-                     headElem.outputBody(headSB, outCtx);
-                  }
-                  if (bodyElem != null) {
-                     bodyElem.outputStartTag(bodySB, outCtx);
-                     bodyElem.outputBody(bodySB, outCtx);
-                  }
-                  mainPage = page;
-                  mainHead = headElem;
-                  mainBody = bodyElem;
-               }
-               else {
-                  if (headElem != null)
-                     headElem.outputBody(headSB, outCtx);
-                  if (bodyElem != null)
-                     bodyElem.outputBody(bodySB, outCtx);
+                  //PerfMon.enabled = false;
                }
             }
+
+            sb = page.output(outCtx);
+
+            // A redirect or something happened in handling the page
+            if (ctx.requestComplete)
+               return null;
+
             // If this page has specified a fixed list of sync types, we need to make sure we add to this list
             // when building up the sync tags.
             if (stCtx.serverTagTypes == null && ctx.curScopeCtx.syncTypeFilter != null) {
                // Null serverTagTypes will not collect the server tag sync types. But if we are using a filter we need to collect them.
                stCtx.serverTagTypes = new HashSet<String>();
             }
-            page.addServerTags(pageEnt.pageScope, stCtx, false);
+            if (page instanceof Element) {
+               Element pageElem = (Element) page;
+               pageElem.addServerTags(pageEnt.pageScope, stCtx, false);
 
-            // For server tag pages, if there are listeners on the window object properties like innerWidth/Height or document properties, add ServerTags for
-            // window and document too
-            if (page.serverTag) {
-               ctx.windowCtx.window.addServerTags(stCtx);
+               // For server tag pages, if there are listeners on the window object properties like innerWidth/Height or document properties, add ServerTags for
+               // window and document too
+               if (pageElem.serverTag) {
+                  ctx.windowCtx.window.addServerTags(stCtx);
+               }
             }
             stCtx.removeUnused();
 
@@ -843,14 +819,6 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                return null;
         }
         i++;
-      }
-
-      if (mainPage != null) {
-         mainHead.outputEndTag(headSB, outCtx);
-         mainBody.outputEndTag(bodySB, outCtx);
-         sb.append(headSB);
-         sb.append(bodySB);
-         mainPage.outputEndTag(sb, outCtx);
       }
 
       if (stCtx.serverTags != null && stCtx.serverTags.size() > 0) {
@@ -1044,7 +1012,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                // Something in creating the object rejected, redirected or whatever
                if (ctx != null && ctx.requestComplete) {
                   if (trace) {
-                     System.out.println("PageDispatcher request handled after page init - aborting processing: " + uri);
+                     ctx.log("PageDispatcher request handled after page init - aborting processing: " + uri);
                   }
                   return true;
                }
@@ -1053,9 +1021,6 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                StringBuilder pageOutput = getInitialSync(insts, ctx, uri, pageEnts, traceBuffer);
 
                if (ctx != null && ctx.requestComplete) {
-                  if (verbose) {
-                     System.out.println("PageDispatcher request handled after page init - aborting processing: " + traceBuffer);
-                  }
                   return true;
                }
 
@@ -1204,8 +1169,6 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             ServletSyncDestination.defaultTimeout = 60*60*24*3*1000;
          }
 
-         defaultPageCache = sys.options.defaultPageCache;
-
          if (Element.trace) {
             Context.trace = trace = true;
          }
@@ -1243,10 +1206,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
    public List<PageDispatcher.PageEntry> getPageEntriesOrError(Context ctx, String url) {
       List<PageDispatcher.PageEntry> pageEnts = getPageEntries(url, ctx.queryParams);
       if (pageEnts == null) {
-         try {
-            ctx.response.sendError(HttpServletResponse.SC_NOT_FOUND, "No page found for url: " + url);
-         }
-         catch (IOException exc) {}
+         ctx.sendError(HttpServletResponse.SC_NOT_FOUND, "No page found for url: " + url);
          return null;
       }
       return pageEnts;

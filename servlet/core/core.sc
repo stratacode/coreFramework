@@ -8,6 +8,7 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.ServletException;
 import java.io.IOException;
+import sc.lang.html.IPage;
 
 public servlet.core extends webApp, meta, html.core {
    compiledOnly = true;

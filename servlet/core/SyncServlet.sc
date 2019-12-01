@@ -253,12 +253,13 @@ class SyncServlet extends HttpServlet {
             repeatSync = false;
 
             CharSequence codeUpdates = null;
+            String updateDetailStr = null;
             // TODO: add "code update" as a feature of the sync manager using the 'js' language - move this code into ServletSyncDestination.
             if (syncSession.lastSyncTime != -1 && sys != null && (refresh != null || sys.options.autoRefresh) && !closeSession) {
                codeUpdates = sys.refreshJS(syncSession.lastSyncTime);
                if (enableLog) {
-                  if (codeUpdates != null)
-                     detailStr = appendDetail(detailStr, "*code updates: " + codeUpdates.length());
+                  if (codeUpdates != null && codeUpdates.length() > 0)
+                     updateDetailStr = "*code updates: " + codeUpdates.length();
                }
             }
 
@@ -344,7 +345,7 @@ class SyncServlet extends HttpServlet {
                      repeatSync = true;
                      if (enableLog) {
                         ctx.log("sync woke: " + " after " + (System.currentTimeMillis() - sleepStartTime) + " millis" +
-                                 (interrupted ? " ***interrupted" : "") + detailStr + " " + getDebugInfo(request, response));
+                                 (interrupted ? " ***interrupted" : "") + detailStr + " " + updateDetailStr + getDebugInfo(request, response));
                      }
                   }
                }
