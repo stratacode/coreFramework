@@ -16,7 +16,7 @@ import sc.dyn.DynUtil;
         "sc.layer.Options", "sc.lang.sc.ModifyDeclaration", "sc.lang.java.EnumDeclaration",
         "sc.lang.java.InterfaceDeclaration", "sc.lang.java.AnnotationTypeDeclaration", "sc.lang.java.EnumConstant",
         "sc.lang.java.ClassDeclaration", "sc.lang.java.ClientTypeDeclaration", "sc.lang.java.VariableDefinition",
-        "sc.lang.sc.PropertyAssignment", "sc.lang.java.JavaModel", "sc.lang.sc.SCModel",  "sc.lang.template.Template",
+        "sc.lang.sc.PropertyAssignment", "sc.lang.sc.OverrideAssignment", "sc.lang.java.JavaModel", "sc.lang.sc.SCModel",  "sc.lang.template.Template",
         "sc.layer.SrcEntry", "sc.lang.java.ParamTypedMember", "sc.lang.java.ParamTypeDeclaration",
         "java.lang.reflect.Field", "sc.lang.reflect.Method", "sc.lang.java.MethodDefinition", "sc.lang.java.ConstructorDefinition",
         "sc.type.BeanMapper", "sc.type.BeanIndexMapper", "sc.layer.Layer", "sc.lang.java.Parameter",

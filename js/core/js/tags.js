@@ -61,9 +61,11 @@ js_Element_c.refreshOnLoad = true;
 js_Element_c.wrap = js_Element_c.bodyOnly = false;
 js_Element_c.pendingType = js_Element_c.pendingEvent = null;
 js_Element_c.isPageElement = function() { return false; }
+/*
 js_Element_c.getURLPaths = function() {
    return [];
 }
+*/
 js_Element_c.getName = function() { return this.$protoName; }
 
 js_Element_c.doRefreshTags = function(tagList) {
@@ -196,6 +198,10 @@ js_Element_c.escBody = function(input) {
 js_Element_c.getRelURL = function(srcRelPath, urlPath) {
    var pref = js_Element_c.getRelPrefix(srcRelPath);
    return pref + (pref.endsWith("/") ? "" : "/") + urlPath;
+}
+
+js_Element_c.getRelFileList = function(fileList) {
+   return fileList;
 }
 
 // JS version of Element.getRelPrefix on server.  Basically, need to convert relative URLs in code on the
@@ -2393,6 +2399,9 @@ js_Page_c._updateInst = js_Html_c._updateInst = function() {
 function js_HtmlPage() {
    js_Html.call(this);
    this.pageVisitCount = 0;
+   //this.pageURL = null;
+   this.queryParamProperties = null;
+   this.pageJSFiles = null;
 }
 
 js_HtmlPage_c = sc_newClass("sc.lang.html.HtmlPage", js_HtmlPage, js_Html, null);
@@ -2426,6 +2435,14 @@ js_HtmlPage_c.setPageVisitCount = js_Page_c.setPageVisitCount = function(vc) {
 
 js_HtmlPage_c.getQueryParamProperties = js_Page_c.getQueryParamProperties = function() {
    return this.queryParamProperties;
+}
+
+js_HtmlPage_c.getPageJSFiles = function() {
+   return this.pageJSFiles;
+}
+
+js_HtmlPage_c.setPageJSFiles = function(f) {
+   this.pageJSFiles = f;
 }
 
 js_HtmlPage_c.getServerTagById = function(id) {
@@ -3666,4 +3683,13 @@ sc_ServerTag_c.hashCode = function ()  {
 sc_ServerTag_c.getObjectId = function ()  {
    return "sc.js.st_" + this.id;
 };
+
+function sc_URLPath(u, n, k, p) {
+   this.url = u;
+   this.name = n;
+   this.keyName = k;
+   this.pageType = p;
+}
+
+sc_URLPath_c = sc_newClass("sc.js.URLPath", sc_URLPath, jv_Object, [sc_IObjectId]);
 

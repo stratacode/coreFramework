@@ -1,0 +1,2 @@
+class OverrideAssignment extends PropertyAssignment {
+}

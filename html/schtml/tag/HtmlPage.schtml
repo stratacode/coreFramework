@@ -28,5 +28,5 @@ import sc.type.PTypeUtil;
    </head>
    <body>
    </body>
-   <script type="text/javascript" repeat="= JSFiles" src="= repeatVar"></script> 
+   <script type="text/javascript" repeat="= getRelFileList(pageJSFiles)" src="= repeatVar"></script>
 </html>
