@@ -29,6 +29,7 @@ public class TestLogFilter {
                                 // scc build stamps for when you run -v
                                 "{whiteSpace}scc version: v{digits}.{digits}.{digits}[-{identifier}][_{identifier}].b{digits}{whiteSpace}@{whiteSpace}{escapedString}",
                                 "{whiteSpace}/Applications/Google Chrome.app/Contents/Versions/{digits}.{digits}.{digits}.{digits}/Google Chrome Framework.framework/Versions/Current/Libraries/libswiftshader_libGLESv2.dylib: stat() failed with errno=1{whiteSpace}",
+                                // the scc jar which expanded to a specific version and build
                                 // These next four are for errors emited by jogl on the mac - warning/exception due to some method called from the wrong thread
                                 "{whiteSpace}{digits}-{digits}-{digits}{whiteSpace}{digits}:{digits}:{digits}.{digits}{whiteSpace}java{escapedString}",
                                 "{whiteSpace}{digits}{whiteSpace}AppKit{escapedString}",

@@ -20,7 +20,8 @@ object CServer extends Server {
 
    static CServer theServer;
    
-   @sc.obj.MainSettings(produceScript = true, execName = "startSCJetty", debug = false, stopMethod="stopServer")
+   //@sc.obj.MainSettings(produceScript = true, execName = "startSCJetty", debug = false, stopMethod="stopServer")
+   @sc.obj.MainSettings(produceScript = true, execName = "startSCJetty", debug = false, stopMethod="stopServer", produceJar=true, includeDepsInJar=true)
    static void main(String[] args) throws Exception {
       CServer s = theServer = CServer;
       if (s.sync)
