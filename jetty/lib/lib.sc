@@ -8,7 +8,14 @@ jetty.lib extends servlet.lib, log4j.core {
 
    object jettyPkg extends MvnRepositoryPackage {
       //url = "mvn://org.eclipse.jetty/jetty-webapp/8.1.17.v20150415";
-      url = "mvn://org.eclipse.jetty/jetty-webapp/9.4.7.v20170914";
+      url = "mvn://org.eclipse.jetty/jetty-webapp/9.4.24.v20191120";
+   }
+
+   // TODO: currently the CServer class adds Env processing logic so we go through jetty for 
+   // managed data sources but we could just configure those directly as components and avoid
+   // this whole thing and make them more manageable
+   object jettyPlusPkg extends MvnRepositoryPackage {
+      url = "mvn://org.eclipse.jetty/jetty-plus/9.4.24.v20191120";
    }
 
    object jettySchemas extends MvnRepositoryPackage {
@@ -49,6 +56,7 @@ jetty.lib extends servlet.lib, log4j.core {
       // Copy this file into the top-level of the buildDir
       system.registerPatternFileProcessor("log4j\\.properties", log4jprops);
 
+      // Older ways we have configured this package using the APIs, not components
       //sc.repos.RepositoryPackage pkg = addRepositoryPackage("jettyLibs", "scp", "vsgit@stratacode.com:/home/vsgit/jettyLibs", false);
       //sc.repos.RepositoryPackage pkg = addRepositoryPackage("jettyLibs", "url", "http://stratacode.com/packages/jettyLibs.zip", true);
       //RepositoryPackage pkg = addRepositoryPackage("mvn://org.eclipse.jetty/jetty-webapp/9.2.11.v20150529");

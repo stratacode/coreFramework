@@ -40,4 +40,11 @@ servlet.webApp extends servlet.lib, util, html.schtml {
 
       addSrcPath("web", "web", "web", null);
    }
+
+   class DataSourceDef {
+      String jndiName, dbName, userName, password, serverName;
+      int port;
+   }
+
+   java.util.List<DataSourceDef> dataSources = new java.util.ArrayList<DataSourceDef>();
 }

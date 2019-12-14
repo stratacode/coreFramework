@@ -548,16 +548,19 @@ class Context {
    /** Returns useful info in string form to identify the details of the particular request */
    public String getRequestDetail() {
       StringBuilder sb = new StringBuilder();
-      sb.append(request.getRemoteAddr());
-      Enumeration<String> hdrNames = request.getHeaderNames();
+      sb.append(request.getMethod());
+      sb.append(" ");
+      List<String> hdrNames = new ArrayList<String>();
+      hdrNames.add("User-Agent");
+      hdrNames.add("Referer");
       boolean first = true;
-      while (hdrNames.hasMoreElements()) {
+      for (int i = 0; i < hdrNames.size(); i++) {
          if (!first) {
-            sb.append("\n   ");
+            sb.append("\n");
          }
          else
             first = false;
-         String hdrName = hdrNames.nextElement();
+         String hdrName = hdrNames.get(i);
          sb.append(hdrName + ": " + request.getHeader(hdrName));
       }
       sb.append("\n");

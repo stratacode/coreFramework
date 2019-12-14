@@ -68,6 +68,18 @@
    public StringBuilder outputListeners() { 
       return new StringBuilder();
    }
+
+   public StringBuilder outputResourceRefs() {
+      StringBuilder out = new StringBuilder();
+      for (DataSourceDef dataSource:dataSources) { %>
+         <resource-ref>
+            <res-ref-name><%= dataSource.jndiName %></res-ref-name>
+            <res-type>javax.sql.DataSource</res-type>
+            <res-auth>Container</res-auth>
+         </resource-ref>
+      <% }
+      return out;
+   }
 %>
    
 <web-app>
@@ -81,5 +93,6 @@
   <%= outputListeners() %>
   <%= outputServletTags() %>
   <%= outputServletMappingTags() %>
+  <%= outputResourceRefs() %>
 
 </web-app>

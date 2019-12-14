@@ -1,5 +1,6 @@
 jdbc.mysql {
    compiledOnly = true;
+   hidden = true;
 
    codeType = sc.layer.CodeType.Framework;
 

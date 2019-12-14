@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+ <!DOCTYPE Configure PUBLIC "-//Jetty//Configure//EN" "http://www.eclipse.org/jetty/configure_9_3.dtd">
+   <Configure id='wac' class="org.eclipse.jetty.webapp.WebAppContext">
+   <% for (DataSourceDef dataSource:dataSources) { %>
+         <New id="myds" class="org.eclipse.jetty.plus.jndi.Resource">
+            <Arg><Ref refid="wac"/></Arg>
+            <Arg><%= dataSource.jndiName %></Arg>
+            <Arg>
+               <New class="com.zaxxer.hikari.HikariDataSource">
+                 <Arg>
+                   <New class="com.zaxxer.hikari.HikariConfig">
+                      <Set name="maximumPoolSize">10</Set>
+                      <Set name="dataSourceClassName">org.postgresql.ds.PGSimpleDataSource</Set>
+                      <Set name="username"><%= dataSource.userName %></Set>
+                      <Set name="password"><%= dataSource.password %></Set>
+                      <Call name="addDataSourceProperty">
+                         <Arg>url</Arg>
+                         <Arg>jdbc:postgresql://<%= dataSource.serverName %>:<%= dataSource.port %>/<%= dataSource.dbName %></Arg>
+                      </Call>
+                   </New> 
+                 </Arg>
+               </New>
+            </Arg>
+        </New>
+   <% } %>
+</Configure>

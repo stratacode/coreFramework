@@ -10,6 +10,8 @@ import javax.servlet.ServletException;
 import java.io.IOException;
 import sc.lang.html.IPage;
 
+import sc.servlet.Context;
+
 public servlet.core extends webApp, meta, html.core {
    compiledOnly = true;
    hidden = true;

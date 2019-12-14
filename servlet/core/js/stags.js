@@ -192,6 +192,12 @@ function sc_updatePlist(plist, props) {
 
 function sc_refresh() { // Called at the end of loading a page - in case autoSync is turned on, kick off the first autoSync
    sc_log("sc_refresh() called");
+   if (!sc_ClientSyncManager_c.defaultRealTime) {
+      sc_log("real time disabled");
+      syncMgr.syncDestination.realTime = false;
+   }
+   else
+      sc_log("real time enabled");
    syncMgr.postCompleteSync();
 }
 
@@ -1783,3 +1789,5 @@ syncMgr = sc_SyncManager_c = {
       }
    }
 };
+
+sc_ClientSyncManager_c = {defaultRealTime: true};
