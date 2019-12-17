@@ -129,6 +129,16 @@ html.core extends sys.std {  // Extending sys.std because we override the standa
       registerLanguage(htmlLang, sc.lang.HTMLLanguage.SC_HTML_SUFFIX);
    }
 
+   String getPlatformOpenCommand() {
+      String osName = System.getProperty("os.name");
+      if (osName == null || osName.contains("Mac OS X"))
+         return "open";
+      else if (osName.contains("Windows"))
+         return "start";
+      else // Assuming linux
+         return "xdg-open";
+   }
+
    public void start() {
       sc.layer.LayeredSystem system = getLayeredSystem();
 
@@ -144,7 +154,7 @@ html.core extends sys.std {  // Extending sys.std because we override the standa
       if (activated) {
          // Open up to the index page for this layer or use the -o URL option to open a specific page.
          if (system.options.openPageAtStartup)
-            system.addRunCommand("open",  webURL);
+            system.addRunCommand(getPlatformOpenCommand(),  webURL);
 
          // Use the -ts <script-name> option to specify a test script - if not specified, we default to testScript.scr
          if (system.options.testScriptName == null)

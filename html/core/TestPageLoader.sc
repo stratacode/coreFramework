@@ -13,6 +13,8 @@ import sc.dyn.DynUtil;
 import sc.lang.AbstractInterpreter;
 import sc.layer.LayeredSystem;
 
+import sc.lang.html.QueryParamProperty;
+
 import sc.layer.AsyncProcessHandle;
 
 // Using runtimes='default' here so this code is run for the 'java server' runtime only in client/server mode and run on the server for the 'js only' case,
@@ -284,6 +286,21 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
 
          if (!sys.testPatternMatches(urlPath.name))
             continue;
+
+         Object pageType = urlPath.pageType;
+         List<QueryParamProperty> queryParams = pageType == null ? null : QueryParamProperty.getQueryParamProperties(pageType);
+         if (queryParams != null) {
+            boolean skip = false;
+            for (QueryParamProperty queryParam:queryParams) {
+               if (queryParam.required) {
+                  System.out.println("*** Skipping url: " + urlPath + " for required query param: " + queryParam.paramName);
+                  skip = true;
+                  break;
+               }
+            }
+            if (skip)
+               continue;
+         }
 
          // If we are syncing to the client, use the unique id for this URL to choose the name of the
          // 'scope context' (essentially the id of the browser window so we can target the savePage and
