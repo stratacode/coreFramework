@@ -79,6 +79,16 @@ android.lib extends util {
       "/usr/local/bin/ant"
    };
 
+   String getPlatformSuffix() {
+      String osName = System.getProperty("os.name");
+      if (osName.contains("Mac OS X"))
+         return "macosx";
+      else if (osName.contains("Windows"))
+         return "windows";
+      else
+         return "linux";
+   }
+
    // Directory holding this file has a symbolic link to the android/platforms/android-xxx directory which contains android.jar
    public void start() {
       // TODO: break this out into an ant layer before we integrate the
@@ -98,9 +108,9 @@ android.lib extends util {
       String sdkDir = System.getenv("ANDROID_SDK");
       String platformDir;
       if (sdkDir == null) {
-         // TODO: replace macosx with something we pull out of the system for linux and windows
-         sc.repos.RepositoryPackage pkg = addRepositoryPackage("androidSDK", "url", "http://dl.google.com/android/android-sdk_r23.0.2-macosx.zip", true);
-         sdkDir = FileUtil.concat(pkg.installedRoot, "android-sdk-macosx");
+         String suffix = getPlatformSuffix();
+         sc.repos.RepositoryPackage pkg = addRepositoryPackage("androidSDK", "url", "http://dl.google.com/android/android-sdk_r23.0.2-" + suffix + ".zip", true);
+         sdkDir = FileUtil.concat(pkg.installedRoot, "android-sdk-" + suffix);
 
          if (!(new java.io.File(sdkDir).isDirectory())) {
             disabled = true;
