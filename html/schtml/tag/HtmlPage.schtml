@@ -19,6 +19,7 @@ import sc.type.PTypeUtil;
 <!DOCTYPE html>
 <html abstract="true">
    <head serverContent="true">
+      <meta charset="utf-8">
       <!-- Setting stateless=true here means that the entire tag and its body are included in the 'outputBody' method of the parent, no object generated for this tag -->
       <script type="text/javascript" stateless="true">
          var sc_windowId = <%= PTypeUtil.getWindowId() %>;
