@@ -54,7 +54,17 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
 
    public boolean skipIndexPage = true;
 
-   String chromeCmd = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+   String getPlatformChromeCommand() {
+      String osName = System.getProperty("os.name");
+      if (osName == null || osName.contains("Mac OS X"))
+         return "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+      else if (osName.contains("Windows"))
+         return "chrome";
+      else // Assuming linux
+         return "/usr/bin/google-chrome";
+   }
+
+   String chromeCmd = getPlatformChromeCommand();
 
    public TestPageLoader(AbstractInterpreter cmd) {
       this.cmd = cmd;
