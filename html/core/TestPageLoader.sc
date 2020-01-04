@@ -65,6 +65,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
    }
 
    String chromeCmd = getPlatformChromeCommand();
+   String openCmd = sc.type.PTypeUtil.getPlatformOpenCommand();
 
    public TestPageLoader(AbstractInterpreter cmd) {
       this.cmd = cmd;
@@ -117,7 +118,8 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
       }
       else {
          System.out.println("Opening browser with: " + url);
-         cmd.exec("open " + url);
+
+         cmd.exec(openCmd + " " + url);
          cmd.sleep(2000); // give user time for opening devtools before starting any script
       }
       return processRes;
