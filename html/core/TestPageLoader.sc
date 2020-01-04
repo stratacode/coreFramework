@@ -119,7 +119,10 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
       else {
          System.out.println("Opening browser with: " + url);
 
-         cmd.exec(openCmd + " " + url);
+         if (openCmd.equals("open"))
+            cmd.exec(openCmd + " " + url);
+         else
+            cmd.execAsync(openCmd + " " + url);
          cmd.sleep(2000); // give user time for opening devtools before starting any script
       }
       return processRes;
