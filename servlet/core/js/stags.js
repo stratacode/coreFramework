@@ -1781,7 +1781,7 @@ syncMgr = sc_SyncManager_c = {
       var np = sc_updatePlist("windowSyncProps", props);
       if (np.length) {
          syncMgr.sendWindowSizeEvents(np); // send changes for new properties right away since they are not on the server
-         if (!first) { // first time need to add the listener
+         if (first) { // first time need to add the listener
             sc_addEventListener(window, "resize", function(event) {
                syncMgr.sendWindowSizeEvents(syncMgr.windowSyncProps);
             });
