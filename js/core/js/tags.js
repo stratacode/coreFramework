@@ -3405,6 +3405,10 @@ js_Window_c.getInnerHeight = function() {
    return window.innerHeight;   
 }
 
+js_Window_c.getDevicePixelRatio = function() {
+   return window.devicePixelRatio;   
+}
+
 js_Window_c.getErrorCount = function() {
    if (window.sc_errorCount === undefined)
       window.sc_errorCount = 0;
