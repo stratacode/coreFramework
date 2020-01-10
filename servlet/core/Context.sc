@@ -327,7 +327,8 @@ class Context {
             windowId = sessionPart + nextWindowId;
             String queryStr = request.getQueryString();
             String fullURL = queryParams == null ? requestURL : requestURL + "?" + queryStr;
-            windowCtx = new WindowScopeContext(windowId, Window.createNewWindow(fullURL, request.getServerName(), request.getServerPort(), request.getRequestURI(), request.getPathInfo(), queryStr));
+            String userAgent = request.getHeader("User-Agent");
+            windowCtx = new WindowScopeContext(windowId, Window.createNewWindow(fullURL, request.getServerName(), request.getServerPort(), request.getRequestURI(), request.getPathInfo(), queryStr, userAgent));
             windowCtx.init();
             windowCtx.lastRequestTime = System.currentTimeMillis();
             ctxList.add(windowCtx);
@@ -553,6 +554,7 @@ class Context {
       List<String> hdrNames = new ArrayList<String>();
       hdrNames.add("User-Agent");
       hdrNames.add("Referer");
+      hdrNames.add("X-Forwarded-For");
       boolean first = true;
       for (int i = 0; i < hdrNames.size(); i++) {
          if (!first) {
@@ -561,7 +563,12 @@ class Context {
          else
             first = false;
          String hdrName = hdrNames.get(i);
-         sb.append(hdrName + ": " + request.getHeader(hdrName));
+         String val = request.getHeader(hdrName);
+         if (val != null)
+            sb.append(hdrName + ": " + val);
+         else if (val == null) {
+            log("header: " + hdrName + " is null");
+         }
       }
       sb.append("\n");
       return sb.toString();
