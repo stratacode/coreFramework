@@ -71,7 +71,10 @@
 
    public StringBuilder outputResourceRefs() {
       StringBuilder out = new StringBuilder();
-      for (DataSourceDef dataSource:dataSources) { %>
+      sc.layer.LayeredSystem system = sc.layer.LayeredSystem.getCurrent();
+      if (system.dataSources == null)
+         return out;
+      for (sc.db.DataSourceDef dataSource:system.dataSources) { %>
          <resource-ref>
             <res-ref-name><%= dataSource.jndiName %></res-ref-name>
             <res-type>javax.sql.DataSource</res-type>

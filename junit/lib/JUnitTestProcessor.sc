@@ -5,7 +5,25 @@ import org.junit.runner.notification.RunListener;
 import org.junit.runner.notification.Failure;
 
 public class JUnitTestProcessor extends RunListener implements ITestProcessor {
+   boolean typesInited = false;
+   public void initTypes() {
+      if (typesInited)
+         return;
+
+      Object initTypesType = DynUtil.findType("sc.junit.InitTypes");
+      if (initTypesType != null) {
+         Object initTypesInst = DynUtil.createInstance(initTypesType, "");
+         if (initTypesInst != null) {
+            Object meth = DynUtil.resolveMethod(initTypesType, "initTypes", null, null);
+            if (meth != null)
+               DynUtil.invokeMethod(initTypesInst, meth);
+         }
+         typesInited = true;
+      }
+   }
+
    public boolean executeTest(Object cl) {
+      initTypes();
       if (cl instanceof Class) {
          JUnitCore core = new JUnitCore();
          core.addListener(this);

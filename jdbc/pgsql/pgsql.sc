@@ -12,5 +12,7 @@ jdbc.pgsql {
       if (pkg.installedRoot != null && !disabled) {
          classPath = pkg.classPath;
       }
+
+      layeredSystem.addDBProvider(new DBProvider("postgresql"));
    }
 }

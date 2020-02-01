@@ -1,7 +1,8 @@
 <?xml version="1.0"?>
  <!DOCTYPE Configure PUBLIC "-//Jetty//Configure//EN" "http://www.eclipse.org/jetty/configure_9_3.dtd">
    <Configure id='wac' class="org.eclipse.jetty.webapp.WebAppContext">
-   <% for (DataSourceDef dataSource:dataSources) { %>
+   <% sc.layer.LayeredSystem sys = sc.layer.LayeredSystem.getCurrent();
+      for (sc.db.DataSourceDef dataSource:sys.dataSources) { %>
          <New id="myds" class="org.eclipse.jetty.plus.jndi.Resource">
             <Arg><Ref refid="wac"/></Arg>
             <Arg><%= dataSource.jndiName %></Arg>
