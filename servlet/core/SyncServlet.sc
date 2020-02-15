@@ -323,7 +323,8 @@ class SyncServlet extends HttpServlet {
                    // Sending the 410 - resource gone - response here to signal that we do not want the client to poll again.  If we are planning
                    // on restarting, send the 205 - reset which means send all of your data on the next request cause your session is gone
                    int resultCode = Context.restarting ? 205 : 410;
-                   response.sendError(resultCode, "Session expired for sync - client should do a reset");
+                   if (!response.isCommitted())
+                      response.sendError(resultCode, "Session expired for sync - client should do a reset");
                    return true;
                }
 
