@@ -10,7 +10,11 @@ CServer {
          parentLoaderPriority = true;
 
          contextPath = "/";
-         war="./web";
+         // We're using relative path names here so that we can reduce the dependencies on path names in 
+         // the generated runtime - so you can deploy and test the same app anywhere.
+         // But between Java 8 and 9, it's not possible to change the actual current process directory.
+         // To support scc's compile+run from one process, it changes this system property before launching main
+         war = sc.util.FileUtil.concat(System.getProperty("user.dir"), "/web");
       }
    }
 
