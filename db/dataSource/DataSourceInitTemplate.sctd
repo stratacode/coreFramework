@@ -1,0 +1,11 @@
+<%
+sc.layer.LayeredSystem system = sc.layer.LayeredSystem.getCurrent();
+java.util.List<sc.db.DBDataSource> dataSourceDefs = system.activeDataSources;
+if (dataSourceDefs.size() > 0) { %>
+static {
+   <% for (sc.db.DBDataSource def:dataSourceDefs) { %>
+      addDBDataSource("<%= def.jndiName %>", "<%= def.dbName %>", "<%= def.userName %>", "<%= def.password %>", "<%= def.serverName %>", <%= def.port %>, <%= def.readOnly %>, <%= def.dbDisabled %>);
+   <% } %>
+}
+<% } %>
+

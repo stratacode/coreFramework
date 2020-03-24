@@ -1,5 +1,6 @@
 
 import sc.lang.pattern.Pattern;
+import sc.lang.pattern.ReplaceResult;
 import sc.lang.PatternLanguage;
 import sc.lang.SCLanguage;
 import sc.parser.Parselet;
@@ -28,7 +29,7 @@ public class TestLogFilter {
                                 "\\[{digits}/{digits}.{digits}:ERROR:{escapedString}",
                                 // scc build stamps for when you run -v
                                 "{whiteSpace}scc version: v{digits}.{digits}.{digits}[-{identifier}][_{identifier}].b{digits}{whiteSpace}@{whiteSpace}{escapedString}",
-                                "{whiteSpace}/Applications/Google Chrome.app/Contents/Versions/{digits}.{digits}.{digits}.{digits}/Google Chrome Framework.framework/Versions/Current/Libraries/libswiftshader_libGLESv2.dylib: stat() failed with errno=1{whiteSpace}",
+                                "{whiteSpace}/Applications/Google Chrome.app/Contents/Versions/{digits}.{digits}.{digits}.{digits}/Google Chrome Framework.framework/Versions/Current/Libraries/libswiftshader_libGLESv2.dylib: stat\\(\\) failed with errno=1{whiteSpace}",
                                 // the scc jar which expanded to a specific version and build
                                 // These next four are for errors emited by jogl on the mac - warning/exception due to some method called from the wrong thread
                                 "{whiteSpace}{digits}-{digits}-{digits}{whiteSpace}{digits}:{digits}:{digits}.{digits}{whiteSpace}java{escapedString}",
@@ -51,6 +52,25 @@ public class TestLogFilter {
          optionName = "sc_windowId";
          replace = true; // We'll replace var sc_windowId = 101 with var_sc_windowId = {windowId} for apps where it might vary
          patternStrings = {"{whiteSpace}var{whiteSpace}sc_windowId{whiteSpace}={whiteSpace}{windowId=digits};{whiteSpace}"};
+      }
+
+      object webIdFilter extends FilterOption {
+         optionName = "webIds";
+         replace = true;
+         patternStrings = {
+                "*(![id={quoteChar}][id={quoteChar}{alphaNumString}[_{id=digits}]])",
+                "*(![for={quoteChar}][for={quoteChar}{alphaNumString}[_{id=digits}]])",
+                "*(!({alphaNumString}__{digits})[{alphaNumString}__{id=digits}])"
+         };
+      }
+
+      object dbIdFilter extends FilterOption {
+         optionName = "dbIds";
+         replace = true;
+         patternStrings = {
+                "*(![id = {digits}][id = {id=digits}])",
+                "*(!({alphaNumString}__{digits})[{alphaNumString}__{id=digits}])"
+         };
       }
    }
 
@@ -104,9 +124,9 @@ public class TestLogFilter {
             }
             if (!excluded) {
                for (Pattern replacePattern:replacePatterns) {
-                  String replacedString = replacePattern.replaceString(nextLine);
-                  if (replacedString != null)
-                     nextLine = replacedString;
+                  String replaceRes = replacePattern.replaceString(nextLine);
+                  if (replaceRes != null)
+                     nextLine = replaceRes;
                }
                out.println(nextLine);
             }

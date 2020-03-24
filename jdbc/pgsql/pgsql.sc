@@ -1,3 +1,9 @@
+import sc.db.DBTypeDescriptor;
+import sc.db.DBPropertyDescriptor;
+import sc.db.FindBy;
+import sc.db.DBTypeSettings;
+import sc.db.DBPropertySettings;
+
 jdbc.pgsql {
    compiledOnly = true;
    hidden = true;
@@ -13,6 +19,6 @@ jdbc.pgsql {
          classPath = pkg.classPath;
       }
 
-      layeredSystem.addDBProvider(new DBProvider("postgresql"));
+      layeredSystem.addDBProvider(new DBProvider("postgresql"), this);
    }
 }

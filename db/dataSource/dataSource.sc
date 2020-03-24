@@ -1,6 +1,6 @@
 package sc.sql;
 
-public hikari.dataSource extends db.dataSource, lib {
+public db.dataSource {
    compiledOnly = true;
    hidden = true;
 

@@ -72,9 +72,9 @@
    public StringBuilder outputResourceRefs() {
       StringBuilder out = new StringBuilder();
       sc.layer.LayeredSystem system = sc.layer.LayeredSystem.getCurrent();
-      if (system.dataSources == null)
+      if (system.activeDataSources == null)
          return out;
-      for (sc.db.DataSourceDef dataSource:system.dataSources) { %>
+      for (sc.db.DBDataSource dataSource:system.activeDataSources) { %>
          <resource-ref>
             <res-ref-name><%= dataSource.jndiName %></res-ref-name>
             <res-type>javax.sql.DataSource</res-type>

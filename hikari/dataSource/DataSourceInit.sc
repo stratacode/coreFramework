@@ -8,10 +8,10 @@ import java.util.HashMap;
 
 import sc.db.DataSourceManager;
 
-@sc.obj.CompilerSettings(mixinTemplate="sc.sql.DataSourceInitTemplate",initOnStartup=true)
-class DataSourceInit {
+DataSourceInit {
+   static DBDataSource addDBDataSource(String jndiName, String dbName, String userName, String password, String serverName, int port, boolean readOnly, boolean dbDisabled) {
+      DBDataSource dbDS = super.addDBDataSource(jndiName, dbName, userName, password, serverName, port, readOnly, dbDisabled);
 
-   static void addDataSource(String jndiName, String dbName, String userName, String password, String serverName, int port) {
       HikariConfig conf = new HikariConfig();
       conf.setJdbcUrl("jdbc:postgresql://" + serverName + ":" + port + "/" + dbName);
       conf.setUsername(userName);
@@ -20,6 +20,8 @@ class DataSourceInit {
       //conf.addDataSourceProperty("prepStmtCacheSize", "250");
       //conf.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
       DataSource ds = new HikariDataSource(conf);
-      DataSourceManager.addDataSource(jndiName, ds);
+      dbDS.dataSource = ds;
+
+      return dbDS;
    }
 }

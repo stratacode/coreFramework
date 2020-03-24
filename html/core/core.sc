@@ -87,7 +87,7 @@ html.core extends sys.std {  // Extending sys.std because we override the standa
 
       // Share one buildDir for web root files since they do not support path searching
       useCommonBuildDir = true;
-      // To support more natural "code behind", schtml will do a modify by default of the previous file
+      // To support more natural "code behind", sccss will do a modify by default of the previous file
       defaultModify = true;
 
       defaultExtendsType = "sc.lang.css.StyleSheet";
