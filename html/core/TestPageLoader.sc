@@ -256,7 +256,8 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
       else {
          // Set the app-id so we restrict the contexts we search to just this application - theoretically, we could iterate over the sessions here too to target a specific browser instance to make it more robust
          FileUtil.saveStringAsFile(pageResultsFile, pageContents, true);
-         System.out.println("- DOM results: " + urlPath.name + " length: " + pageContents.length() + (sys.options.testVerifyMode ? "" : " path: " + pageResultsFile));
+         System.out.println("- DOM results: " + urlPath.name + 
+                            (sys.options.testVerifyMode ? "" : " length: " + pageContents.length() + " path: " + pageResultsFile));
       }
    }
 
