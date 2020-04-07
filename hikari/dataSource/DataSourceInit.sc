@@ -15,6 +15,7 @@ DataSourceInit {
       HikariConfig conf = new HikariConfig();
       conf.setJdbcUrl("jdbc:postgresql://" + serverName + ":" + port + "/" + dbName);
       conf.setUsername(userName);
+      //conf.setAutoCommit(false);
       conf.setPassword(password);
       //conf.addDataSourceProperty("cachePrepStmts", "true");
       //conf.addDataSourceProperty("prepStmtCacheSize", "250");

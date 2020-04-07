@@ -20,6 +20,14 @@ object SchemaUpdater implements ISchemaUpdater {
 
    private static String createTablesSchemaStr = null;
 
+   void setSchemaReady(String dataSourceName, boolean val) {
+      DBDataSource dbDS = DataSourceManager.getDBDataSource(dataSourceName);
+      if (dbDS != null)
+         dbDS.setSchemaReady(val);
+      else
+         DBUtil.error("setSchemaReady - no dataSource: " + dataSourceName);
+   }
+
    List<DBSchemaType> getDBSchemas(String dataSourceName) {
       Connection conn = null;
       PreparedStatement st = null;
@@ -41,7 +49,7 @@ object SchemaUpdater implements ISchemaUpdater {
             DBSchemaVersion newVers = new DBSchemaVersion();
             newType.setCurrentVersion(newVers);
 
-            int col = 0;
+            int col = 1;
             newType.setId(rs.getLong(col++));
             newType.setTypeName(rs.getString(col++));
             newVers.setId(rs.getLong(col++));
@@ -73,12 +81,17 @@ object SchemaUpdater implements ISchemaUpdater {
          for (int i = 0; i < alterCommands.size(); i++) {
             alterCmd = alterCommands.get(i);
             st = conn.prepareStatement(alterCmd);
+
+            if (DBUtil.verbose)
+               DBUtil.verbose("-- Exec sql update:\n" + alterCmd);
             int rowCt = st.executeUpdate();
+            /*
             if (rowCt == 0)
                System.err.println("*** Invalid returned row count");
             else
-               DBUtil.verbose("Updated (" + rowCt + ") for dataSource: " + dataSourceName + " with DDL/alter script:\n" + alterCmd);
+            */
          }
+         DBUtil.verbose("Completed: " + alterCommands.size() + " sql statements");
       }
       catch (SQLException exc) {
          throw new IllegalArgumentException("DB error applying schema update cmd:\n" + alterCmd + "\n", exc);
@@ -112,6 +125,7 @@ object SchemaUpdater implements ISchemaUpdater {
             st.close();
             st = null;
             rs = null;
+            newSchemaType = true;
          }
          else
             typeId = curType.id;
@@ -142,8 +156,9 @@ object SchemaUpdater implements ISchemaUpdater {
             st.setLong(2, versionId);
          }
          else {
-            st = conn.prepareStatement("UPDATE db_schema_current_version SET schema_version = ?");
+            st = conn.prepareStatement("UPDATE db_schema_current_version SET schema_version = ? WHERE schema_type = ?");
             st.setLong(1, versionId);
+            st.setLong(2, typeId);
          }
          int resCt = st.executeUpdate();
          if (resCt != 1) {
@@ -160,9 +175,11 @@ object SchemaUpdater implements ISchemaUpdater {
                }
             }
          }
+         // TODO: currently using autoCommit but this would be a good transaction boundary
+         //conn.commit();
       }
       catch (SQLException exc) {
-         throw new IllegalArgumentException("Failed to updateDB schema - SQLException: " + exc);
+         throw new IllegalArgumentException("Failed to updateDB schema - SQLException: " + exc + " for statement: " + st);
       }
       finally {
          DBUtil.close(conn, st);
