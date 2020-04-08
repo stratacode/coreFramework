@@ -203,6 +203,7 @@ object SchemaUpdater implements ISchemaUpdater {
             st = conn.prepareStatement("UPDATE db_schema_current_version SET schema_version = NULL WHERE schema_type = ?");
             st.setLong(1, curType.getId());
          }
+         DBUtil.info("Removed db_schema_current_version for: " + typeName);
       }
       catch (SQLException exc) {
          DBUtil.error("DB error: " + exc + " for removeDBSchemaForType(" + dataSourceName + ", " + typeName + ")");
