@@ -4,10 +4,14 @@ import sc.db.DBSchemaType;
 import sc.db.DBSchemaVersion;
 import sc.db.DBUtil;
 import sc.db.DBDataSource;
+import sc.db.DBMetadata;
+import sc.db.ColumnInfo;
+import sc.db.TableInfo;
 import java.util.List;
 import java.util.ArrayList;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.io.InputStream;
@@ -19,6 +23,8 @@ object SchemaUpdater implements ISchemaUpdater {
    }
 
    private static String createTablesSchemaStr = null;
+
+   public boolean enableMetadataValidation = true;
 
    void setSchemaReady(String dataSourceName, boolean val) {
       DBDataSource dbDS = DataSourceManager.getDBDataSource(dataSourceName);
@@ -36,7 +42,7 @@ object SchemaUpdater implements ISchemaUpdater {
          conn = DBUtil.createConnection(dataSourceName);
          // Get the current version of all of the schema types
          st = conn.prepareStatement("SELECT tst.id, tst.type_name, tsv.id, tsv.schema_sql, tsv.alter_sql, tsv.date_applied, tsv.version_info " +
-                                    "FROM db_schema_type as tst, db_schema_current_version as tscv, db_schema_version as tsv " +
+                                    "FROM db_schema_type AS tst, db_schema_current_version AS tscv, db_schema_version AS tsv " +
                                     "WHERE tst.id = tscv.schema_type AND " +
                                     "      tscv.schema_version = tsv.id");
 
@@ -186,6 +192,26 @@ object SchemaUpdater implements ISchemaUpdater {
       }
    }
 
+   void removeDBSchemaForType(String dataSourceName, String typeName) {
+      Connection conn = null;
+      PreparedStatement st = null;
+      try {
+         conn = DBUtil.createConnection(dataSourceName);
+
+         DBSchemaType curType = findSchemaType(conn, typeName, false);
+         if (curType != null) {
+            st = conn.prepareStatement("UPDATE db_schema_current_version SET schema_version = NULL WHERE schema_type = ?");
+            st.setLong(1, curType.getId());
+         }
+      }
+      catch (SQLException exc) {
+         DBUtil.error("DB error: " + exc + " for removeDBSchemaForType(" + dataSourceName + ", " + typeName + ")");
+      }
+      finally {
+         DBUtil.close(conn, st);
+      }
+   }
+
    private DBSchemaType findSchemaType(Connection conn, String typeName, boolean initSchemaOnError) {
       PreparedStatement st = null;
       ResultSet rs = null;
@@ -236,5 +262,60 @@ object SchemaUpdater implements ISchemaUpdater {
          return null;
       createTablesSchemaStr = sb.toString();
       return createTablesSchema;
+   }
+
+
+   static ColumnInfo createFromResultSet(ResultSet rs) throws SQLException {
+      ColumnInfo info = new ColumnInfo();
+      info.colName = rs.getString("COLUMN_NAME");
+      info.colType = rs.getInt("DATA_TYPE");
+      info.size = rs.getString("COLUMN_SIZE");
+      info.numDigits = rs.getInt("DECIMAL_DIGITS");
+      String isNullStr = rs.getString("IS_NULLABLE");
+      info.isNullable = isNullStr != null && isNullStr.equalsIgnoreCase("yes");
+      return info;
+   }
+
+   public DBMetadata getDBMetadata(String dataSourceName) {
+      DBMetadata dbmd = new DBMetadata();
+      List<TableInfo> tableInfos = new ArrayList<TableInfo>();
+      dbmd.tableInfos = tableInfos;
+
+      Connection conn = null;
+      ResultSet rs = null;
+
+      try {
+         conn = DBUtil.createConnection(dataSourceName);
+
+         DatabaseMetaData jmd = conn.getMetaData();
+         rs = jmd.getTables(null, null, null, new String[] {"TABLE"});
+         while (rs.next()) {
+            String tableName = rs.getString("table_name");
+
+            TableInfo tableInfo = new TableInfo(tableName);
+            tableInfos.add(tableInfo);
+         }
+         rs.close();
+         rs = null;
+
+         for (TableInfo tableInfo:tableInfos) {
+            rs = jmd.getColumns(null, null, tableInfo.tableName, null);
+            List<ColumnInfo> colInfos = tableInfo.colInfos;
+            while (rs.next()) {
+               ColumnInfo info = createFromResultSet(rs);
+               colInfos.add(info);
+            }
+            rs.close();
+            rs = null;
+         }
+         return dbmd;
+      }
+      catch (SQLException exc) {
+         DBUtil.error("Error extracting metadata from existing dataSource: " + dataSourceName + ": " + exc);
+         return null;
+      }
+      finally {
+         DBUtil.close(conn, null, rs);
+      }
    }
 }
