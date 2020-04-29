@@ -24,7 +24,8 @@ public class JUnitTestProcessor extends RunListener implements ITestProcessor {
 
    public boolean executeTest(Object cl) {
       initTypes();
-      if (cl instanceof Class) {
+      // For components, need to use the DynUtil wrapper to create the test class. 
+      if (cl instanceof Class && !DynUtil.isComponentType(cl)) {
          JUnitCore core = new JUnitCore();
          core.addListener(this);
          Result res = core.run((Class) cl);
@@ -34,7 +35,7 @@ public class JUnitTestProcessor extends RunListener implements ITestProcessor {
       }
       else {
          boolean result = true;
-         Object testInst = DynUtil.createInstance(cl, null);
+         Object testInst = DynUtil.newInnerComponent(cl, null, null);
          Object[] methods = RDynUtil.getAllMethods(cl, "public", true);
 
          if (runAllMethods(cl, methods, org.junit.Before.class, testInst) &&

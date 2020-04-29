@@ -39,7 +39,7 @@ object SchemaUpdater implements ISchemaUpdater {
       PreparedStatement st = null;
       ResultSet rs = null;
       try {
-         conn = DBUtil.createConnection(dataSourceName);
+         conn = DBUtil.createConnection(dataSourceName, true);
          // Get the current version of all of the schema types
          st = conn.prepareStatement("SELECT tst.id, tst.type_name, tsv.id, tsv.schema_sql, tsv.alter_sql, tsv.date_applied, tsv.version_info " +
                                     "FROM db_schema_type AS tst, db_schema_current_version AS tscv, db_schema_version AS tsv " +
@@ -82,7 +82,7 @@ object SchemaUpdater implements ISchemaUpdater {
       ResultSet rs = null;
       String alterCmd = null;
       try {
-         conn = DBUtil.createConnection(dataSourceName);
+         conn = DBUtil.createConnection(dataSourceName, true);
 
          for (int i = 0; i < alterCommands.size(); i++) {
             alterCmd = alterCommands.get(i);
@@ -112,7 +112,7 @@ object SchemaUpdater implements ISchemaUpdater {
       PreparedStatement st = null;
       ResultSet rs = null;
       try {
-         conn = DBUtil.createConnection(dataSourceName);
+         conn = DBUtil.createConnection(dataSourceName, true);
 
          boolean newSchemaType = false;
 
@@ -196,7 +196,7 @@ object SchemaUpdater implements ISchemaUpdater {
       Connection conn = null;
       PreparedStatement st = null;
       try {
-         conn = DBUtil.createConnection(dataSourceName);
+         conn = DBUtil.createConnection(dataSourceName, true);
 
          DBSchemaType curType = findSchemaType(conn, typeName, false);
          if (curType != null) {
@@ -286,7 +286,7 @@ object SchemaUpdater implements ISchemaUpdater {
       ResultSet rs = null;
 
       try {
-         conn = DBUtil.createConnection(dataSourceName);
+         conn = DBUtil.createConnection(dataSourceName, true);
 
          DatabaseMetaData jmd = conn.getMetaData();
          rs = jmd.getTables(null, null, null, new String[] {"TABLE"});

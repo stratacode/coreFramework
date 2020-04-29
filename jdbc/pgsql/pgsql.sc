@@ -3,6 +3,7 @@ import sc.db.DBPropertyDescriptor;
 import sc.db.FindBy;
 import sc.db.DBTypeSettings;
 import sc.db.DBPropertySettings;
+import sc.db.DBUtil;
 
 jdbc.pgsql {
    compiledOnly = true;
