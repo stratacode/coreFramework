@@ -255,9 +255,9 @@ object SchemaUpdater implements ISchemaUpdater {
    private static String getCreateTablesSchema() {
       if (createTablesSchemaStr != null)
          return createTablesSchemaStr;
-      InputStream is = SchemaUpdater.class.getClassLoader().getResourceAsStream("typeInfo.sql");
+      InputStream is = SchemaUpdater.class.getClassLoader().getResourceAsStream("sql/dbSchemaInfo.sql");
       if (is == null)
-         throw new IllegalArgumentException("Missing typeInfo.sql in classpath for SchemaUpdater");
+         throw new IllegalArgumentException("Error initializing db_schema tables for database: Missing dbSchemaInfo.sql in classpath for SchemaUpdater");
       StringBuilder sb = DBUtil.readInputStream(is);
       if (sb == null)
          return null;
