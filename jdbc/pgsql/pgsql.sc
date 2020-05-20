@@ -1,11 +1,5 @@
-import sc.db.DBTypeDescriptor;
-import sc.db.DBPropertyDescriptor;
-import sc.db.FindBy;
-import sc.db.DBTypeSettings;
-import sc.db.DBPropertySettings;
-import sc.db.DBUtil;
 
-jdbc.pgsql {
+jdbc.pgsql extends db.model {
    compiledOnly = true;
    hidden = true;
 

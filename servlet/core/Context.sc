@@ -18,6 +18,7 @@ import java.util.Enumeration;
 import java.util.TreeMap;
 
 import sc.sync.RuntimeIOException;
+import javax.servlet.http.Cookie;
 
 /** 
   * An abstraction around the servlet request and response, stored in thread-local so any code running
@@ -43,6 +44,8 @@ class Context {
    WindowScopeContext windowCtx = null;
 
    CurrentScopeContext curScopeCtx = null;
+
+   TreeMap<String,Cookie> cookieMap = null;
 
    // For diagnostics only
    String threadName = DynUtil.getCurrentThreadString();
@@ -613,5 +616,15 @@ class Context {
          if (verbose)
             log("IOException in sendError(" + errorCode + ", " + msg);
       }
+   }
+
+   public Cookie getCookie(String name) {
+      if (cookieMap == null) {
+         cookieMap = new TreeMap<String,Cookie>();
+         Cookie[] cookies = request.getCookies();
+         for (Cookie cookie: cookies)
+            cookieMap.put(cookie.getName(), cookie);
+      }
+      return cookieMap.get(name);
    }
 }

@@ -415,6 +415,20 @@ jv_Character_c.toUpperCase = function(c) {
    return c.toUpperCase();
 }
 
+jv_Character_c.isLetter = function(c) {
+   var n = c.charCodeAt(0);
+   return (n >= 65 && n < 91) || (n >= 97 && n < 123);
+}
+
+jv_Character_c.isDigit = function(c) {
+   var n = c.charCodeAt(0);
+   return n >= 48 && n <= 57;
+}
+
+jv_Character_c.isLetterOrDigit = function(c) {
+   return jv_Character_c.isDigit(c) || jv_Character_c.isLetter(c);
+}
+
 jv_Character_c.isWhitespace = function(c) {
    return ' \n\t\r\f\v'.indexOf(c) != -1; 
 }

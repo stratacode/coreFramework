@@ -32,6 +32,8 @@ import sc.sync.SyncResult;
 
 import sc.js.URLPath;
 
+import sc.db.DBTransaction;
+
 /** 
   * The SyncServlet responds to the sync requests made by the client.  It receives a layer of changes, parses and applies
   * that layer, then gathers up any response data to the sync in the response layer.  That layer gets converted to Java
@@ -106,6 +108,12 @@ class SyncServlet extends HttpServlet {
       if (syncSession == null && closeSession) {
          if (verbosePage)
             System.out.println("Sync: Close session received with no session in place");
+
+         DBTransaction tx = DBTransaction.getCurrent();
+         if (tx != null) {
+            System.err.println("*** Transaction found on closed sync request");
+            tx.rollback();
+         }
          return true;
       }
 
@@ -122,7 +130,7 @@ class SyncServlet extends HttpServlet {
 
       boolean enableLog = SyncManager.trace || PageDispatcher.trace;
 
-         Context ctx = null;
+      Context ctx = null;
       try {
          TreeMap<String,String> queryParams = Context.initQueryParams(request);
          List<PageDispatcher.PageEntry> pageEnts = pageDispatcher.getPageEntries(url, queryParams);
@@ -131,6 +139,12 @@ class SyncServlet extends HttpServlet {
                response.sendError(HttpServletResponse.SC_NOT_FOUND, "No page found for url: " + url + " in sync request");
             }
             catch (IOException exc) {}
+
+            DBTransaction tx = DBTransaction.getCurrent();
+            if (tx != null) {
+               System.err.println("*** Transaction found on not found request");
+               tx.rollback();
+            }
             return true;
          }
 
@@ -160,7 +174,7 @@ class SyncServlet extends HttpServlet {
          // Wake up the previous listener - if any, so there's only one thread per window that's waiting at any given time.
          if (oldListener != null && oldListener.waiting) {
             if (verbosePage) 
-                ctx.log("sync request: waking up: " + oldListener.ctx + " " + getDebugInfo(request, response) + (closeSession ? " (session close)" : ""));
+               ctx.log("sync request: waking up: " + oldListener.ctx + " " + getDebugInfo(request, response) + (closeSession ? " (session close)" : ""));
             synchronized (oldListener) {
                if (oldListener.waiting) {
                   oldListener.replaced = true;
@@ -177,13 +191,20 @@ class SyncServlet extends HttpServlet {
             if (verbosePage)
                ctx.log("sync - closing session " + getDebugInfo(request, response));
 
-            // TODO: we could potentially remove the window context here but I think it's good to keep it around for cached back button support. I think the window
-            // contexts can be seen as an in-memory record of the navigation structure as well and so useful for the server to understand the
-            // browser history. Close session prevents sync listeners from hanging around once the user has navigated away and we remove
-            // the scopeContext so that we don't send sync events to this scopeContextName or tie up the command-line interpreter.
-            // The browser uses the beacon (or onunload) listener to trigger the closeSession request.
-            if (ctx != null && ctx.windowCtx != null) {
-               ctx.windowCtx.removeScopeContext();
+            try {
+               DBTransaction tx = DBTransaction.getCurrent();
+               if (tx != null)
+                  tx.commit();
+            }
+            finally {
+               // TODO: we could potentially remove the window context here but I think it's good to keep it around for cached back button support. I think the window
+               // contexts can be seen as an in-memory record of the navigation structure as well and so useful for the server to understand the
+               // browser history. Close session prevents sync listeners from hanging around once the user has navigated away and we remove
+               // the scopeContext so that we don't send sync events to this scopeContextName or tie up the command-line interpreter.
+               // The browser uses the beacon (or onunload) listener to trigger the closeSession request.
+               if (ctx != null && ctx.windowCtx != null) {
+                  ctx.windowCtx.removeScopeContext();
+               }
             }
 
             return true;
@@ -193,6 +214,10 @@ class SyncServlet extends HttpServlet {
             // Reads the POST data as a layer, applies that layer to the current context, and execs any jobs spawned
             // by the layer.
             applySyncLayer(ctx, request, receiveLanguage, pageEnt, session, url, syncGroup, false);
+
+            DBTransaction tx = DBTransaction.getCurrent();
+            if (tx != null)
+               tx.commit();
          }
 
          StringBuilder pageOutput;
@@ -206,7 +231,7 @@ class SyncServlet extends HttpServlet {
             // TODO: setting traceBuffer = null here since we never see this output but are there any cases where it might help to debug things?
             pageOutput = pageDispatcher.getPageOutput(ctx, url, pageEnts, curScopeCtx, isReset, false, sys, null);
             if (pageOutput == null)
-               return true;
+               return true; // Request was redirected, response closed
          }
 
          // For the reset=true case, we need to first render the pages from the default initial state, then apply
@@ -299,6 +324,10 @@ class SyncServlet extends HttpServlet {
                            // and that can go back and forth for a while before it's really finished initializing.
                            CurrentScopeContext.markReady(scopeContextName, true);
                         }
+
+                        DBTransaction tx = DBTransaction.getCurrent();
+                        if (tx != null)
+                           tx.commit();
 
                         try {
                            listener.waiting = true;
@@ -396,6 +425,11 @@ class SyncServlet extends HttpServlet {
                   locksAcquired = true;
                }
                ctx.execLaterJobs();
+
+               DBTransaction tx = DBTransaction.getCurrent();
+               if (tx != null)
+                  tx.commit();
+
                Context.clearContext();
                sc.type.PTypeUtil.setAppId(null);
 

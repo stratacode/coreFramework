@@ -62,6 +62,8 @@ import javax.servlet.FilterChain;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 
+import sc.db.DBTransaction;
+
 /** 
  * The PageDispatcher manages a registry of URL patterns to request handling objects.  For each incoming URL, the
  * set of matching objects generates the content for the response.
@@ -1020,6 +1022,11 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                StringBuilder traceBuffer = new StringBuilder();
                StringBuilder pageOutput = getInitialSync(insts, ctx, uri, pageEnts, traceBuffer);
 
+               DBTransaction tx = DBTransaction.getCurrent();
+               if (tx != null) {
+                  tx.commit();
+               }
+
                if (ctx != null && ctx.requestComplete) {
                   return true;
                }
@@ -1065,6 +1072,15 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          }
          return pageEnts != null && pageEnts.size() > 0 && isUrlPage;
       }
+      catch (RuntimeException exc) {
+         DBTransaction tx = DBTransaction.getCurrent();
+         if (tx != null) {
+            tx.rollback();
+         }
+         System.err.println("*** Runtime exception processing request: " + exc);
+         exc.printStackTrace();
+         throw exc;
+      }
       finally {
          try {
             if (ctx != null) {
@@ -1073,6 +1089,10 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             }
          }
          catch (RuntimeException exc) {
+            DBTransaction tx = DBTransaction.getCurrent();
+            if (tx != null) {
+               tx.rollback();
+            }
             System.err.println("*** Application error clearing context request: " + uri + ": " + exc);
             exc.printStackTrace();
          }
@@ -1080,6 +1100,11 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             if (curScopeCtx != null)
                CurrentScopeContext.popCurrentScopeContext(true);
             PTypeUtil.setAppId(null);
+            DBTransaction tx = DBTransaction.getCurrent();
+            if (tx != null) {
+               System.err.println("*** Transaction exists after request!");
+               tx.rollback();
+            }
          }
       }
    }
