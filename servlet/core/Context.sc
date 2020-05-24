@@ -36,6 +36,7 @@ class Context {
    boolean mimeTypeSet = false;
    boolean requestComplete;
    boolean windowRequest = true; // When processing a session invalidate event, we are not from a window
+   boolean needsInvalidate = false; // Set to true to invalidate the session after the request
 
    TreeMap<String,String> queryParams;
 
@@ -183,13 +184,24 @@ class Context {
    }
 
    static void clearContext() {
-      currentContextStore.set(null);
+      Context current = getCurrentContext();
+      if (current != null) {
+         if (current.needsInvalidate) {
+            HttpSession session = current.getSession();
+            if (session != null)
+               session.invalidate();
+         }
+         currentContextStore.set(null);
+      }
       ScopeContext requestCtx = RequestScopeDefinition.getRequestScopeDefinition().getScopeContext(false);
       if (requestCtx != null) {
          requestCtx.scopeDestroyed(null);
       }
    }
 
+   void markSessionInvalid() {
+      needsInvalidate = true;
+   }
 
    void execLaterJobs() {
       execLaterJobs(IScheduler.NO_MIN, IScheduler.NO_MAX);
