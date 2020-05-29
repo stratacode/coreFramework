@@ -164,6 +164,8 @@ class Context {
       Context ctx;
       currentContextStore.set(ctx = new Context(request, response, requestURL, requestURI, queryParams));
 
+      response.addHeader("Cache-Control", "no-store");
+
       String windowIdStr = request.getParameter("windowId");
       if (windowIdStr != null) {
          int windowId = Integer.parseInt(windowIdStr);
