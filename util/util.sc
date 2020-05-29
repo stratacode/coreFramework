@@ -4,6 +4,7 @@ import java.util.List;
 import sc.util.ArrayList;
 
 import sc.util.NumberConverter;
+import sc.util.IntConverter;
 import sc.util.ComponentList;
 
 import sc.util.TextUtil;
