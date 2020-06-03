@@ -3,7 +3,7 @@ var Error_c = sc_newClass("java.lang.Error", Error, null, null);
 function jv_Object() {
 }
 
-var jv_Object_c = sc_newClass("java.lang.Object", jv_Object, null, null);
+jv_Object_c = sc_newClass("java.lang.Object", jv_Object, null, null);
 
 jv_Object_c.equals = function(other) {
    return this == other;
@@ -510,3 +510,5 @@ jv_Collections_c.singletonList = function(arg) {
    return res;
 }
 
+jv_Date = Date;
+jv_Date_c = sc_newClass("java.util.Date", Date, jv_Object, null);

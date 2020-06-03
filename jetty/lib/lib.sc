@@ -27,13 +27,6 @@ jetty.lib extends servlet.lib, log4j.core {
    }
 
    public void init() {
-      // Exclude the javascript, android, and gwt runtimes.  All layers which extend this layer explicitly will also be excluded, unless they explicitly include a layer which uses an excluded runtime
-      excludeRuntimes("js", "android", "gwt");
-
-      // Jetty requires the default runtime - Server process
-      //addRuntime(null);
-      addProcess(sc.layer.ProcessDefinition.create("Server", "java", true));
-
       System.setProperty("org.eclipse.jetty.xml.XmlParser.Validating", "false");
    }
 

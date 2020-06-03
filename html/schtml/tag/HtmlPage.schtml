@@ -14,7 +14,7 @@ import sc.type.PTypeUtil;
 // Init on startup
 @MainInit(subTypesOnly=true)
 // For the JS runtime, each page by default is deployed in it's own .js file and will include the framework js/tags.js file as a dependency
-@sc.js.JSSettings(jsModulePattern="js/<%= typeName %>.js", dependentJSFiles="js/tags.js")
+@sc.js.JSSettings(jsModulePattern="js/<%= typeName %>.js", extendsJSFiles="js/tags.js")
 %>
 <!DOCTYPE html>
 <html abstract="true">

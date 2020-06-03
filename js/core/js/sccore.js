@@ -155,6 +155,11 @@ function sc_initArrDim(array, arrayClass, args, dim) {
 }
 
 function sc_isAssignableFrom(srcClass, dstClass) {
+   if (srcClass.hasOwnProperty("$protoName") && srcClass.constructor)
+      srcClass = srcClass.constructor;
+   if (dstClass.hasOwnProperty("$protoName") && dstClass.constructor)
+      dstClass = dstClass.constructor;
+      
    if (srcClass === jv_Object)
       return true;
    if (srcClass === dstClass)

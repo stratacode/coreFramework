@@ -3400,6 +3400,12 @@ function js_Window() {
    this.document = document;
    this.location = window.location;
    this.location.getPathname = getThisPathname;
+   this.location.setHref = function(href) {
+      window.location.href = href;
+   }
+   this.location.getHref = function() {
+      return window.location.href;
+   }
    this.documentTag = js_Document_c.getDocument();
    window.sc_errorCountListener = errorCountChanged;
 }

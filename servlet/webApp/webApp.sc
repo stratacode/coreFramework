@@ -10,15 +10,6 @@ servlet.webApp extends servlet.lib, util, html.schtml {
 
    codeType = sc.layer.CodeType.Framework;
 
-   public void init() {
-      // Exclude the javascript runtime.  All layers which extend this layer explicitly will also be excluded, unless they explicitly include a layer which uses JS
-      excludeRuntimes("js", "gwt", "android");
-
-      // The servlet stuff requires the default runtime, Server process
-      //addRuntime(null);
-      addProcess(sc.layer.ProcessDefinition.create("Server", "java", true));
-   }
-
    public void start() {
       sc.layer.LayeredSystem system = getLayeredSystem();
 

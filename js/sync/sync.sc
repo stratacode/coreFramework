@@ -1,6 +1,6 @@
 package sc.js;
 
-public js.sync extends js.core {
+public js.sync extends js.core, js.math.core {
    compiledOnly = true;
 
    codeType = sc.layer.CodeType.Framework;

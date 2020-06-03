@@ -873,6 +873,14 @@ sc_DynUtil_c.isComponentType = function(type) {
    return type._A_Component !== undefined;
 };
 
+sc_DynUtil_c.parseDate = function(ds) {
+   return new Date(ds);
+}
+
+sc_DynUtil_c.formatDate = function(d) {
+   return d.toISOString();
+}
+
 function sc_IObjChildren() {}
 sc_IObjChildren_c = sc_newClass("sc.dyn.IObjChildren", sc_IObjChildren, null, null);
 
@@ -883,7 +891,7 @@ function sc_IStoppable() {}
 sc_IStoppable_c = sc_newClass("sc.obj.IStoppable", sc_IStoppable, null, null);
 
 function sc_IChildInit() {}
-sc_IChildInit = sc_newClass("sc.obj.IChildInit", sc_IChildInit, null, null);
+sc_IChildInit_c = sc_newClass("sc.obj.IChildInit", sc_IChildInit, null, null);
 
 function sc_IComponent() {}
 
@@ -1340,4 +1348,10 @@ sc_DynUtil_c.addSystemExitListener = function(listener) {
    window.addEventListener("unload", function(event) {
       listener.systemExiting();
    }, false);
+}
+
+sc_DynUtil_c.isImmutableObject = function(obj) {
+   var type = typeof obj;
+   var res = type == "string" || type == "number" || type == "boolean";
+   return res;
 }

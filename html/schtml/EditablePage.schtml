@@ -1,7 +1,7 @@
 <%@
    // Placeholder type used for mixing in the management UI. Pages that extend this base type will be editable with
    // the management UI. Those that extend the default HtmlPage will not.
-@sc.js.JSSettings(jsModulePattern="js/<%= typeName %>.js", dependentJSFiles="js/tags.js")
+@sc.js.JSSettings(jsModulePattern="js/<%= typeName %>.js", extendsJSFiles="js/tags.js")
 @URL(page=true, subTypesOnly=true)
 @MainInit(subTypesOnly=true)
 %>
