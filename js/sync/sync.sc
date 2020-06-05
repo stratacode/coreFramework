@@ -2,7 +2,7 @@ package sc.js;
 
 public js.sync extends js.core, js.math.core {
    compiledOnly = true;
-
+   hidden = true;
    codeType = sc.layer.CodeType.Framework;
 
    public void init() {
