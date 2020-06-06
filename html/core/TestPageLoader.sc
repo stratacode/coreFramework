@@ -17,11 +17,22 @@ import sc.lang.html.QueryParamProperty;
 
 import sc.layer.AsyncProcessHandle;
 
-// Using runtimes='default' here so this code is run for the 'java server' runtime only in client/server mode and run on the server for the 'js only' case,
-// Use default in general when there's a need to run code in the "bootstrap runtime" - i.e. the one generating the code for the other runtime.   This way 
-// we can still launch and control a browser session that talks to the JS-only application.  
-// With default, this class will not be included in the JS runtime for client/server mode - nor can it be run there because some of the dependencies 
-// require it to be in the Java runtime (like the ability to launch a web browser).
+/**
+ * This class implements a test harness, to load a set of web pages and save the results. When clientSync is false,
+ * for each web page, it opens either a headless or default browser on each URL (or provides an api for test
+ * scripts: loadPage). When the client does sync with the server, it supports a dialog between the server and
+ * browser. Test scripts can target commands to run on either. It can capture the server and client HTML and
+ * save the results for auto-tests.
+ *
+ * The urlPaths property here is by default taken from all of the @URL's in the system. If the testURLs attribute is
+ * provides, each of those testURLs is in the urlPaths.
+
+ * Using runtimes='default' here so this code is run for the 'java server' runtime only in client/server mode and run on the server for the 'js only' case,
+ * Use default in general when there's a need to run code in the "bootstrap runtime" - i.e. the one generating the code for the other runtime.   This way
+ * we can still launch and control a browser session that talks to the JS-only application.
+ * With default, this class will not be included in the JS runtime for client/server mode - nor can it be run there because some of the dependencies
+ * require it to be in the Java runtime (like the ability to launch a web browser).
+ */
 @sc.obj.Exec(runtimes="default")
 // This keeps the class from being included in the actual Javascript since it has dependencies which don't exist there
 @sc.js.JSSettings(jsLibFiles="js/tags.js")
@@ -94,10 +105,10 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
       System.out.println("TestPageLoader initialized with clientSync: " + clientSync + " headless: " + headless + " for urls: " + urlPaths);
    }
 
-   AsyncProcessHandle openBrowser(String url, String pageResultsFile) {
+   AsyncProcessHandle openBrowser(String url, String pageResultsFile, boolean doSync) {
       AsyncProcessHandle processRes = null;
       if (headless) {
-         if (clientSync) {
+         if (doSync) {
             System.out.println("Opening headless sync url: " + url);
 
             // To debug problems that only show up in headless mode, add --remote-debugging-port=9222 and then navigate to localhost:9222 in another browser instance. You'll see
@@ -193,7 +204,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
          url = URLPath.addQueryParam(url, "scopeContextName", scopeContextName);
       }
 
-      AsyncProcessHandle processRes = openBrowser(url, pageResultsFile);
+      AsyncProcessHandle processRes = openBrowser(url, pageResultsFile, clientSync && urlPath.realTime);
 
       try {
          if (!sys.serverEnabled || scopeContextName == null) {
@@ -202,7 +213,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
             System.out.println("- Done waiting for client to connect");
          }
 
-         if (clientSync) {
+         if (clientSync && urlPath.realTime) {
             PTypeUtil.setAppId(urlPath.keyName);
 
             if (scopeContextName != null) {
@@ -265,7 +276,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
       String typeName = sc.type.CTypeUtil.capitalizePropertyName(urlPath.name);
       String testScriptName = "test" + typeName + ".scr";
       if (cmd.exists(testScriptName)) {
-         if (!clientSync) // TODO: in this case, we'd like to convert the testApp.scr file into a program to download when we run in testMode
+         if (!(clientSync || !urlPath.realTime)) // TODO: in this case, we'd like to convert the testApp.scr file into a program to download when we run in testMode
             System.out.println("Skipping " + testScriptName + " for type: " + typeName + " - scripts not yet supported for client-only application");
          else {
             System.out.println("--- Running " + testScriptName + " for type: " + typeName);
@@ -294,6 +305,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
       System.out.println("--- Loading all pages from: " + urlPaths.size() + " urls");
       boolean indexSkipped = false;
       for (URLPath urlPath:urlPaths) {
+         boolean doSync = clientSync && urlPath.realTime;
          // Simple applications have only a single URL - the root.  Others have an index page and the application pages so we only skip when there's more than one
          if (skipIndexPage && urlPath.name.equals("index") && urlPaths.size() > 1) {
             indexSkipped = true;
@@ -321,7 +333,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
          // If we are syncing to the client, use the unique id for this URL to choose the name of the
          // 'scope context' (essentially the id of the browser window so we can target the savePage and
          // saveClientConsole methods at the right window).
-         String scopeContextName = clientSync ? urlPath.keyName : null;
+         String scopeContextName = doSync ? urlPath.keyName : null;
          URLResult processRes = loadURL(urlPath, scopeContextName);
          if (processRes == null) {
             System.out.println("Skipping test for incomplete url: " + urlPath);
@@ -334,7 +346,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
             saveClientConsole(urlPath, scopeContextName);
 
             // Save the page after it's run a page test. Otherwise, it's the same thing and not worth the effort
-            if (clientSync && ranPageTest)
+            if (doSync && ranPageTest)
                savePage(urlPath.name, getClientBodyHTML(scopeContextName));
          }
          finally {
@@ -346,7 +358,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
    }
 
    public void saveClientConsole(URLPath urlPath, String scopeContextName) {
-      if (clientSync && recordClientOutput) {
+      if (clientSync && urlPath.realTime && recordClientOutput) {
          String consoleLog = getClientConsoleLog(scopeContextName);
          String consoleResultsFile = getPageResultsFile(urlPath, ".jsConsole");
          FileUtil.saveStringAsFile(consoleResultsFile, consoleLog, true);

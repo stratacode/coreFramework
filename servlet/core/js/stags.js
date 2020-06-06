@@ -1551,11 +1551,12 @@ syncMgr = sc_SyncManager_c = {
          syncMgr.writeToDestination("", "");
       }
       else
-         sc_log("autoSync - not writing to destination");
+         sc_log("autoSync - not writing to destination - " + syncMgr.pendingSends.length + " pending requests");
       syncMgr.autoSyncScheduled = false;
    },
    postCompleteSync:function() {
-      if (syncMgr.syncDestination.realTime && syncMgr.pollTime !== -1 && syncMgr.pendingSends.length == 0 && syncMgr.connected && !syncMgr.autoSyncScheduled) {
+      if (syncMgr.syncDestination.realTime && syncMgr.pollTime !== -1 && syncMgr.pendingSends.length == 0 &&
+          syncMgr.connected && !syncMgr.autoSyncScheduled && !syncMgr.syncScheduled) {
          sc_log("Post complete sync: scheduling autoSync with: " + syncMgr.pendingSends.length + " pending requests");
          syncMgr.autoSyncScheduled = true;
          setTimeout(syncMgr.autoSync, syncMgr.pollTime);
@@ -1564,7 +1565,10 @@ syncMgr = sc_SyncManager_c = {
          sc_log("Post complete sync: realTime disabled");
       }
       else {
-         sc_log("Post complete sync: not scheduling autoSync with: " + syncMgr.pendingSends.length + " pending requests");
+         if (syncMgr.autoSyncScheduled)
+            sc_log("Post complete sync - auto sync already scheduled");
+         else
+            sc_log("Post complete sync: not scheduling autoSync with: " + syncMgr.pendingSends.length + " pending requests, syncScheduled: " + syncMgr.syncScheduled + ", connected: " + syncMgr.connected);
       }
    },
    // For readability in the logs, flexibility in code-gen and efficiency in rendering we send the start tag txt all at once so

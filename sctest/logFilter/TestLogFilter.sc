@@ -69,7 +69,9 @@ public class TestLogFilter {
          replace = true;
          patternStrings = {
                 "*(![id = {digits}][id = {id=digits}])",
-                "*(!({alphaNumString}__{digits})[{alphaNumString}__{id=digits}])"
+                "*(!({alphaNumString}__{digits})[{alphaNumString}__{id=digits}])",
+                // format of id references in JSON properties
+                "*(![ref:db:{digits}][ref:db:{id=digits}])"
          };
       }
    }

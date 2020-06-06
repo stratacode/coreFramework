@@ -3716,11 +3716,12 @@ sc_ServerTag_c.getObjectId = function ()  {
    return "sc.js.st_" + this.id;
 };
 
-function sc_URLPath(u, n, k, p) {
+function sc_URLPath(u, n, k, p, rt) {
    this.url = u;
    this.name = n;
    this.keyName = k;
    this.pageType = p;
+   this.realTime = rt;
 }
 
 sc_URLPath_c = sc_newClass("sc.js.URLPath", sc_URLPath, jv_Object, [sc_IObjectId]);

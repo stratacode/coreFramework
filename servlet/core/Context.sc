@@ -636,8 +636,10 @@ class Context {
       if (cookieMap == null) {
          cookieMap = new TreeMap<String,Cookie>();
          Cookie[] cookies = request.getCookies();
-         for (Cookie cookie: cookies)
-            cookieMap.put(cookie.getName(), cookie);
+         if (cookies != null) {
+            for (Cookie cookie: cookies)
+               cookieMap.put(cookie.getName(), cookie);
+         }
       }
       return cookieMap.get(name);
    }

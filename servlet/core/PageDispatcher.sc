@@ -121,6 +121,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       String lockScope; // The scope name to use for locking.  if null, use the type's scope as the scope for the lock.
       String mimeType;
       boolean doSync; // Set to true during compilation based on whether there's a client/server sync'ing - matching js to java classes
+      boolean realTime; /** Set to true or false to enable/disable realTime behavior for this page */
       boolean hasServerTags; // There's no client tag object but there is one or more serverTags in the server version.  Server tags also need sync
       boolean resource; // Set to true for pages like .css pages that are resources. Similar to !dynContentPage but sccss is both a resource and a dynContentPage
       Set<String> syncTypes;
@@ -247,7 +248,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
     * extracting values from the URL.
     * The doSync flag indicates whether sync is enabled or disabled for this page.
     */
-   public static void addPage(String keyName, String pattern, Object pageType, boolean dynContentPage, boolean doSync, boolean isResource, int priority, String lockScope, List<QueryParamProperty> queryParamProps, Set<String> syncTypes) {
+   public static void addPage(String keyName, String pattern, Object pageType, boolean dynContentPage, boolean doSync, boolean isResource, int priority, String lockScope, List<QueryParamProperty> queryParamProps, Set<String> syncTypes, boolean realTime) {
       PageEntry ent = new PageEntry();
       ent.keyName = keyName;
       ent.pattern = pattern;
@@ -261,6 +262,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       ent.dynContentPage = dynContentPage;
       ent.resource = isResource;
       ent.doSync = doSync;
+      ent.realTime = realTime;
       // TODO: should we add an annotation for this - some page objects may not have server tags so we could avoid some work for them.
       // Also, if we synchronize more than one page object for the same page, we'll need to improve the logic for selecting the current
       // context because the sccss files conflict with the main page when driving the test scripts (e.g. prepDemoTodo)
@@ -291,7 +293,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          String dir = pattern.equals(indexPattern) ? "" : pattern.substring(0,pattern.length() - indexPattern.length());
          if (verbose)
             System.out.println("PageDispatcher: adding index page for: " + (dir.length() == 0 ? "doc root" : dir));
-         addPage(dir + "_index_", dir + "/", pageType, dynContentPage, doSync, isResource, priority, lockScope, queryParamProps, syncTypes);
+         addPage(dir + "_index_", dir + "/", pageType, dynContentPage, doSync, isResource, priority, lockScope, queryParamProps, syncTypes, realTime);
       }
    }
 
@@ -690,6 +692,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       boolean needsDyn = false;
       boolean doSync = false;
       boolean stateless = false;
+      boolean realTimeEnabled = true;
 
       boolean origSyncTypes = false;
 
@@ -724,6 +727,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             needsDyn = true;
 
             IPage page = (IPage) inst;
+
+            if (!pageEnt.realTime)
+               realTimeEnabled = false;
 
             if (pageEnt.doSync || pageEnt.hasServerTags || testMode) {
                doSync = true;
@@ -866,7 +872,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          sb.append("   var sc_windowId = " + ctx.getWindowId() + ";\n");
          if (doSync) {
             SyncManager syncMgr = SyncManager.getSyncManager("jsHttp");
-            if (!syncMgr.syncDestination.realTime)
+            if (!syncMgr.syncDestination.realTime || !realTimeEnabled)
                sb.append("   if (typeof sc_ClientSyncManager_c != 'undefined') sc_ClientSyncManager_c.defaultRealTime = false;\n");
             if (stateless)
                sb.append("   if (typeof sc_ClientSyncManager_c != 'undefined') sc_ClientSyncManager_c.statelessServer = true;\n");
@@ -1295,6 +1301,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          String pattern = (String) DynUtil.getInheritedAnnotationValue(newType, "sc.html.URL", "pattern");
          String lockScope = (String) DynUtil.getInheritedAnnotationValue(newType, "sc.html.URL", "lockScope");
          String resultSuffix = (String) DynUtil.getInheritedAnnotationValue(newType, "sc.obj.ResultSuffix", "value");
+         Boolean realTimeDef = (Boolean) DynUtil.getInheritedAnnotationValue(newType, "sc.html.URL", "realTime");
+         boolean realTime = realTimeDef == null || realTimeDef;
          String templatePathName = ModelUtil.getTemplatePathName(newType);
          Set<String> syncTypes = needsSync ? ModelUtil.getJSSyncTypes(sys, newType) : null;
          if (pattern == null) {
@@ -1302,7 +1310,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          }
          System.out.println("*** Adding page type: " + newType);
          addPage(templatePathName, pattern, newType, isURLPage, needsSync, isResource,
-                 DynUtil.getLayerPosition(newType), lockScope, QueryParamProperty.getQueryParamProperties(newType), syncTypes);
+                 DynUtil.getLayerPosition(newType), lockScope, QueryParamProperty.getQueryParamProperties(newType), syncTypes, realTime);
       }
       initPageEntries();
    }
