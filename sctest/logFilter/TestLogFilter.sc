@@ -58,9 +58,10 @@ public class TestLogFilter {
          optionName = "webIds";
          replace = true;
          patternStrings = {
-                "*(![id={quoteChar}][id={quoteChar}{alphaNumString}[_{id=digits}]])",
-                "*(![for={quoteChar}][for={quoteChar}{alphaNumString}[_{id=digits}]])",
-                "*(!({alphaNumString}__{digits})[{alphaNumString}__{id=digits}])"
+                "id={quoteChar}{alphaNumString}", 
+                "_{id=digits}",
+                "for={quoteChar}{alphaNumString}",
+                "{alphaNumString}__{id=digits}"
          };
       }
 
@@ -68,10 +69,10 @@ public class TestLogFilter {
          optionName = "dbIds";
          replace = true;
          patternStrings = {
-                "*(![id = {digits}][id = {id=digits}])",
-                "*(!({alphaNumString}__{digits})[{alphaNumString}__{id=digits}])",
+                "id = {id=digits}",
+                "{alphaNumString}__{id=digits}",
                 // format of id references in JSON properties
-                "*(![ref:db:{digits}][ref:db:{id=digits}])"
+                "ref:db:{id=digits}"
          };
       }
    }
