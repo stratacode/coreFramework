@@ -25,6 +25,7 @@ import sc.type.PTypeUtil;
          var sc_windowId = <%= PTypeUtil.getWindowId() %>;
          var sc_appId = "<%= PTypeUtil.getAppId() %>";
          var sc_testMode = <%= PTypeUtil.testMode %>;
+         var sc_testVerifyMode = <%= PTypeUtil.testVerifyMode %>;
       </script>
    </head>
    <body>

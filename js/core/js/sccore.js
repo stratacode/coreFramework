@@ -4,8 +4,9 @@ function sc_logError(str) {
    window.sc_errorCount++;
    if (window.sc_errorCountListener != undefined)
       window.sc_errorCountListener();
-   console.error(str);
-   sc_rlog(str);
+   var pstr = sc_logPrefix() + str;
+   console.error(pstr);
+   sc_rlog(pstr);
 }
 
 function sc_rlog(str) {
@@ -19,8 +20,9 @@ function sc_rlog(str) {
 }
 
 function sc_log(str) {
-   sc_rlog(str);
-   console.log(str);
+   var pstr = sc_logPrefix() + str;
+   sc_rlog(pstr);
+   console.log(pstr);
 }
 
 function sc_getConsoleLog() {
@@ -407,4 +409,55 @@ function sc_addTypeAlias(fromName, toName) {
 
 function sc_noMeth(name) {
    throw new Error("Invalid method call to: " + name);
+}
+
+sc$startTime = new Date().getTime();
+
+function sc_logPrefix() {
+   if (typeof sc_testVerifyMode !== undefined && sc_testVerifyMode)
+      return "";
+   return sc_getTimeDelta(sc$startTime, new Date().getTime());
+}
+
+function sc_getTimeDelta(startTime, now) {
+   if (startTime == 0)
+      return "<server not yet started!>";
+   var sb = new Array()
+   var elapsed = now - startTime;
+   sb.push("+");
+   var remainder = false;
+   if (elapsed > 60*60*1000) {
+      var hrs = elapsed / (60*60*1000);
+      elapsed -= hrs * 60*60*1000;
+      if (hrs < 10)
+         sb.push("0");
+      sb.push(hrs);
+      sb.push(":");
+      remainder = true;
+   }
+   if (elapsed > 60*1000 || remainder) {
+      var mins = elapsed / (60*1000);
+      elapsed -= mins * 60*1000;
+      if (mins < 10)
+         sb.push("0");
+      sb.push(mins);
+      sb.push(":");
+   }
+   if (elapsed > 1000 || remainder) {
+      var secs = elapsed / 1000;
+      elapsed -= secs * 1000;
+      if (secs < 10)
+         sb.push("0");
+      sb.push(secs);
+      sb.push(".");
+   }
+   if (elapsed > 1000) // TODO: remove this - diagnostics only
+      console.error("bad time in sc_getTimeDelta");
+   if (elapsed < 10)
+      sb.push("00");
+   else if (elapsed < 100)
+      sb.push("0");
+   sb.push(elapsed);
+   sb.push(":");
+   return sb.join("");
 }

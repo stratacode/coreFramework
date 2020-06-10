@@ -180,13 +180,13 @@ js_Element_c.getChildForName = function(name) {
 
 js_Element_c.escAtt = function(input, s) {
    if (input == null)
-      return null;
+      return "";
    return !s ? input.toString().replace(/"/g, "&quot;") : input.toString().replace(/'/g, "&#039;");
 }
 
 js_Element_c.escBody = function(input) {
    if (input == null)
-      return null;
+      return "";
     return input.toString()
          .replace(/&/g, "&amp;")
          .replace(/</g, "&lt;")
@@ -1938,6 +1938,8 @@ function js_Input() {
    this.tagName = "input";
    this.disabled = null;
    this.size = 20;
+   this.liveEdit = true;
+   this.liveEditDelay = 0;
 }
 js_Input_c = sc_newClass("sc.lang.html.Input", js_Input, js_HTMLElement, null);
 
@@ -1947,18 +1949,27 @@ js_Input_c.removeOnEmpty = {value:true};
 
 //js_Input_c.booleanAtts = {checked:true};
 
+// Warning - this is not set for this function - it's called directly by the event handler
 js_Input_c.doChangeEvent = function(event) {
    var elem = event.currentTarget ? event.currentTarget : event.srcElement;
    var scObj = elem.scObj;
    if (scObj !== undefined) {
+      var cs = false;
+      if ((!scObj.liveEdit || scObj.liveEditDelay != 0) && typeof sc_ClientSyncManager_c !== "undefined") {
+          sc_ClientSyncManager_c.syncDelaySet = true;
+          sc_ClientSyncManager_c.currentSyncDelay = scObj.liveEdit ? scObj.liveEditDelay : -1;
+          cs = true;
+      }
       if (scObj.setValue) {
          scObj.setValue(this.value);
-         if (this.value == "" && scObj.removeOnEmpty.value != null)
+         if (scObj.value == "" && scObj.removeOnEmpty.value != null)
             this.removeAttribute("value");
       }
       if (scObj.setChecked)
          scObj.setChecked(this.checked);
 
+      if (cs)
+         sc_ClientSyncManager_c.syncDelaySet = false;
       sc_refresh();
    }
    else 
@@ -1993,6 +2004,8 @@ js_Input_c.updateFromDOMElement = function(newElem) {
 }
 
 js_Input_c.setValue = function(newVal) {
+   if (newVal === null)
+      newVal = "";
    if (newVal != this.value) {
       this.value = newVal; 
       if (this.element !== null && this.element.value != newVal)

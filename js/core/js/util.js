@@ -55,3 +55,7 @@ sc_TextUtil_c.escapeQuotes = function(input) {
          .replace(/"/g, "&quot;")
          .replace(/'/g, "&#039;");
 }
+
+sc_TextUtil_c.hasMapEntry = function(m,k) {
+   return m !== null && m.get(k) !== null;
+}

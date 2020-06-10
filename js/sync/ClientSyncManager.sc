@@ -13,6 +13,11 @@ class ClientSyncManager extends SyncManager {
 
    int syncMinDelay = 100;       // Specifies a minimum time between syncs, so we do not send too many syncs back to back (in milliseconds)
 
+   boolean sendChangesQueued = false;
+
+   static int currentSyncDelay = -1;    // Set from the syncDelay attribute on text tags. If set to 0
+   static boolean syncDelaySet = false;
+
    long lastSentTime = -1;
 
    recordInitial = false;        // By default, let the server restore the initial state and only record the changes made from the initial state.  This is used to restore the server session when it gets lost.0
@@ -57,6 +62,16 @@ class ClientSyncManager extends SyncManager {
       }, waitToSyncTime, false);
    }
 
+   boolean getNeedsAutoSync() {
+      if (syncDestination.numSendsInProgress == 0 && syncDestination.numWaitsInProgress == 0) {
+         long now = System.currentTimeMillis();
+         if (!sc.dyn.DynUtil.hasPendingJobs() && (lastSentTime == -1 || lastSentTime - now > syncMinDelay)) {
+            return true;
+         }
+      }
+      return false;
+   }
+
    class ClientSyncContext extends SyncManager.SyncContext implements Runnable {
        ClientSyncContext(String name) {
           super(name);
@@ -65,17 +80,31 @@ class ClientSyncManager extends SyncManager {
           needsInitialSync = false;
        }
 
-       void setNeedsSync(boolean newNeedsSync) {
-          super.setNeedsSync(newNeedsSync);
-          if (newNeedsSync && autoSync) {
-             long delay;
+       void markChanged() {
+          // The first time we see a change, schedule an autoSync call to be sure we send it
+          super.markChanged();
+          if (!sendChangesQueued && autoSync) {
+             long absDelay;
+             long relDelay;
+             // The sync delay to use has been overridden up the stack in an event handler for a specific component
+             // use that delay for this event firing only. A value of -1 here means to disable the auto-sync for this
+             // particular event, for example to implement a form field that waits till another button is pressed to sync.
+             if (syncDelaySet) {
+                if (currentSyncDelay == -1)
+                   return;
+                absDelay = currentSyncDelay;
+             }
+             else {
+                absDelay = syncMinDelay;
+             }
              long nowTime = System.currentTimeMillis();
              long timeSinceLastSend = (nowTime - lastSentTime);
-             if (lastSentTime == -1 || timeSinceLastSend > syncMinDelay)
-                delay = 0;
+             if (lastSentTime == -1 || timeSinceLastSend > absDelay)
+                relDelay = 0;
              else
-                delay = syncMinDelay - timeSinceLastSend;
-             PTypeUtil.addScheduledJob(this, delay, false);
+                relDelay = absDelay - timeSinceLastSend;
+             sendChangesQueued = true;
+             PTypeUtil.addScheduledJob(this, relDelay, false);
           }
        }
 
@@ -85,6 +114,7 @@ class ClientSyncManager extends SyncManager {
    }
 
    void autoSync() {
+      sendChangesQueued = false;
       // If there is no session management for this connection, need to 'reset' on every request to create
       // the session and apply the change. To get real time, effectively every sync request will hold the state
       // and listeners it needs during the 'wait' so it's not entirely stateless. But if the client is not waiting

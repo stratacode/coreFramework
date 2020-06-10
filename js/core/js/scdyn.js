@@ -906,6 +906,7 @@ sc_PTypeUtil_c.isPrimitive = function(type) {
 }
 
 sc_PTypeUtil_c.testMode = window.sc_testMode;
+sc_PTypeUtil_c.testVerifyMode = window.sc_testVerifyMode;
 
 sc_PTypeUtil_c.isANumber = function(type) {
    var tot = typeof type;
@@ -1354,4 +1355,22 @@ sc_DynUtil_c.isImmutableObject = function(obj) {
    var type = typeof obj;
    var res = type == "string" || type == "number" || type == "boolean";
    return res;
+}
+
+sc_DynUtil_c.validateProperties = function(obj, propNames) {
+   var objType = sc_DynUtil_c.getType(obj);
+   // Need to code-gen an _VN array of the validators so we can iterate and call them here
+   throw new Exception("validateProperties not implemented yet");
+   /*
+   var pns = sc_DynUtil.getPropertyNames(objType);
+   var resMap = null;
+   if (pns) {
+      for (var i = 0; i < pns.length; i++) {
+          String pn = pns[i];
+          if (obj.hasOwnProperty("validate" + sc_capitalizeProperty(pn))) {
+             var
+          }
+      }
+   }
+   */
 }

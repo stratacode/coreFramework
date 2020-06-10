@@ -1229,7 +1229,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       // TODO: right now we don't have a SEND_ONLY option for properties - instead, we just don't add them on the client side. Nonetheless, these are
       // send only properties.
       SyncManager.addSyncType(ServerTagManager.class, new SyncProperties(null, null, new Object[] {"serverTags", "newServerTags", "removedServerTags"}, null, SyncPropOptions.SYNC_INIT, WindowScopeDefinition.scopeId));
-      SyncManager.addSyncType(ServerTag.class, new SyncProperties(null, null, new Object[] {"id", "props"}, null, SyncPropOptions.SYNC_INIT, WindowScopeDefinition.scopeId));
+      SyncManager.addSyncType(ServerTag.class, new SyncProperties(null, null, new Object[] {
+         new SyncPropOptions("id", SyncPropOptions.SYNC_INIT), new SyncPropOptions("props", SyncPropOptions.SYNC_INIT), new SyncPropOptions("liveEdit", 0, true), new SyncPropOptions("liveEditDelay", 0, 0)}, null, 0, WindowScopeDefinition.scopeId));
       SyncManager.addSyncType(Location.class, new SyncProperties(null, null, new Object[] {"href", "pathname", "search"}, null, 0, WindowScopeDefinition.scopeId));
       //SyncManager.addSyncType(ServerTag.ServerTagProp.class, new SyncProperties(null, null, new Object[] {"propName"}, null, SyncPropOptions.SYNC_INIT, WindowScopeDefinition.scopeId));
    }

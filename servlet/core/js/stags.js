@@ -419,6 +419,9 @@ js_HTMLElement_c.processEvent = function(elem, event, listener) {
          scObj[listener.propName] = event;
       }
 
+      if (listener.scEventName === "changeEvent")
+         scObj.preChangeHandler();
+
       if (js_Element_c.trace && listener.scEventName != "mouseMoveEvent")
          sc_log("tag event: " + listener.propName + ": " + listener.scEventName + " = " + eventValue);
       sc_Bind_c.sendChangedEvent(scObj, listener.propName, eventValue);
@@ -427,7 +430,10 @@ js_HTMLElement_c.processEvent = function(elem, event, listener) {
             sc_Bind_c.sendChangedEvent(scObj, ops[opi], otherEventValues[opi]);
          }
       }
-      
+
+      if (listener.scEventName === "changeEvent")
+         scObj.postChangeHandler();
+
       if (listener.scEventName === "mouseDownMoveUp") {
          if (event.type === "mousedown") {
             listener.mouseDownElem = elem;
@@ -448,6 +454,12 @@ js_HTMLElement_c.processEvent = function(elem, event, listener) {
    else
       sc_log("Unable to find scObject to update in eventHandler");
 };
+
+js_HTMLElement_c.preChangeHandler = function() {
+}
+
+js_HTMLElement_c.postChangeHandler = function() {
+}
 
 js_HTMLElement_c.getOffsetWidth = function() {
    if (this.element == null)
@@ -670,6 +682,8 @@ js_HTMLElement_c.destroy = function() {
 
 function js_Input() {
    js_HTMLElement.call(this);
+   this.liveEdit = true;
+   this.liveEditDelay = 0;
 }
 js_Input_c = sc_newClass("Input", js_Input, js_HTMLElement);
 js_Input_c.eventAttNames = js_HTMLElement_c.eventAttNames.concat(["value", "checked", "changeEvent", "clickCount"]);
@@ -699,10 +713,23 @@ js_Input_c.updateFromDOMElement = function(newElem) {
    this.checked = newElem.checked;
 }
 
+js_Input_c.preChangeHandler = function() {
+   if ((!this.liveEdit || this.liveEditDelay != 0)) {
+       sc_ClientSyncManager_c.syncDelaySet = true;
+       sc_ClientSyncManager_c.currentSyncDelay = this.liveEdit ? this.liveEditDelay : -1;
+       cs = true;
+   }
+}
+
+js_Input_c.postChangeHandler = function() {
+   sc_ClientSyncManager_c.syncDelaySet = false;
+}
+
 js_Input_c.doChangeEvent = function(event) {
    var elem = event.currentTarget ? event.currentTarget : event.srcElement;
    var scObj = elem.scObj;
    if (scObj !== undefined) {
+      scObj.preChangeHandler();
       if (scObj.setValue) {
          scObj.setValue(this.value);
          if (this.value === "" && scObj.removeOnEmpty.value != null)
@@ -710,12 +737,16 @@ js_Input_c.doChangeEvent = function(event) {
       }
       if (scObj.setChecked)
          scObj.setChecked(this.checked);
+
+      scObj.postChangeHandler();
    }
    else
       sc_log("Unable to find scObject to update in doChangeEvent");
 }
 
 js_Input_c.setValue = function(newVal) {
+   if (newVal == null)
+      newVal = "";
    if (newVal != this.value) {
       this.value = newVal;
       if (this.element !== null && this.element.value != newVal)
@@ -1056,6 +1087,7 @@ syncMgr = sc_SyncManager_c = {
    serverTagList:[],
    tagObjects:{},
    pendingChanges:[],
+   changesByObjId:{},
    syncScheduled:false,
    eventIndex:0,
    syncDestination:{realTime:true},
@@ -1120,6 +1152,14 @@ syncMgr = sc_SyncManager_c = {
                         st.id = stProps.id;
                      if (stProps.props)
                         st.props = stProps.props;
+                     if (stProps.liveEdit === undefined)
+                        st.liveEdit = true; // Default is true
+                     else
+                        st.liveEdit = stProps.liveEdit;
+                     if (stProps.liveEditDelay === undefined)
+                        st.liveEditDelay = 0;
+                     else
+                        st.liveEditDelay = stProps.liveEditDelay;
                   }
                   else
                      sc_logError("No ServerTag for modify");
@@ -1364,6 +1404,10 @@ syncMgr = sc_SyncManager_c = {
             if (tagClass != null) {
                tagObj = new tagClass();
                tagObj.id = id;
+               if (!serverTag.liveEdit)
+                  tagObj.liveEdit = false;
+               if (serverTag.liveEditDelay != 0)
+                  tagObj.liveEditDelay = serverTag.liveEditDelay;
                var props = serverTag == null || serverTag.props == null ? tagObj.eventAttNames : serverTag.props.concat(tagObj.eventAttNames);
 
                tagObj.listenerProps = props;
@@ -1409,23 +1453,65 @@ syncMgr = sc_SyncManager_c = {
       return tagObj;
    },
    addChange: function(obj, propName, val) {
-      syncMgr.pendingChanges.push({o:obj, p:propName, v:val});
-      syncMgr.scheduleSync();
+      var id = obj.getId();
+      var changeMap = null;
+      if (id) {
+         changeMap = syncMgr.changesByObjId[id];
+         if (!changeMap) {
+            changeMap = {};
+            syncMgr.changesByObjId[id] = changeMap;
+         }
+      }
+      else
+         sc_logError("change missing id");
+      var change = changeMap[propName];
+      if (!change) {
+         change = {o:obj, p:propName, v:val};
+         syncMgr.pendingChanges.push(change);
+         if (id) {
+            changeMap[propName] = change;
+         }
+      }
+      else
+         change.v = val;
+
+      var absDelay;
+      var relDelay;
+      // The sync delay to use has been overridden up the stack in an event handler for a specific component
+      // use that delay for this event firing only. A value of -1 here means to disable the auto-sync for this
+      // particular event, for example to implement a form field that waits till another button is pressed to sync.
+      if (sc_ClientSyncManager_c.syncDelaySet) {
+         if (sc_ClientSyncManager_c.currentSyncDelay == -1)
+            return;
+         absDelay = sc_ClientSyncManager_c.currentSyncDelay;
+      }
+      else {
+         absDelay = sc_ClientSyncManager_c.syncMinDelay;
+      }
+      var nowTime = new Date().getTime();
+      var timeSinceLastSend = (nowTime - sc_ClientSyncManager_c.lastSentTime);
+      if (sc_ClientSyncManager_c.lastSentTime == -1 || timeSinceLastSend > absDelay)
+         relDelay = 0;
+      else
+         relDelay = absDelay - timeSinceLastSend;
+      syncMgr.scheduleSync(relDelay);
    },
    addMethReturn: function(res, callId) {
       var retType = res ? res.constructor.name : "null";
       syncMgr.pendingChanges.push({t:"methReturn", res:res, callId:callId, retType:retType});
-      syncMgr.scheduleSync();
+      syncMgr.scheduleSync(sc_ClientSyncManager_c.syncMinDelay);
    },
-   scheduleSync: function() {
+   scheduleSync: function(delay) {
       if (!syncMgr.syncScheduled) {
          syncMgr.syncScheduled = true;
-         sc_addRunLaterMethod(syncMgr, syncMgr.sendSync, 5);
+         sc_addRunLaterMethod(syncMgr, syncMgr.sendSync, delay);
       }
    },
    sendSync: function() {
       var changes = syncMgr.pendingChanges;
       var jsArr = [];
+
+      sc_ClientSyncManager_c.lastSentTime = new Date().getTime();
 
       for (var i = 0; i < changes.length; i++) {
          var change = changes[i];
@@ -1515,6 +1601,7 @@ syncMgr = sc_SyncManager_c = {
       syncMgr.writeToDestination(jStr, "");
 
       syncMgr.pendingChanges = [];
+      syncMgr.changesByObjId = {};
       // Allow another sync since this one has gone out
       syncMgr.syncScheduled = false; // TODO: add configuration option to allow more than one send at a time (and set this in the SyncListener response/error instead)
    },
@@ -1794,4 +1881,4 @@ syncMgr = sc_SyncManager_c = {
    }
 };
 
-sc_ClientSyncManager_c = {defaultRealTime: true};
+sc_ClientSyncManager_c = {defaultRealTime: true, syncDelaySet:false, currentSyncDelay:-1, syncMinDelay:100, lastSentTime:-1};
