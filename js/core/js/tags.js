@@ -1938,7 +1938,7 @@ function js_Input() {
    this.tagName = "input";
    this.disabled = null;
    this.size = 20;
-   this.liveEdit = true;
+   this.liveEdit = "on";
    this.liveEditDelay = 0;
 }
 js_Input_c = sc_newClass("sc.lang.html.Input", js_Input, js_HTMLElement, null);
@@ -1955,9 +1955,13 @@ js_Input_c.doChangeEvent = function(event) {
    var scObj = elem.scObj;
    if (scObj !== undefined) {
       var cs = false;
-      if ((!scObj.liveEdit || scObj.liveEditDelay != 0) && typeof sc_ClientSyncManager_c !== "undefined") {
+      // If liveEdit is off - just trigger the change without triggering a sync.
+      // If it is set to 'change' - only the change event triggers the sync.
+      if ((scObj.liveEdit == "off" ||
+           scObj.liveEditDelay != 0 ||
+           (scObj.liveEdit == "change" && event.type == "keyup")) && typeof sc_ClientSyncManager_c !== "undefined") {
           sc_ClientSyncManager_c.syncDelaySet = true;
-          sc_ClientSyncManager_c.currentSyncDelay = scObj.liveEdit ? scObj.liveEditDelay : -1;
+          sc_ClientSyncManager_c.currentSyncDelay = scObj.liveEditDelay != 0 ? scObj.liveEditDelay : -1;
           cs = true;
       }
       if (scObj.setValue) {

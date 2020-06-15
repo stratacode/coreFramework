@@ -723,10 +723,11 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          }
 
          Object inst = insts.get(i);
-         if (inst instanceof IPage && pageEnt.dynContentPage) {
+         if (pageEnt.dynContentPage && inst instanceof Element) {
             needsDyn = true;
 
-            IPage page = (IPage) inst;
+            Element elem = (Element) inst;
+            IPage page = elem instanceof IPage ? (IPage) inst : null;
 
             if (!pageEnt.realTime)
                realTimeEnabled = false;
@@ -747,7 +748,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                ctx.mimeType = pageEnt.mimeType;
 
             // Part of the API to help track individual page views - increment this value which may trigger bindings in the page
-            if (isPageView)
+            if (isPageView && page != null) {
                page.pageVisitCount++;
 
             // Using isPageView for the accessBindings and validateCache flag in the OutputCtx for outputing the body.
@@ -760,22 +761,23 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             // This will force us to call outputBody on all tag objects and incrementally updated the innerHTML and startTagTxt
             // properties of children that have changed.  It will also make necessary "accessSyncInst" calls in resolving
             // child objects of the page.
-            if (isPageView && page.pageCached) {
-               //PerfMon.enabled = true;
-               //PerfMon.clear();
-               PerfMon.start("accessBindings");
-               try {
-                  Bind.accessBindings(page, true);
-               }
-               finally {
-                  PerfMon.end("accessBindings");
-                  //PerfMon.dump();
+               if (page.pageCached) {
+                  //PerfMon.enabled = true;
                   //PerfMon.clear();
-                  //PerfMon.enabled = false;
+                  PerfMon.start("accessBindings");
+                  try {
+                     Bind.accessBindings(page, true);
+                  }
+                  finally {
+                     PerfMon.end("accessBindings");
+                     //PerfMon.dump();
+                     //PerfMon.clear();
+                     //PerfMon.enabled = false;
+                  }
                }
             }
 
-            sb = page.output(outCtx);
+            sb = elem.output(outCtx);
 
             // A redirect or something happened in handling the page
             if (ctx.requestComplete)
@@ -1230,7 +1232,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       // send only properties.
       SyncManager.addSyncType(ServerTagManager.class, new SyncProperties(null, null, new Object[] {"serverTags", "newServerTags", "removedServerTags"}, null, SyncPropOptions.SYNC_INIT, WindowScopeDefinition.scopeId));
       SyncManager.addSyncType(ServerTag.class, new SyncProperties(null, null, new Object[] {
-         new SyncPropOptions("id", SyncPropOptions.SYNC_INIT), new SyncPropOptions("props", SyncPropOptions.SYNC_INIT), new SyncPropOptions("liveEdit", 0, true), new SyncPropOptions("liveEditDelay", 0, 0)}, null, 0, WindowScopeDefinition.scopeId));
+         new SyncPropOptions("id", SyncPropOptions.SYNC_INIT), new SyncPropOptions("props", SyncPropOptions.SYNC_INIT), new SyncPropOptions("liveEdit", 0, "on"), new SyncPropOptions("liveEditDelay", 0, 0)}, null, 0, WindowScopeDefinition.scopeId));
       SyncManager.addSyncType(Location.class, new SyncProperties(null, null, new Object[] {"href", "pathname", "search"}, null, 0, WindowScopeDefinition.scopeId));
       //SyncManager.addSyncType(ServerTag.ServerTagProp.class, new SyncProperties(null, null, new Object[] {"propName"}, null, SyncPropOptions.SYNC_INIT, WindowScopeDefinition.scopeId));
    }

@@ -420,7 +420,7 @@ js_HTMLElement_c.processEvent = function(elem, event, listener) {
       }
 
       if (listener.scEventName === "changeEvent")
-         scObj.preChangeHandler();
+         scObj.preChangeHandler(event);
 
       if (js_Element_c.trace && listener.scEventName != "mouseMoveEvent")
          sc_log("tag event: " + listener.propName + ": " + listener.scEventName + " = " + eventValue);
@@ -432,7 +432,7 @@ js_HTMLElement_c.processEvent = function(elem, event, listener) {
       }
 
       if (listener.scEventName === "changeEvent")
-         scObj.postChangeHandler();
+         scObj.postChangeHandler(event);
 
       if (listener.scEventName === "mouseDownMoveUp") {
          if (event.type === "mousedown") {
@@ -455,10 +455,10 @@ js_HTMLElement_c.processEvent = function(elem, event, listener) {
       sc_log("Unable to find scObject to update in eventHandler");
 };
 
-js_HTMLElement_c.preChangeHandler = function() {
+js_HTMLElement_c.preChangeHandler = function(event) {
 }
 
-js_HTMLElement_c.postChangeHandler = function() {
+js_HTMLElement_c.postChangeHandler = function(event) {
 }
 
 js_HTMLElement_c.getOffsetWidth = function() {
@@ -682,7 +682,7 @@ js_HTMLElement_c.destroy = function() {
 
 function js_Input() {
    js_HTMLElement.call(this);
-   this.liveEdit = true;
+   this.liveEdit = "on";
    this.liveEditDelay = 0;
 }
 js_Input_c = sc_newClass("Input", js_Input, js_HTMLElement);
@@ -713,15 +713,15 @@ js_Input_c.updateFromDOMElement = function(newElem) {
    this.checked = newElem.checked;
 }
 
-js_Input_c.preChangeHandler = function() {
-   if ((!this.liveEdit || this.liveEditDelay != 0)) {
+js_Input_c.preChangeHandler = function(event) {
+   if ((this.liveEdit == "off" || this.liveEditDelay != 0 || (this.liveEdit == "change" && event.type == "keyup"))) {
        sc_ClientSyncManager_c.syncDelaySet = true;
-       sc_ClientSyncManager_c.currentSyncDelay = this.liveEdit ? this.liveEditDelay : -1;
+       sc_ClientSyncManager_c.currentSyncDelay = this.liveEditDelay != 0 ? this.liveEditDelay : -1;
        cs = true;
    }
 }
 
-js_Input_c.postChangeHandler = function() {
+js_Input_c.postChangeHandler = function(event) {
    sc_ClientSyncManager_c.syncDelaySet = false;
 }
 
@@ -729,7 +729,7 @@ js_Input_c.doChangeEvent = function(event) {
    var elem = event.currentTarget ? event.currentTarget : event.srcElement;
    var scObj = elem.scObj;
    if (scObj !== undefined) {
-      scObj.preChangeHandler();
+      scObj.preChangeHandler(event);
       if (scObj.setValue) {
          scObj.setValue(this.value);
          if (this.value === "" && scObj.removeOnEmpty.value != null)
@@ -738,7 +738,7 @@ js_Input_c.doChangeEvent = function(event) {
       if (scObj.setChecked)
          scObj.setChecked(this.checked);
 
-      scObj.postChangeHandler();
+      scObj.postChangeHandler(event);
    }
    else
       sc_log("Unable to find scObject to update in doChangeEvent");
@@ -1153,7 +1153,7 @@ syncMgr = sc_SyncManager_c = {
                      if (stProps.props)
                         st.props = stProps.props;
                      if (stProps.liveEdit === undefined)
-                        st.liveEdit = true; // Default is true
+                        st.liveEdit = "on";
                      else
                         st.liveEdit = stProps.liveEdit;
                      if (stProps.liveEditDelay === undefined)
@@ -1404,8 +1404,8 @@ syncMgr = sc_SyncManager_c = {
             if (tagClass != null) {
                tagObj = new tagClass();
                tagObj.id = id;
-               if (!serverTag.liveEdit)
-                  tagObj.liveEdit = false;
+               if (serverTag.liveEdit == "off" || serverTag.liveEdit == "change")
+                  tagObj.liveEdit = serverTag.liveEdit;
                if (serverTag.liveEditDelay != 0)
                   tagObj.liveEditDelay = serverTag.liveEditDelay;
                var props = serverTag == null || serverTag.props == null ? tagObj.eventAttNames : serverTag.props.concat(tagObj.eventAttNames);
