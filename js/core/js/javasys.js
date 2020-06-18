@@ -311,6 +311,12 @@ jv_Enum_c._valueOf = function(name) {
 
 function jv_StringBuilder() {
   this.value = new Array();
+  if (arguments.length == 1) {
+     var arg = arguments[0];
+     if (typeof arg != "number")
+        this.value.push(arg);
+     // else - capacity
+  }
 }
 
 
