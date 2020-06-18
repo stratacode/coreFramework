@@ -801,7 +801,6 @@ js_Input_c.postChangeHandler = function(event) {
 js_Input_c.doChangeEvent = function(event) {
    var elem = event.currentTarget ? event.currentTarget : event.srcElement;
    var scObj = elem.scObj;
-   sc_log("In doChangeEvent with: " + this.value);
    if (scObj !== undefined) {
       scObj.preChangeHandler(event);
       if (scObj.setValue) {
@@ -816,7 +815,6 @@ js_Input_c.doChangeEvent = function(event) {
    }
    else
       sc_log("Unable to find scObject to update in doChangeEvent");
-   sc_log("Done with doChangeEvent with: " + this.value);
 }
 
 js_Input_c.setValue = function(newVal) {
@@ -1589,12 +1587,10 @@ syncMgr = sc_SyncManager_c = {
       }
       var nowTime = new Date().getTime();
       var timeSinceLastSend = (nowTime - sc_ClientSyncManager_c.lastSentTime);
-      sc_log("TimeSinceLastSend=" + timeSinceLastSend);
       if (sc_ClientSyncManager_c.lastSentTime == -1 || timeSinceLastSend > absDelay)
          relDelay = 0;
       else
          relDelay = absDelay - timeSinceLastSend;
-      sc_log("SendDelay=" + relDelay);
       syncMgr.scheduleSync(relDelay);
    },
    addMethReturn: function(res, callId) {
