@@ -545,6 +545,10 @@ public class VariableBinding extends DestinationListener {
       // For reverse only bindings, we do not want to eval the binding at all... that's what we do when
       // we decide to execute it anyway!
       if (!direction.doForward() || !DynUtil.equalObjects(newValue, getBoundValue(false))) {
+         // If we have a reverse binding with a.b but where a is not set yet don't try to set b
+         if (bObj == UNSET_VALUE_SENTINEL)
+            return false;
+
          if (!isAssignment) {
             Object oldValue = boundValues[boundValues.length-1];
             if (oldValue instanceof IChangeable)
