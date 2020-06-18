@@ -19,6 +19,7 @@ var sc$propNameTable = {};
 var sc$nextid = 1;
 var sc$dynStyles = {};
 var sc$resetState = {}; // any sync'd state that does not correspond to the DOM is stored here - to be sent back when we need to reset the server's session
+var sc$startTime = new Date().getTime();
 function sc_id(o) {
    if (!sc_hasProp(o, "sc$id"))
       o.sc$id = sc$nextid++;
@@ -117,6 +118,7 @@ function sc_capitalizeProperty(prop) {
    return zeroUp + prop.substring(1);
 }
 
+/*
 var sc_runLaterMethods = [];
 
 function sc_runRunLaterMethods() {
@@ -139,6 +141,21 @@ function sc_runRunLaterMethods() {
 // Set this to true when you need to pause runLaters - e.g. wait till you are about to do the next UI refresh.
 var sc_runLaterScheduled = false;
 
+*/
+
+function sc_methodCallback(thisObj, method) {
+    return function() {
+      var _this = thisObj;
+      method.call(_this);
+   };
+}
+
+function sc_addScheduledJob(thisObj, method, timeInMillis, repeat) {
+   var f = repeat ? setInterval : setTimeout;
+   return f(sc_methodCallback(thisObj, method),timeInMillis);
+}
+
+/*
 function sc_addRunLaterMethod(thisObj, method, priority) {
    var i;
    var len = sc_runLaterMethods.length;
@@ -156,6 +173,7 @@ function sc_addRunLaterMethod(thisObj, method, priority) {
    else
       sc_runLaterMethods.splice(i, 0, newEnt);
 }
+*/
 
 function sc_hasProp(obj, prop) {
    if (obj.hasOwnProperty)
@@ -220,6 +238,8 @@ function sc_rlog(str) {
 }
 
 function sc_log(str) {
+   if (sc_PTypeUtil_c && !sc_PTypeUtil_c.testVerifyMode)
+      str = sc_logPrefix() + str;
    sc_rlog(str);
    console.log(str);
 }
@@ -228,6 +248,55 @@ function sc_getConsoleLog() {
    if (window.sc_consoleLog)
       return window.sc_consoleLog.join("\n");
    return "<empty js console>";
+}
+
+function sc_logPrefix() {
+   if (typeof sc_testVerifyMode !== undefined && sc_testVerifyMode)
+      return "";
+   return sc_getTimeDelta(sc$startTime, new Date().getTime());
+}
+
+function sc_getTimeDelta(startTime, now) {
+   if (startTime == 0)
+      return "<server not yet started!>";
+   var sb = new Array()
+   var elapsed = now - startTime;
+   sb.push("+");
+   var remainder = false;
+   if (elapsed > 60*60*1000) {
+      var hrs = elapsed / (60*60*1000);
+      elapsed -= hrs * 60*60*1000;
+      if (hrs < 10)
+         sb.push("0");
+      sb.push(hrs);
+      sb.push(":");
+      remainder = true;
+   }
+   if (elapsed > 60*1000 || remainder) {
+      var mins = elapsed / (60*1000);
+      elapsed -= mins * 60*1000;
+      if (mins < 10)
+         sb.push("0");
+      sb.push(mins);
+      sb.push(":");
+   }
+   if (elapsed > 1000 || remainder) {
+      var secs = elapsed / 1000;
+      elapsed -= secs * 1000;
+      if (secs < 10)
+         sb.push("0");
+      sb.push(secs);
+      sb.push(".");
+   }
+   if (elapsed > 1000) // TODO: remove this - diagnostics only
+      console.error("bad time in sc_getTimeDelta");
+   if (elapsed < 10)
+      sb.push("00");
+   else if (elapsed < 100)
+      sb.push("0");
+   sb.push(Math.trunc(elapsed));
+   sb.push(":");
+   return sb.join("");
 }
 
 Error.prototype.printStackTrace = function() {  // Used in generated code
@@ -684,6 +753,7 @@ function js_Input() {
    js_HTMLElement.call(this);
    this.liveEdit = "on";
    this.liveEditDelay = 0;
+   this.lastSequence = 0;
 }
 js_Input_c = sc_newClass("Input", js_Input, js_HTMLElement);
 js_Input_c.eventAttNames = js_HTMLElement_c.eventAttNames.concat(["value", "checked", "changeEvent", "clickCount"]);
@@ -714,6 +784,9 @@ js_Input_c.updateFromDOMElement = function(newElem) {
 }
 
 js_Input_c.preChangeHandler = function(event) {
+   // This is the sequence number of this input tag's value. If it changes before we get back the response it might
+   // cause us to ignore a change to 'value' in the response because it's stale.
+   this.lastSequence = syncMgr.syncSequence;
    if ((this.liveEdit == "off" || this.liveEditDelay != 0 || (this.liveEdit == "change" && event.type == "keyup"))) {
        sc_ClientSyncManager_c.syncDelaySet = true;
        sc_ClientSyncManager_c.currentSyncDelay = this.liveEditDelay != 0 ? this.liveEditDelay : -1;
@@ -728,6 +801,7 @@ js_Input_c.postChangeHandler = function(event) {
 js_Input_c.doChangeEvent = function(event) {
    var elem = event.currentTarget ? event.currentTarget : event.srcElement;
    var scObj = elem.scObj;
+   sc_log("In doChangeEvent with: " + this.value);
    if (scObj !== undefined) {
       scObj.preChangeHandler(event);
       if (scObj.setValue) {
@@ -742,17 +816,22 @@ js_Input_c.doChangeEvent = function(event) {
    }
    else
       sc_log("Unable to find scObject to update in doChangeEvent");
+   sc_log("Done with doChangeEvent with: " + this.value);
 }
 
 js_Input_c.setValue = function(newVal) {
    if (newVal == null)
       newVal = "";
+   sc_log("Input.setValue(" + newVal + ")");
    if (newVal != this.value) {
       this.value = newVal;
       if (this.element !== null && this.element.value != newVal)
          this.element.value = newVal;
+      sc_log("Input.sendChangedEvent(" + newVal + ")");
       sc_Bind_c.sendChangedEvent(this, "value" , newVal);
    }
+   else
+      sc_log("Input.setValue - not changed");
 }
 
 js_Input_c.getValue = function() {
@@ -1006,6 +1085,7 @@ js_ServerTag_c = {
 
 function sc_SyncListener(anyChanges) {
    this.anyChanges = anyChanges;
+   this.syncSequence = syncMgr.syncSequence;
 }
 
 sc_SyncListener_c = sc_newClass("SyncListener", sc_SyncListener, null);
@@ -1042,7 +1122,7 @@ sc_SyncListener_c.response = function(responseText) {
                   processDef = nextText.substring(layerDefStart, layerDefStart + syncLen);
                   nextText = nextText.substring(layerDefStart + syncLen + 1);
                   if (lang === "json")
-                     syncMgr.applySyncLayer("json", processDef, this.anyChanges ? "send" : "wait");
+                     syncMgr.applySyncLayer("json", processDef, this.syncSequence, this.anyChanges ? "send" : "wait");
                   else if (lang === "js")
                      eval(processDef);
                   else
@@ -1090,6 +1170,7 @@ syncMgr = sc_SyncManager_c = {
    changesByObjId:{},
    syncScheduled:false,
    eventIndex:0,
+   syncSequence:0,
    syncDestination:{realTime:true},
    waitTime:1200000, // TODO: make this configurable in the page or URL?
    pollTime: 500,
@@ -1099,7 +1180,7 @@ syncMgr = sc_SyncManager_c = {
    refreshTagsScheduled: false,
    windowSyncProps: null,
    documentSyncProps: null,
-   applySyncLayer: function(lang,json,detail) {
+   applySyncLayer: function(lang,json,syncSequence,detail) {
       if (sc_SyncManager_c.trace) {
          sc_log("Sync applying server changes (from: " + (detail ? detail : "init") + " request): " + json);
      }
@@ -1263,7 +1344,21 @@ syncMgr = sc_SyncManager_c = {
                      var prop = props[pix];
                      var val = chObj[prop];
                      if (prop === "startTagTxt") {
-                        syncMgr.setStartTagTxt(chElem, val);
+                        // Avoid two race conditions for typing into an input tag that is being updated
+                        if (chElem.tagName == "INPUT" && chElem.scObj) {
+                           // User has typed a key that's not yet been received by doChangeEvent
+                           if (chElem.value != chElem.scObj.value)
+                              sc_log("Out of sync change to: " + name + " startTagTxt because element has changed since this sync was sent");
+                           // doChangeEvent has been called since we sent this sync - TODO: we should really only be skipping the 'value' attribute
+                           // update in setStartTagTxt - it might be that a 'class' or other update should happen even on a stale edit (but that seems kind of
+                           // unlikely too)
+                           else if (chElem.scObj.lastSequence > syncSequence)
+                              sc_log("Ignoring change to: " + name + " startTagTxt because element has changed since this sync was sent");
+                           else
+                              syncMgr.setStartTagTxt(chElem, val);
+                        }
+                        else
+                           syncMgr.setStartTagTxt(chElem, val);
                      }
                      else if (prop === "innerHTML") {
                         if (js_RepeatTag_c.isRepeatId(name)) { // repeat tag needs special processing - remove all 'repeat children', then insert the innerHTML after the marker element
@@ -1285,8 +1380,12 @@ syncMgr = sc_SyncManager_c = {
                         needsTagRefresh = true;
                      }
                      else if (prop === "value") {
-                        // ignoring since we receive the value in startTagTxt as well
-                        chElem.value = val;
+                        if (chElem.tagName == "INPUT" && chElem.scObj && chElem.value != chElem.scObj.value)
+                           sc_log("Out of sync change to: " + name + " startTagTxt because element has changed since this sync was sent");
+                        else if (chElem.scObj && chElem.scObj.lastSequence > syncSequence)
+                           sc_log("Ignoring change to " + name + ".value that's been changed since this sync started");
+                        else
+                           chElem.value = val;
                      }
                      else if (prop === "checked")
                         chElem.checked = val;
@@ -1490,10 +1589,12 @@ syncMgr = sc_SyncManager_c = {
       }
       var nowTime = new Date().getTime();
       var timeSinceLastSend = (nowTime - sc_ClientSyncManager_c.lastSentTime);
+      sc_log("TimeSinceLastSend=" + timeSinceLastSend);
       if (sc_ClientSyncManager_c.lastSentTime == -1 || timeSinceLastSend > absDelay)
          relDelay = 0;
       else
          relDelay = absDelay - timeSinceLastSend;
+      sc_log("SendDelay=" + relDelay);
       syncMgr.scheduleSync(relDelay);
    },
    addMethReturn: function(res, callId) {
@@ -1502,9 +1603,10 @@ syncMgr = sc_SyncManager_c = {
       syncMgr.scheduleSync(sc_ClientSyncManager_c.syncMinDelay);
    },
    scheduleSync: function(delay) {
+      sc_ClientSyncManager_c.lastSentTime = new Date().getTime();
       if (!syncMgr.syncScheduled) {
          syncMgr.syncScheduled = true;
-         sc_addRunLaterMethod(syncMgr, syncMgr.sendSync, delay);
+         sc_addScheduledJob(syncMgr, syncMgr.sendSync, delay, false);
       }
    },
    sendSync: function() {
@@ -1512,6 +1614,7 @@ syncMgr = sc_SyncManager_c = {
       var jsArr = [];
 
       sc_ClientSyncManager_c.lastSentTime = new Date().getTime();
+      sc_log("Updating lastSentTime=" + sc_ClientSyncManager_c.lastSentTime);
 
       for (var i = 0; i < changes.length; i++) {
          var change = changes[i];
@@ -1599,6 +1702,7 @@ syncMgr = sc_SyncManager_c = {
       var jObj = {sync:jsArr};
       var jStr = JSON.stringify(jObj, null, 3);
       syncMgr.writeToDestination(jStr, "");
+      syncMgr.syncSequence++;
 
       syncMgr.pendingChanges = [];
       syncMgr.changesByObjId = {};
@@ -1882,3 +1986,4 @@ syncMgr = sc_SyncManager_c = {
 };
 
 sc_ClientSyncManager_c = {defaultRealTime: true, syncDelaySet:false, currentSyncDelay:-1, syncMinDelay:100, lastSentTime:-1};
+

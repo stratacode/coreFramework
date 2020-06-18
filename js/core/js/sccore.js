@@ -457,7 +457,7 @@ function sc_getTimeDelta(startTime, now) {
       sb.push("00");
    else if (elapsed < 100)
       sb.push("0");
-   sb.push(elapsed);
+   sb.push(Math.trunc(elapsed));
    sb.push(":");
    return sb.join("");
 }

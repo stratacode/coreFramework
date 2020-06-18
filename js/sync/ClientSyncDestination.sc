@@ -35,6 +35,13 @@ object ClientSyncDestination extends SyncDestination {
    /** How much time should we wait on the server for changes?  This can be set as high as it's ok to keep an HTTP connection open  */
    int waitTime = realTime ? 1200000 : -1;
 
+   /**
+    * Incremented each time we send a sync. Used by the client to determine when response data is stale based on a subsequent change - e.g. changing a value
+    * field of an input tag twice before processing the response from the first. If the server decides to reformat value in the meantime, we need to ignore that
+    * change or it will replace the more recent change from the user.
+    */
+   //long sequenceNumber = 0;
+
    public void writeToDestination(String layerDef, String syncGroup, IResponseListener listener, String paramStr, CharSequence codeUpdates) {
       String useParams = getIdParams(paramStr, syncGroup);
 
