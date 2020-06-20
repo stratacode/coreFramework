@@ -264,7 +264,7 @@ function sc_getTimeDelta(startTime, now) {
    sb.push("+");
    var remainder = false;
    if (elapsed > 60*60*1000) {
-      var hrs = elapsed / (60*60*1000);
+      var hrs = Math.trunc(elapsed / (60*60*1000));
       elapsed -= hrs * 60*60*1000;
       if (hrs < 10)
          sb.push("0");
@@ -273,7 +273,7 @@ function sc_getTimeDelta(startTime, now) {
       remainder = true;
    }
    if (elapsed > 60*1000 || remainder) {
-      var mins = elapsed / (60*1000);
+      var mins = Math.trunc(elapsed / (60*1000));
       elapsed -= mins * 60*1000;
       if (mins < 10)
          sb.push("0");
@@ -281,7 +281,7 @@ function sc_getTimeDelta(startTime, now) {
       sb.push(":");
    }
    if (elapsed > 1000 || remainder) {
-      var secs = elapsed / 1000;
+      var secs = Math.trunc(elapsed / 1000);
       elapsed -= secs * 1000;
       if (secs < 10)
          sb.push("0");
@@ -1088,13 +1088,26 @@ function sc_SyncListener(anyChanges) {
 
 sc_SyncListener_c = sc_newClass("SyncListener", sc_SyncListener, null);
 
-sc_SyncListener_c.completeSync = function() {
-   syncMgr.pendingSends.pop();
+sc_SyncListener_c.syncResponse = function() {
+   var res = syncMgr.pendingSends.pop();
+   if (syncMgr.pendingSync) {
+      syncMgr.pendingSync = false;
+      syncMgr.scheduleSync(0);
+   }
+   if (this.anyChanges)
+      syncMgr.numSendsInProgress--;
+   else
+      syncMgr.numWaitsInProgress--;
+
+   if (syncMgr.numSendsInProgress < 0 || syncMgr.numWaitsInProgress < 0)
+      sc_logError("Invalid case in syncResponse");
+   return res;
 }
+
 
 sc_SyncListener_c.response = function(responseText) {
    sc_log("in response handler");
-   this.completeSync();
+   this.syncResponse();
    var syncLayerStart = "sync:";
    syncMgr.connected = true; // Success from server means we are connected
    var nextText = responseText;
@@ -1139,7 +1152,7 @@ sc_SyncListener_c.response = function(responseText) {
 
 sc_SyncListener_c.error = function(code, text) {
    sc_log("in error handler");
-   var errReq = syncMgr.pendingSends.pop(); 
+   var errReq = this.syncResponse();
    if (code === 205) { // session on server has expired - send the reset state and the original error request to be reapplied
       sc_logError("*** Server session lost - sending empty reset");
       var resetJ = {sync:[sc$resetState]};
@@ -1167,6 +1180,10 @@ syncMgr = sc_SyncManager_c = {
    pendingChanges:[],
    changesByObjId:{},
    syncScheduled:false,
+   pendingSync:false,
+   numSendsInProgress:0,
+   numWaitsInProgress:0,
+   maxSends:1,
    eventIndex:0,
    syncSequence:0,
    syncDestination:{realTime:true},
@@ -1606,6 +1623,12 @@ syncMgr = sc_SyncManager_c = {
       }
    },
    sendSync: function() {
+      if (syncMgr.numSendsInProgress >= syncMgr.maxSends) {
+         sc_log("Not sending sync with: " + syncMgr.numSendsInProgress + " in progress due to maxSends reached");
+         syncMgr.syncScheduled = false;
+         syncMgr.pendingSync = true;
+         return;
+      }
       var changes = syncMgr.pendingChanges;
       var jsArr = [];
 
@@ -1634,6 +1657,10 @@ syncMgr = sc_SyncManager_c = {
                else if (v.constructor === FocusEvent) {
                   evName = "FocusEvent";
                   idProps = ["relatedTarget"];
+               }
+               else if (v.constructor === SubmitEvent) {
+                  evName = "SubmitEvent";
+                  idProps = ["target"];
                }
                else {
                   sc_logError("Property: " + change.p + " no serializer for: " + v);
@@ -1703,7 +1730,7 @@ syncMgr = sc_SyncManager_c = {
       syncMgr.pendingChanges = [];
       syncMgr.changesByObjId = {};
       // Allow another sync since this one has gone out
-      syncMgr.syncScheduled = false; // TODO: add configuration option to allow more than one send at a time (and set this in the SyncListener response/error instead)
+      syncMgr.syncScheduled = false;
    },
    writeToDestination:function(json,paramStr) {
       var url = "/sync?url=" + encodeURI(window.location.pathname) + "&windowId=" + sc_windowId + paramStr;
@@ -1712,6 +1739,7 @@ syncMgr = sc_SyncManager_c = {
 
       if (!anyChanges && syncMgr.waitTime !== -1) {
          url += "&waitTime=" + syncMgr.waitTime;
+         syncMgr.numWaitsInProgress++;
          if (!syncMgr.exitListener) {
             syncMgr.exitListener = true;
             // Notifies the server this window is gone so it can close the sync connection. This is also one last time potentially to
@@ -1721,6 +1749,8 @@ syncMgr = sc_SyncManager_c = {
             }, false);
          }
       }
+      else
+         syncMgr.numSendsInProgress++;
       if (!anyChanges) {
          if (sc_SyncManager_c.trace)
             sc_log("Sending sync wait request: " + (syncMgr.waitTime === -1 ? "(no wait)" : "wait: " + syncMgr.waitTime));
@@ -1738,7 +1768,7 @@ syncMgr = sc_SyncManager_c = {
          syncMgr.writeToDestination("", "");
       }
       else
-         sc_log("autoSync - not writing to destination - " + syncMgr.pendingSends.length + " pending requests");
+         sc_log("autoSync - not writing to destination - " + syncMgr.pendingSends.length + " pending requests - numSends: " + syncMgr.numSendsInProgress + " numWaits:" + syncMgr.numWaitsInProgress);
       syncMgr.autoSyncScheduled = false;
    },
    postCompleteSync:function() {
