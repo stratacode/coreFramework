@@ -1957,9 +1957,10 @@ js_Input_c.doChangeEvent = function(event) {
       var cs = false;
       // If liveEdit is off - just trigger the change without triggering a sync.
       // If it is set to 'change' - only the change event triggers the sync.
+      var liveEditChange = scObj.liveEdit == "change";
       if ((scObj.liveEdit == "off" ||
            scObj.liveEditDelay != 0 ||
-           (scObj.liveEdit == "change" && event.type == "keyup")) && typeof sc_ClientSyncManager_c !== "undefined") {
+           (liveEditChange && event.type == "keyup")) && typeof sc_ClientSyncManager_c !== "undefined") {
           sc_ClientSyncManager_c.syncDelaySet = true;
           sc_ClientSyncManager_c.currentSyncDelay = scObj.liveEditDelay != 0 ? scObj.liveEditDelay : -1;
           cs = true;
@@ -1972,8 +1973,13 @@ js_Input_c.doChangeEvent = function(event) {
       if (scObj.setChecked)
          scObj.setChecked(this.checked);
 
-      if (cs)
+      if (cs) {
          sc_ClientSyncManager_c.syncDelaySet = false;
+      }
+      // Force a change event here in case the value change was sent on keyup and did not force a sync.
+      else if (liveEditChange && event.type == "change" && typeof sc_SyncManager_c !== "undefined")
+         sc_SyncManager_c.getDefaultSyncContext().markChanged();
+
       sc_refresh();
    }
    else 
