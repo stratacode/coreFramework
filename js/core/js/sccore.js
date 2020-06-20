@@ -427,7 +427,7 @@ function sc_getTimeDelta(startTime, now) {
    sb.push("+");
    var remainder = false;
    if (elapsed > 60*60*1000) {
-      var hrs = elapsed / (60*60*1000);
+      var hrs = Math.trunc(elapsed / (60*60*1000));
       elapsed -= hrs * 60*60*1000;
       if (hrs < 10)
          sb.push("0");
@@ -436,7 +436,7 @@ function sc_getTimeDelta(startTime, now) {
       remainder = true;
    }
    if (elapsed > 60*1000 || remainder) {
-      var mins = elapsed / (60*1000);
+      var mins = Math.trunc(elapsed / (60*1000));
       elapsed -= mins * 60*1000;
       if (mins < 10)
          sb.push("0");
@@ -444,7 +444,7 @@ function sc_getTimeDelta(startTime, now) {
       sb.push(":");
    }
    if (elapsed > 1000 || remainder) {
-      var secs = elapsed / 1000;
+      var secs = Math.trunc(elapsed / 1000);
       elapsed -= secs * 1000;
       if (secs < 10)
          sb.push("0");
