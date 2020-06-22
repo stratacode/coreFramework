@@ -31,9 +31,22 @@ sc_DBObject_c.dbRefresh = function() {
 sc_DBObject_c.getDBObject = function() {
    return this;
 }
-
-sc_DBObject_c.getDBId = function() {
-   return wrap.id; // TODO: this should use the id property name for the object
+sc_DBObject_c.getObjectId = function() {
+    if (this.wrapper.id == 0 || !this.wrapper.id) {
+       console.error("transient instance in getObjectId on client")
+    }
+   return sc_CTypeUtil_c.getClassName(sc_DynUtil_c.getTypeName(sc_DynUtil_c.getType(this.wrapper))) + "__" + this.wrapper.id;
 }
 
+sc_DBObject_c.getDBId = function() {
+   return this.wrapper.id; // TODO: this should use the id property name for the object
+}
 
+// TODO: insert basic serialization for any DB metadata we need in the client
+function sc_DBTypeDescriptor() {}
+
+sc_DBTypeDescriptor_c = sc_newClass("sc.db.DBTypeDescriptor", sc_DBTypeDescriptor, null, null);
+
+sc_DBTypeDescriptor_c.getByType = function(type) {
+   return null;
+}

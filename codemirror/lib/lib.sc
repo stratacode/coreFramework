@@ -1,4 +1,7 @@
 // To install: npm install codemirror
+//   - NOTE: must apply a few patches from /jjv/codemirror git repo: 
+//  ${codeMirrorPath}/mode/htmlmixed/htmlmixed.js, plus adding the
+//  sc syntax type and a change to the default css styling for height: 100%;
 package sc.html;
 
 

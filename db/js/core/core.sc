@@ -1,5 +1,9 @@
 /** DB support for JS - as a client to a database */
 public db.js.core {
+   compiledOnly = true;
+   codeType = sc.layer.CodeType.Framework;
+   hidden = true;
+
    void init() {
       includeRuntime("js");
    }

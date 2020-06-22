@@ -7,4 +7,8 @@ public db.dataSource {
    hidden = true;
 
    codeType = sc.layer.CodeType.Framework;
+
+   void init() {
+      excludeRuntimes("js", "gwt", "android");
+   }
 }
