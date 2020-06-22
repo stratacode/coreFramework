@@ -701,6 +701,10 @@ sc_DynUtil_c.findType = function(name) {
       return Number_c;
    if (name === "java.lang.String")
       return String_c;
+   if (name === "java.math.BigDecimal" && typeof Big != "undefined") {
+      Big.$protoName = "java.math.BigDecimal";
+      return Big;
+   }
    return null;
 }
 
