@@ -6,4 +6,5 @@ js.meta extends lib {
    codeType = sc.layer.CodeType.Framework;
 
    compiledOnly = true;
+   hidden = true;
 }

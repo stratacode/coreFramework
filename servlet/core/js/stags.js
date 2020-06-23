@@ -880,7 +880,7 @@ function js_Select() {
    this.selectedValue = null;
 }
 js_Select_c = sc_newClass("Select", js_Select, js_HTMLElement);
-js_Select_c.eventAttNames = js_HTMLElement_c.eventAttNames.concat([ "selectedIndex"]);
+js_Select_c.eventAttNames = js_HTMLElement_c.eventAttNames.concat([ "selectedIndex", "changeEvent"]);
 
 js_Select_c.doChangeEvent = function(event) {
    var elem = event.currentTarget ? event.currentTarget : js_findCurrentTargetSimple(event.srcElement, "selectedIndex");
@@ -894,12 +894,13 @@ js_Select_c.doChangeEvent = function(event) {
 }
 
 js_Select_c.domChanged = function(origElem, newElem) {
-   js_HTMLElement_c.domChanged.call(this, origElem, newElem);
    if (origElem != null)
       sc_removeEventListener(origElem, 'change', js_Select_c.doChangeEvent);
    if (newElem != null) {
       sc_addEventListener(newElem, 'change', js_Select_c.doChangeEvent);
    }
+   // Must be after the 'change' has updated the selectedIndex/Value properties so the event handler sees the new value
+   js_HTMLElement_c.domChanged.call(this, origElem, newElem);
 }
 
 js_Select_c.setSelectedIndex = function(newIx) {
@@ -950,6 +951,9 @@ js_Select_c.setOptionDataSource = function(newDS) {
 js_Select_c.getOptionDataSource = function() {
    return this.optionDataSource;
 }
+
+js_Select_c.preChangeHandler = js_Input_c.preChangeHandler;
+js_Select_c.postChangeHandler = js_Input_c.postChangeHandler;
 
 function js_Form() {
    js_HTMLElement.call(this);
@@ -1396,11 +1400,14 @@ syncMgr = sc_SyncManager_c = {
                      }
                      else if (prop === "value") {
                         if (chElem.tagName == "INPUT" && chElem.scObj && chElem.value != chElem.scObj.value)
-                           sc_log("Out of sync change to: " + name + " startTagTxt because element has changed since this sync was sent");
+                           sc_log("Out of sync change to: " + name + " input.value because element has changed since this sync was sent");
                         else if (chElem.scObj && chElem.scObj.lastSequence > syncSequence)
                            sc_log("Ignoring change to " + name + ".value that's been changed since this sync started");
-                        else
+                        else {
                            chElem.value = val;
+                           if (chElem.scObj)
+                              chElem.scObj.value = val;
+                        }
                      }
                      else if (prop === "checked")
                         chElem.checked = val;
@@ -1953,8 +1960,11 @@ syncMgr = sc_SyncManager_c = {
                elem.removeAttribute(newAttName);
          }
          if (oldVal == null || oldVal != newVal) {
-            if (isInput && newAttName === "value")
+            if (isInput && newAttName === "value") {
                elem.value = newVal;
+               if (elem.scObj)
+                  elem.scObj.value = newVal;
+            }
             else
                elem.setAttribute(newAttName, newVal);
          }

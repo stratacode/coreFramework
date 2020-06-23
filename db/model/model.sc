@@ -11,4 +11,7 @@ import java.util.List;
 
 /** Extend this from layers that define DB model objects without a specific db dependency */
 public db.model {
+   compiledOnly = true;
+   codeType = sc.layer.CodeType.Framework;
+   hidden = true;
 }

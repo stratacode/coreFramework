@@ -2141,7 +2141,7 @@ function js_Select() {
    this.multiple = false;
 }
 js_Select_c = sc_newClass("sc.lang.html.Select", js_Select, js_HTMLElement, null);
-js_Select_c.eventAttNames = js_HTMLElement_c.eventAttNames.concat([ "selectedIndex"]);
+js_Select_c.eventAttNames = js_HTMLElement_c.eventAttNames.concat([ "selectedIndex", "changeEvent"]);
 
 js_Select_c.doChangeEvent = function(event) {
    var elem = event.currentTarget ? event.currentTarget : js_findCurrentTargetSimple(event.srcElement, "selectedIndex");
