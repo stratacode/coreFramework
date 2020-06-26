@@ -13,6 +13,9 @@ public db.js.core {
       provider.needsSchema = false;
       provider.needsMetadata = false;
       provider.needsQueryMethods = false;
+      // We really only need this when the editor is enabled. On the server, we don't want to register prototypes
+      // and so we do not set the annotation.
+      provider.needsLiveDynamicTypes = true;
       layeredSystem.addDBProvider(provider, this);
       layeredSystem.defaultDBProvider = provider;
    }
