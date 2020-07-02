@@ -643,4 +643,14 @@ class Context {
       }
       return cookieMap.get(name);
    }
+
+   public void startFileUpload(UploadServerConfig config) {
+      if (config == null)
+         config = defaultUploadConfig;
+      platformEnableFileUpload(config);
+   }
+
+   public void platformEnableFileUpload(UploadServerConfig config) {
+      throw new UnsupportedOperationException();
+   }
 }

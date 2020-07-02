@@ -56,7 +56,7 @@ public class InstanceWrapper implements sc.obj.IObjectId {
          return labelName;
       if (theInstance == null)
          return typeName != null ? (selectToCreate ? "<select to create>" : "<type>") : "<type>";
-      return DynUtil.getInstanceName(theInstance);
+      return DynUtil.getDisplayName(theInstance);
    }
 
    public boolean equals(Object other) {

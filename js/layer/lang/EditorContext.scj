@@ -28,6 +28,8 @@ public class EditorContext extends ClientEditorContext {
 
    public static final int MaxCompletions = 20;
 
+   public final static int MaxInstancesOfType = 100;
+
    // TODO: add hook for a dispose listener or use JS weak hashmap to support Weak hashmaps through the JS emulation
    Map<Object,InstanceWrapper> instanceWrappers = new java.util.IdentityHashMap<Object,InstanceWrapper>();
 

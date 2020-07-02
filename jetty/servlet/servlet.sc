@@ -1,4 +1,4 @@
-public jetty.servlet extends serve, servlet.webApp {
+public jetty.servlet extends serve, servlet.webApp, jetty.servletBase {
    compiledOnly = true;
    hidden = true;
 

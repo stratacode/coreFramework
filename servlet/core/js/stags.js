@@ -971,6 +971,13 @@ js_Form_c.submitEvent = function(event) {
 }
 
 js_Form_c.submit = function() {
+   if (this.element)
+      this.element.submit();
+   else
+      sc_log("No dom element for submit call");
+}
+
+js_Form_c.sendSubmitEvent = function() {
    var evt = new Event('submit');
    evt["currentTarget"] = evt["target"] = this; // not using "." here because intelliJ complains these are constant - will any browsers barf on this?  If so we'll need to just create a new object and copy over any fields we need.
    this.submitEvent = evt;

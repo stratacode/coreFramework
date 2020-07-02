@@ -723,11 +723,11 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          }
 
          Object inst = insts.get(i);
-         if (pageEnt.dynContentPage && inst instanceof Element) {
+         if (pageEnt.dynContentPage && (inst instanceof Element || inst instanceof IPage)) {
             needsDyn = true;
 
-            Element elem = (Element) inst;
-            IPage page = elem instanceof IPage ? (IPage) inst : null;
+            Element elem = inst instanceof Element ? (Element) inst : null;
+            IPage page = inst instanceof IPage ? (IPage) inst : null;
 
             if (!pageEnt.realTime)
                realTimeEnabled = false;
@@ -777,7 +777,12 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                }
             }
 
-            sb = elem.output(outCtx);
+            if (elem != null)
+               sb = elem.output(outCtx);
+            else if (page != null)
+               sb = page.output(outCtx);
+            else
+               ctx.error("No handler for page object");
 
             // A redirect or something happened in handling the page
             if (ctx.requestComplete)

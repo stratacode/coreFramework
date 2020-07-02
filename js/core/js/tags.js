@@ -1998,7 +1998,7 @@ js_Input_c.domChanged = function(origElem, newElem) {
    if (newElem !== null) {
       sc_addEventListener(newElem, 'change', js_Input_c.doChangeEvent);
       sc_addEventListener(newElem, 'keyup', js_Input_c.doChangeEvent);
-      if (this.value != null && !this.serverContent)
+      if (this.value != null && !this.serverContent && this.type != "file")
          newElem.value = this.value; 
    }
    // Putting this after the above listener which updates 'value'
@@ -2337,6 +2337,8 @@ function js_Form() {
    js_HTMLElement.apply(this, arguments);
    this.tagName = "form";
    this.submitCount = 0;
+   this.submitInProgress = false;
+   this.submitError = null;
 }
 js_Form_c = sc_newClass("sc.lang.html.Form", js_Form, js_HTMLElement, null);
 js_Form_c.eventAttNames = js_HTMLElement_c.eventAttNames.concat([ "submitCount", "submitEvent"]);
@@ -2350,11 +2352,62 @@ js_Form_c.submitEvent = function(event) {
       console.log("Unable to find scObject to update in submitEvent");
 }
 
+js_Form_c.setSubmitInProgress = function(v) {
+   this.submitInProgress = v;
+   sc_Bind_c.sendEvent(sc_IListener_c.VALUE_CHANGED, this, "submitInProgress" , this.submitInProgress);
+}
+
+js_Form_c.getSubmitInProgress = function() {
+   return this.submitInProgress;
+}
+
+js_Form_c.setSubmitError = function(e) {
+   this.submitError = e;
+   sc_Bind_c.sendEvent(sc_IListener_c.VALUE_CHANGED, this, "submitError" , this.submitError);
+}
+
+js_Form_c.getSubmitError = function() {
+   return this.submitError;
+}
+
 js_Form_c.submit = function() {
+   if (this.element)
+      this.element.submit();
+   else
+      sc_error("No DOM element for form in submit() call");
+}
+
+js_Form_c.sendSubmitEvent = function() {
    var evt = new Event('submit');
    evt["currentTarget"] = evt["target"] = this; // not using "." here because intelliJ complains these are constant - will any browsers barf on this?  If so we'll need to just create a new object and copy over any fields we need.
    this.submitEvent = evt;
    sc_Bind_c.sendEvent(sc_IListener_c.VALUE_CHANGED, this, "submitEvent", evt);
+}
+
+js_Form_c.submitFormData = function(url) {
+   if (this.element) {
+      var formData = new FormData(this.element);
+      /*
+      var enctype = this.element.enctype;
+      if (!enctype)
+         enctype = "application/x-www-form-urlencoded";
+      */
+      var listener = {
+         obj:this,
+         response: function() {
+            this.obj.setSubmitError(null);
+            this.obj.setSubmitInProgress(false);
+         },
+         error: function(code, msg) {
+            this.obj.setSubmitError(code);
+            this.obj.setSubmitInProgress(false);
+            sc_error("Error from submitFormData result: " + code + ": " + msg);
+         }
+      };
+      this.setSubmitInProgress(true);
+      this.setSubmitCount(this.getSubmitCount()+1);
+      sc_PTypeUtil_c.postHttpRequest(url, formData, null, listener);
+   }
 }
 
 js_Form_c.domChanged = function(origElem, newElem) {

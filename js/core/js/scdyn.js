@@ -345,6 +345,31 @@ sc_DynUtil_c.getInstanceName = function(obj) {
    return sc_CTypeUtil_c.getClassName(pn) + '__' + scid;
 }
 
+sc_DynUtil_c.getDisplayName = function(obj) {
+   if (!sc_DynUtil_c.isType(obj)) {
+      var type = sc_DynUtil_c.getType(obj);
+      var displayNameProp = sc_DynUtil_c.getAnnotationValue(type, "sc.obj.EditorSettings", "displayNameProperty");
+      if (displayNameProp != null) {
+         var res = null;
+         try {
+            var ores = sc_DynUtil_c.getProperty(obj, displayNameProp);
+            if (ores !== null) {
+               if (typeof ores.toString !== 'function')
+                  sc_logError("*** Error - display name property: " + displayNameProp + " for: " + type + " returns non string");
+               else {
+                  res = ores.toString();
+                  return res;
+               }
+            }
+         }
+         catch (exc) {
+            sc_logError("*** Error retrieving display name property: " + displayNameProp + " for: " + type);
+         }
+      }
+   }
+   return sc_CTypeUtil_c.getClassName(sc_DynUtil_c.getInstanceName(obj));
+}
+
 sc_DynUtil_c.arrayToInstanceName = function(list) {
    if (list == null)
       return "";
@@ -973,7 +998,8 @@ sc_PTypeUtil_c.postHttpRequest = function(url, postData, contentType, listener) 
       listener.error(httpReq.status, httpReq.statusText);
    }
    */
-   httpReq.setRequestHeader("Content-type", contentType);
+   if (contentType !== null)
+      httpReq.setRequestHeader("Content-type", contentType);
 
    httpReq.send(postData);
 }
@@ -1096,7 +1122,10 @@ sc_DynUtil_c.getAnnotationValue = function(typeObj, annotName, valName) {
    var val = typeObj[keyName];
    if (val == null)
       return null;
-   return val[valName];
+   var res = val[valName];
+   if (res == null)
+      return null;
+   return res;
 }
 
 sc_DynUtil_c.hasAnnotation = function(typeObj, annotName) {

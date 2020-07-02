@@ -1,6 +1,8 @@
 package sc.jdbc;
 
 public jdbc.schemaManager extends jdbc.pgsql, sys.std {
+   hidden = true;
+
    void init() {
       // TODO: maybe have this run in a separate process, so we can give it separate permissions and 
       // have it attach and update the schema after we build and before run the application.

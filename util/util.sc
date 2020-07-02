@@ -11,12 +11,21 @@ import sc.util.TextUtil;
 
 import sc.dyn.DynUtil;
 
+import sc.type.PTypeUtil;
+
 // these are here mostly for the generated code for properties and objects
 import sc.type.IBeanMapper;
 import sc.obj.TypeSettings;
 import sc.bind.Bind;
 import sc.bind.IBinding;
 import sc.bind.BindingDirection;
+
+import sc.obj.EditorSettings;
+
+import sc.obj.Exec;
+
+import java.math.BigDecimal;
+import java.util.Date;
 
 @sc.js.JSSettings(jsModuleFile="js/scutil.js", prefixAlias="sc_")
 util extends sys.std {
