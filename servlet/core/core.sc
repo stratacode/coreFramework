@@ -11,6 +11,7 @@ import java.io.IOException;
 import sc.lang.html.IPage;
 
 import sc.servlet.Context;
+import sc.servlet.UploadPage;
 
 public servlet.core extends webApp, meta, html.core {
    compiledOnly = true;

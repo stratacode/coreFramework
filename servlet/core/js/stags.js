@@ -344,7 +344,8 @@ sc_PTypeUtil_c = {
          listener.error(httpReq.status, httpReq.statusText);
       }
       */
-      httpReq.setRequestHeader("Content-type", contentType);
+      if (contentType !== null)
+         httpReq.setRequestHeader("Content-type", contentType);
 
       httpReq.send(postData);
    }
@@ -958,6 +959,8 @@ js_Select_c.postChangeHandler = js_Input_c.postChangeHandler;
 function js_Form() {
    js_HTMLElement.call(this);
    this.submitCount = 0;
+   this.submitInProgress = false;
+   this.submitError = null;
 }
 js_Form_c = sc_newClass("Form", js_Form, js_HTMLElement);
 js_Form_c.eventAttNames = js_HTMLElement_c.eventAttNames.concat([ "submitCount", "submitEvent"]);
@@ -984,6 +987,32 @@ js_Form_c.sendSubmitEvent = function() {
    sc_Bind_c.sendChangedEvent(this, "submitEvent", evt);
 }
 
+js_Form_c.submitFormData = function(url) {
+   if (this.element) {
+      var formData = new FormData(this.element);
+      /*
+      var enctype = this.element.enctype;
+      if (!enctype)
+         enctype = "application/x-www-form-urlencoded";
+      */
+      var listener = {
+         obj:this,
+         response: function() {
+            this.obj.setSubmitError(null);
+            this.obj.setSubmitInProgress(false);
+         },
+         error: function(code, msg) {
+            this.obj.setSubmitError(code);
+            this.obj.setSubmitInProgress(false);
+            sc_error("Error from submitFormData result: " + code + ": " + msg);
+         }
+      };
+      this.setSubmitInProgress(true);
+      this.setSubmitCount(this.getSubmitCount()+1);
+      sc_PTypeUtil_c.postHttpRequest(url, formData, null, listener);
+   }
+}
+
 js_Form_c.domChanged = function(origElem, newElem) {
    js_HTMLElement_c.domChanged.call(this, origElem, newElem);
    if (origElem != null)
@@ -1001,6 +1030,24 @@ js_Form_c.setSubmitCount = function(ct) {
 
 js_Form_c.getSubmitCount = function() {
    return this.submitCount;
+}
+
+js_Form_c.setSubmitInProgress = function(v) {
+   this.submitInProgress = v;
+   sc_Bind_c.sendChangedEvent(this, "submitInProgress" , this.submitInProgress);
+}
+
+js_Form_c.getSubmitInProgress = function() {
+   return this.submitInProgress;
+}
+
+js_Form_c.setSubmitError = function(e) {
+   this.submitError = e;
+   sc_Bind_c.sendChangedEvent(this, "submitError" , this.submitError);
+}
+
+js_Form_c.getSubmitError = function() {
+   return this.submitError;
 }
 
 function js_Option() {

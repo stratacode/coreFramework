@@ -2392,6 +2392,7 @@ js_Form_c.submitFormData = function(url) {
       if (!enctype)
          enctype = "application/x-www-form-urlencoded";
       */
+      // TODO: add a progress handler and support size/downloaded properties for the current submission
       var listener = {
          obj:this,
          response: function() {
