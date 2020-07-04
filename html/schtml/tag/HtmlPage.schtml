@@ -7,7 +7,7 @@ import sc.type.PTypeUtil;
  * and sets the default lifecycle of the tag object.
  */
 // Expose each page with a URL based on their file path, e.g. fileDir/fileName.html
-@URL(page=true, subTypesOnly=true)
+@URL(dynContent=true, subTypesOnly=true)
 @sc.obj.ServerTagSettings(jsFiles="js/stags.js")
 // Set the lifecycle so we store one instance for each page (or app), for each session
 @sc.obj.Scope(name="appSession")

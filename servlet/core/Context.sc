@@ -160,28 +160,35 @@ class Context {
       return ctx;
    }
 
-   static Context initContext(HttpServletRequest request, HttpServletResponse response, String requestURL, String requestURI, TreeMap<String,String> queryParams) {
+   static Context initContext(HttpServletRequest request, HttpServletResponse response, String requestURL, String requestURI, TreeMap<String,String> queryParams, boolean isDynPage) {
       Context ctx;
+      if (requestURI == null)
+         requestURI = request.getRequestURI();
+      if (requestURL == null)
+         requestURL = buildRequestURL(request, requestURI);
+
       currentContextStore.set(ctx = new Context(request, response, requestURL, requestURI, queryParams));
 
-      response.addHeader("Cache-Control", "no-store");
+      if (isDynPage) {
+         response.addHeader("Cache-Control", "no-store");
 
-      String windowIdStr = request.getParameter("windowId");
-      if (windowIdStr != null) {
-         int windowId = Integer.parseInt(windowIdStr);
-         try {
-            ctx.initWindowScopeContext(windowId);
+         String windowIdStr = request.getParameter("windowId");
+         if (windowIdStr != null) {
+            int windowId = Integer.parseInt(windowIdStr);
+            try {
+               ctx.initWindowScopeContext(windowId);
+            }
+            catch (NumberFormatException exc) {
+            }
          }
-         catch (NumberFormatException exc) {
+         else {
+            ctx.updateWindowContext(ctx.getWindowScopeContext(true));
          }
+         // TODO: populate this with data from the request/response - url and compute a size from the device meta-data
+         // You might want to render different content based on the device size for example so that would be nice to have here.
+         // Of course the location for rendering links the same between client and server
+         Window.setWindow(ctx.windowCtx.getWindow());
       }
-      else {
-         ctx.updateWindowContext(ctx.getWindowScopeContext(true));
-      }
-      // TODO: populate this with data from the request/response - url and compute a size from the device meta-data
-      // You might want to render different content based on the device size for example so that would be nice to have here.
-      // Of course the location for rendering links the same between client and server
-      Window.setWindow(ctx.windowCtx.getWindow());
       return ctx;
    }
 
@@ -653,4 +660,19 @@ class Context {
    public void platformEnableFileUpload(UploadServerConfig config) {
       throw new UnsupportedOperationException();
    }
+
+   public static String buildRequestURL(HttpServletRequest request, String uri) {
+      StringBuilder builder = new StringBuilder();
+      builder.append(request.getProtocol());
+      builder.append("://");
+      builder.append(request.getServerName());
+      if (request.getServerPort() != 80 && request.getServerPort() != 443) {
+         builder.append(":");
+         builder.append(request.getServerPort());
+      }
+      builder.append("/");
+      builder.append(uri);
+      return builder.toString();
+   }
+
 }

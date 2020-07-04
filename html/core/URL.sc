@@ -4,20 +4,22 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
-  * Use the URL annotation to mark a class which corresponds to a URL.  If you do not specify a pattern, the default pattern is
-  * the type name of the file with the .html suffix.  So a type "Foo" would be fetched with /Foo.html.  If you do specify a pattern,
-  * that pattern is used for the URL in ths page type.  When a URL matching that pattern is entered, the request maps to that page object.
+  * Use the URL annotation on a class or object to have it automatically handle URL requests for both dynamic content and static resources.
+  * The pattern attribute for the annotation can be a simple string to match (e.g. "/login"), or a URLPattern (e.g. /blog/{post=urlString}).
+  * The default value for pattern if one is not specified is to use the type name of the file with a '.html' suffix.
+  * So by default, a type "Foo" would be fetched with /Foo.html.
   * <p>
-  * It can be set on a top-level page, using the default page=true attribute actually handle the request.  In this case you set @URL on a Servlet or
-  * page which has an schtml file associated with it.  For schtml files, the @URL is set by framework layers on the html tag by default so you do not
-  * have to use @URL at all, unless you want to change the URL for a given object.
+  * Set dynContent=true for dynamic HTML and false for requests that serve images, plain css files or other static resources. In a production environment,
+  * we will code-generate the mapping for a front-end web server to handle those request (TODO).
+  * Setting dynContent=false will skip the locking and other context initialization and allow for simple pass-through servlet pages. It will also allow
+  * the content of those requests to be cached by the browser.
   * <p>
-  * With page=true, the object for that page is used to generate the output for the request.  The first URL which matches a page completes the request
-  * and you are finished.  When page=false, each component that matches the URL is populated with data values extracted from the URL.
+  * With dynContent=true, the object for that page is used to generate the output for the request.  The first URL which matches a page completes the request
+  * and you are finished.
   * <p>
-  * Use the @QueryParam annotation on properties of the type with the URL to have those values auto-populated when the page is rendered, and
-  * for the URL to be updated on the client when the properties are changed.
-  (TODO: each component?  right now the code is only doing the first component to match the URL)
+  * For dynContent=true pages, use the @QueryParam annotation on properties of the type with the URL to have those values auto-populated when the page is rendered, and
+  * for the URL to be updated on the client when the properties are changed. Similarly, properties specified in the URLPattern will be set in the page instance
+  * before the request is handled.
   */
 @Target({ElementType.TYPE})
 // Keep these at runtime so we can do the getURLPaths lookup at runtime using the compiled class, without having to retrieve the source.
@@ -31,9 +33,9 @@ public @interface URL {
     * variable names like: @URL(pattern="/bookTitle/{bookId=integer}")   When your page is called, it's bookId property will always be set to a valid integer.
     */
    String pattern() default "";
-   /** When page is true, the URL matches a top-level page object which handle the request.  When it is false, the first component */
-   boolean page() default true;
-   /** CSS files that are generated dynamically are resources and not included in the index */
+   /** For requests to static resources, set this to false to disable locking, setting of URL/query params into the instance, and enabling of the cache headers */
+   boolean dynContent() default true;
+   /** Set to true for css, images or other files. If resources are dynamic, the app id is chosen from the referer(sic) header */
    boolean resource() default false;
    /** Set this to true so that a base type is not itself asigned a URL but all sub-types in the chain are assigned the URL.  If you want to bury
     the @URL annotation on a subclass, so it's not set on each individual class, using this option avoids having an entry for the abstract base class. */

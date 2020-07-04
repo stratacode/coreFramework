@@ -68,7 +68,7 @@ abstract class UploadPage extends BasePage {
             long partSize = part.getSize();
             String contentType = part.getContentType();
             String fileName = part.getSubmittedFileName();
-            String useFileName = fileName == null ? null : cleanFileName(fileName);
+            String useFileName = fileName == null ? null : URLUtil.cleanFileName(fileName);
 
             if (!StringUtil.isEmpty(useFileName)) {
                 Path outputFile = uploadDir.resolve(fileName);
@@ -108,40 +108,5 @@ abstract class UploadPage extends BasePage {
          ctx.response.setContentType("text/html");
          return new StringBuilder("<html><body>Upload failed due to error reading request data</body></html>");
       }
-   }
-
-   static String cleanFileName(String inStr) {
-      StringBuilder sb = null;
-      int len = inStr.length();
-      for (int i = 0; i < len; i++) {
-         char c = inStr.charAt(i);
-         boolean skip = false;
-         if (!Character.isAlphabetic(c) && !Character.isDigit(c)) {
-            switch (c) {
-               case '.':
-                  if (i == len-1 || inStr.charAt(i+1) == '.')
-                     skip = true;
-                  break;
-               case '-':
-               case '_':
-                  break;
-               default:
-                  skip = true;
-                  break;
-            }
-            if (skip) {
-               if (sb == null) {
-                  sb = new StringBuilder();
-                  if (i > 0)
-                     sb.append(inStr.substring(0, i));
-               }
-               if (c == ' ')
-                  sb.append('_');
-            }
-            else if (sb != null)
-               sb.append(c);
-         }
-      }
-      return sb == null ? inStr : sb.toString();
    }
 }

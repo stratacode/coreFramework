@@ -589,8 +589,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                inst = ModelUtil.getAndRegisterGlobalObjectInstance(pageType);
                newInst = true;
             }
-            if (newInst && inst instanceof Element) {
-               initPageInst((Element) inst);
+            if (newInst) {
+               initPageInst(inst);
             }
             insts.add(inst);
 
@@ -658,13 +658,46 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                ctx.execLaterJobs();
             }
          }
+         else {
+            Object inst = null;
+            boolean newInst = false;
+
+            Object pageType = pageEnt.pageType;
+            boolean isObject = ModelUtil.isObjectType(pageType);
+
+            // For page objects that are classes, we'll create the class and register it here
+            if (!isObject) {
+               String typeName = ModelUtil.getTypeName(pageType);
+               ScopeDefinition scopeDef = getScopeDefForPageType(pageType);
+               if (scopeDef != null) {
+                  ScopeContext scopeCtx = scopeDef.getScopeContext(true);
+                  if (scopeCtx != null) {
+                     inst = scopeCtx.getValue(typeName);
+                     if (inst == null) {
+                        inst = ModelUtil.getAndRegisterGlobalObjectInstance(pageType);
+                        scopeCtx.setValue(typeName, inst);
+                        newInst = true;
+                     }
+                  }
+               }
+            }
+
+            if (inst == null) {
+               inst = ModelUtil.getAndRegisterGlobalObjectInstance(pageType);
+               newInst = true;
+            }
+            if (newInst) {
+               initPageInst(inst);
+            }
+            insts.add(inst);
+         }
 
          i++;
       }
       return insts;
    }
 
-   public void initPageInst(Element pageObj) {
+   public void initPageInst(Object pageObj) {
 
       if (pageObj instanceof IPage) {
          IPage page = (IPage) pageObj;
@@ -723,7 +756,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          }
 
          Object inst = insts.get(i);
-         if (pageEnt.dynContentPage && (inst instanceof Element || inst instanceof IPage)) {
+         if ((inst instanceof Element || inst instanceof IPage)) {
             needsDyn = true;
 
             Element elem = inst instanceof Element ? (Element) inst : null;
@@ -748,7 +781,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                ctx.mimeType = pageEnt.mimeType;
 
             // Part of the API to help track individual page views - increment this value which may trigger bindings in the page
-            if (isPageView && page != null) {
+            if (isPageView && page != null && pageEnt.dynContentPage) {
                page.pageVisitCount++;
 
             // Using isPageView for the accessBindings and validateCache flag in the OutputCtx for outputing the body.
@@ -788,33 +821,36 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             if (ctx.requestComplete)
                return null;
 
-            // If this page has specified a fixed list of sync types, we need to make sure we add to this list
-            // when building up the sync tags.
-            if (stCtx.serverTagTypes == null && ctx.curScopeCtx.syncTypeFilter != null) {
-               // Null serverTagTypes will not collect the server tag sync types. But if we are using a filter we need to collect them.
-               stCtx.serverTagTypes = new HashSet<String>();
-            }
-            if (page instanceof Element) {
-               Element pageElem = (Element) page;
-               pageElem.addServerTags(pageEnt.pageScope, stCtx, false);
+            if (pageEnt.dynContentPage) {
 
-               // For server tag pages, if there are listeners on the window object properties like innerWidth/Height or document properties, add ServerTags for
-               // window and document too
-               if (pageElem.serverTag) {
-                  ctx.windowCtx.window.addServerTags(stCtx);
+               // If this page has specified a fixed list of sync types, we need to make sure we add to this list
+               // when building up the sync tags.
+               if (stCtx.serverTagTypes == null && ctx.curScopeCtx.syncTypeFilter != null) {
+                  // Null serverTagTypes will not collect the server tag sync types. But if we are using a filter we need to collect them.
+                  stCtx.serverTagTypes = new HashSet<String>();
                }
-            }
-            stCtx.removeUnused();
+               if (page instanceof Element) {
+                  Element pageElem = (Element) page;
+                  pageElem.addServerTags(pageEnt.pageScope, stCtx, false);
 
-            // If we are filtering the page with a restricted set of syncTypes (ctx.syncTypeFilter != null), need to
-            // add the serverTagIds so that they pass the filter.
-            if (stCtx.serverTagTypes != null && stCtx.serverTagTypes.size() > 0) {
-               if (origSyncTypes) {
-                  ctx.curScopeCtx.syncTypeFilter = new HashSet<String>(ctx.curScopeCtx.syncTypeFilter);
-                  origSyncTypes = false;
+                  // For server tag pages, if there are listeners on the window object properties like innerWidth/Height or document properties, add ServerTags for
+                  // window and document too
+                  if (pageElem.serverTag) {
+                     ctx.windowCtx.window.addServerTags(stCtx);
+                  }
                }
-               ctx.curScopeCtx.syncTypeFilter.addAll(stCtx.serverTagTypes);
-               ctx.curScopeCtx.syncTypeFilter.addAll(Arrays.asList("sc.js.ServerTagManager", "sc.js.ServerTag", "sc.lang.html.Location"));
+               stCtx.removeUnused();
+
+               // If we are filtering the page with a restricted set of syncTypes (ctx.syncTypeFilter != null), need to
+               // add the serverTagIds so that they pass the filter.
+               if (stCtx.serverTagTypes != null && stCtx.serverTagTypes.size() > 0) {
+                  if (origSyncTypes) {
+                     ctx.curScopeCtx.syncTypeFilter = new HashSet<String>(ctx.curScopeCtx.syncTypeFilter);
+                     origSyncTypes = false;
+                  }
+                  ctx.curScopeCtx.syncTypeFilter.addAll(stCtx.serverTagTypes);
+                  ctx.curScopeCtx.syncTypeFilter.addAll(Arrays.asList("sc.js.ServerTagManager", "sc.js.ServerTag", "sc.lang.html.Location"));
+               }
             }
 
          /*
@@ -976,7 +1012,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       CurrentScopeContext curScopeCtx = null;
 
       try {
-         boolean isUrlPage = false;
+         boolean isDynPage = false;
          List<PageEntry> pageEnts = getPageEntries(uri, queryParams);
 
          if (pageEnts != null && pageEnts.size() > 0) {
@@ -985,14 +1021,14 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
 
             PageEntry pageEnt = pageEnts.get(0);
 
-            isUrlPage = pageEnt.dynContentPage;
+            isDynPage = pageEnt.dynContentPage;
 
             // Must be set before we call Context.initContext
-            if (isUrlPage) {
+            if (isDynPage) {
                setAppId(pageEnt, request);
             }
 
-            ctx = Context.initContext(request, response, request.getRequestURL().toString(), request.getRequestURI().toString(), queryParams);
+            ctx = Context.initContext(request, response, request.getRequestURL().toString(), request.getRequestURI(), queryParams, isDynPage);
 
             //if (verbose)
             //   log(ctx, "page request: " + uri + " matched: " + sz + " objects");
@@ -1052,7 +1088,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                   ctx.log("page complete: " + traceBuffer);
 
                // We don't want to register a command context for the '.css' page - i.e. pageEnt.resource = true
-               if (sys != null && isUrlPage && (pageEnt.doSync || pageEnt.hasServerTags || (testMode && !pageEnt.resource))) {
+               if (sys != null && isDynPage && (pageEnt.doSync || pageEnt.hasServerTags || (testMode && !pageEnt.resource))) {
                   // In test mode only we accept the scopeContextName parameter, so we can attach to a specific request's scope context from the test script
                   String scopeContextName = !sys.options.testMode ? null : request.getParameter("scopeContextName");
                   // If the command line interpreter is enabled, use a scopeContextName so the command line is sync'd up to CurrentScopeContext
@@ -1083,7 +1119,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                }
             }
          }
-         return pageEnts != null && pageEnts.size() > 0 && isUrlPage;
+         return pageEnts != null && pageEnts.size() > 0 && isDynPage;
       }
       catch (RuntimeException exc) {
          DBTransaction tx = DBTransaction.getCurrent();
@@ -1353,21 +1389,6 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
    /** Hook to allow tag objects to find the page type for a given URL at runtime */
    public IPageEntry lookupPageType(String url) {
       return pages.get(url);
-   }
-
-   /** Build the requestURL from a requestURI and a request.  */
-   public static String buildRequestURL(HttpServletRequest request, String uri) {
-      StringBuilder builder = new StringBuilder();
-      builder.append(request.getProtocol());
-      builder.append("://");
-      builder.append(request.getServerName());
-      if (request.getServerPort() != 80 && request.getServerPort() != 443) {
-         builder.append(":");
-         builder.append(request.getServerPort());
-      }
-      builder.append("/");
-      builder.append(uri);
-      return builder.toString();
    }
 
    public void log(String mesg) {
