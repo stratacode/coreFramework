@@ -30,7 +30,8 @@ abstract class UploadPage extends BasePage {
 
    Path uploadDir = null;
 
-   public void processUpload(Map<String,String> uploadedFiles, Map<String,String> formFields) {
+   public UploadResult processUpload(Map<String,String> uploadedFiles, Map<String,String> formFields) {
+      return new UploadResult("success", null);
    }
 
    public StringBuilder output(OutputCtx octx) {
@@ -93,20 +94,17 @@ abstract class UploadPage extends BasePage {
             }
          }
 
-         processUpload(uploadedFiles, formFields);
+         UploadResult result = processUpload(uploadedFiles, formFields);
 
-         ctx.response.setContentType("text/html");
-         return new StringBuilder("<html><body>Uploaded: " + uploadedFiles + " files</body></html>");
+         ctx.response.setContentType("text/plain");
+         return result.getResultJSON();
       }
       catch (ServletException exc) {
-         ctx.error("Upload failed: " + exc);
-         ctx.response.setContentType("text/html");
-         return new StringBuilder("<html><body>Upload failed due to error reading request data</body></html>");
+         ctx.sendError(500, "Upload failed: " + exc);
       }
       catch (IOException exc) {
-         ctx.error("Upload failed: " + exc);
-         ctx.response.setContentType("text/html");
-         return new StringBuilder("<html><body>Upload failed due to error reading request data</body></html>");
+         ctx.sendError(500, "Upload failed: " + exc);
       }
+      return null;
    }
 }

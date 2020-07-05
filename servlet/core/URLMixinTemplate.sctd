@@ -9,13 +9,14 @@
       String lockScope = (String) getAnnotationValue("sc.html.URL", "lockScope");
       Boolean realTimeDef = (Boolean) getAnnotationValue("sc.html.URL", "realTime");
       boolean realTime = realTimeDef == null || realTimeDef;
+      String mimeType = (String) getAnnotationValue("sc.html.URL", "mimeType");
       if (url == null) {
          url = templatePathName;
       }
 %>
         
 static {
-   sc.servlet.PageDispatcher.addPage("<%= templatePathName %>", "<%= url %>", <%= typeIsDynamic ? "sc.dyn.DynUtil.findType(\"" + typeName + "\")" : typeBaseName + ".class" %>, <%= isDynContent %>, <%= isSync %>, <%= isResource %>, <%= layer.layerPosition %>, <%= lockScope == null ? "null" : '"' + lockScope + '"' %>, <%= QueryParamProperty.toValueString(objType) %>, <%= syncTypeNames %>, <%= realTime %>);
+   sc.servlet.PageDispatcher.addPage("<%= templatePathName %>", "<%= url %>", <%= typeIsDynamic ? "sc.dyn.DynUtil.findType(\"" + typeName + "\")" : typeBaseName + ".class" %>, <%= isDynContent %>, <%= isSync %>, <%= isResource %>, <%= layer.layerPosition %>, <%= lockScope == null ? "null" : '"' + lockScope + '"' %>, <%= QueryParamProperty.toValueString(objType) %>, <%= syncTypeNames %>, <%= realTime %>, <%= mimeType == null ? "null" : '"' + mimeType + '"' %>);
 }
 
 <% } %>

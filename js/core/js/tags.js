@@ -2370,6 +2370,15 @@ js_Form_c.getSubmitError = function() {
    return this.submitError;
 }
 
+js_Form_c.setSubmitResult = function(v) {
+   this.submitResult = v;
+   sc_Bind_c.sendEvent(sc_IListener_c.VALUE_CHANGED, this, "submitResult" , this.submitResult);
+}
+
+js_Form_c.getSubmitResult = function() {
+   return this.submitResult;
+}
+
 js_Form_c.submit = function() {
    if (this.element)
       this.element.submit();
@@ -2395,8 +2404,10 @@ js_Form_c.submitFormData = function(url) {
       // TODO: add a progress handler and support size/downloaded properties for the current submission
       var listener = {
          obj:this,
-         response: function() {
-            this.obj.setSubmitError(null);
+         response: function(r) {
+            var res = JSON.parse(r);
+            this.obj.setSubmitResult(res.result);
+            this.obj.setSubmitError(res.error);
             this.obj.setSubmitInProgress(false);
          },
          error: function(code, msg) {
@@ -2406,6 +2417,8 @@ js_Form_c.submitFormData = function(url) {
          }
       };
       this.setSubmitInProgress(true);
+      this.setSubmitResult(null);
+      this.setSubmitError(null);
       this.setSubmitCount(this.getSubmitCount()+1);
       sc_PTypeUtil_c.postHttpRequest(url, formData, null, listener);
    }

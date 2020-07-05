@@ -997,8 +997,10 @@ js_Form_c.submitFormData = function(url) {
       */
       var listener = {
          obj:this,
-         response: function() {
-            this.obj.setSubmitError(null);
+         response: function(r) {
+            var res = JSON.parse(r);
+            this.obj.setSubmitResult(res.result);
+            this.obj.setSubmitError(res.error);
             this.obj.setSubmitInProgress(false);
          },
          error: function(code, msg) {
@@ -1008,6 +1010,8 @@ js_Form_c.submitFormData = function(url) {
          }
       };
       this.setSubmitInProgress(true);
+      this.setSubmitError(null);
+      this.setSubmitResult(null);
       this.setSubmitCount(this.getSubmitCount()+1);
       sc_PTypeUtil_c.postHttpRequest(url, formData, null, listener);
    }
@@ -1048,6 +1052,15 @@ js_Form_c.setSubmitError = function(e) {
 
 js_Form_c.getSubmitError = function() {
    return this.submitError;
+}
+
+js_Form_c.setSubmitResult = function(e) {
+   this.submitResult = e;
+   sc_Bind_c.sendChangedEvent(this, "submitResult" , this.submitResult);
+}
+
+js_Form_c.getSubmitResult = function() {
+   return this.submitResult;
 }
 
 function js_Option() {

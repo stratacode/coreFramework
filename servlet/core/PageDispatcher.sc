@@ -248,7 +248,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
     * extracting values from the URL.
     * The doSync flag indicates whether sync is enabled or disabled for this page.
     */
-   public static void addPage(String keyName, String pattern, Object pageType, boolean dynContentPage, boolean doSync, boolean isResource, int priority, String lockScope, List<QueryParamProperty> queryParamProps, Set<String> syncTypes, boolean realTime) {
+   public static void addPage(String keyName, String pattern, Object pageType, boolean dynContentPage, boolean doSync, boolean isResource, int priority, String lockScope, List<QueryParamProperty> queryParamProps, Set<String> syncTypes, boolean realTime, String mimeType) {
       PageEntry ent = new PageEntry();
       ent.keyName = keyName;
       ent.pattern = pattern;
@@ -267,7 +267,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       // Also, if we synchronize more than one page object for the same page, we'll need to improve the logic for selecting the current
       // context because the sccss files conflict with the main page when driving the test scripts (e.g. prepDemoTodo)
       ent.hasServerTags = !isResource && DynUtil.isAssignableFrom(Element.class, pageType);
-      ent.mimeType = getMimeType(pattern);
+      ent.mimeType = mimeType == null ? getMimeType(pattern) : mimeType;
       ent.queryParamProps = queryParamProps;
       ent.syncTypes = syncTypes;
       // Used to use the keyName here as the key but really can only have one per pattern anyway and need a precedence so sc.foo.index can override sc.bar.index.
@@ -293,7 +293,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          String dir = pattern.equals(indexPattern) ? "" : pattern.substring(0,pattern.length() - indexPattern.length());
          if (verbose)
             System.out.println("PageDispatcher: adding index page for: " + (dir.length() == 0 ? "doc root" : dir));
-         addPage(dir + "_index_", dir + "/", pageType, dynContentPage, doSync, isResource, priority, lockScope, queryParamProps, syncTypes, realTime);
+         addPage(dir + "_index_", dir + "/", pageType, dynContentPage, doSync, isResource, priority, lockScope, queryParamProps, syncTypes, realTime, mimeType);
       }
    }
 
@@ -895,7 +895,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       int pageBodySize = sb == null ? 0 : sb.length();
       int initSyncSize = 0;
 
-      if (needsDyn && needsInitialSync && !resetSync) {
+      if (needsDyn && needsInitialSync && !resetSync && ctx.mimeType != null && ctx.mimeType.equals("text/html")) {
          /*
          if (jsFiles.size() > 0) {
             sb.append("\n");
@@ -1346,6 +1346,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          String lockScope = (String) DynUtil.getInheritedAnnotationValue(newType, "sc.html.URL", "lockScope");
          String resultSuffix = (String) DynUtil.getInheritedAnnotationValue(newType, "sc.obj.ResultSuffix", "value");
          Boolean realTimeDef = (Boolean) DynUtil.getInheritedAnnotationValue(newType, "sc.html.URL", "realTime");
+         String mimeType = (String) DynUtil.getInheritedAnnotationValue(newType, "sc.html.URL", "mimeType");
          boolean realTime = realTimeDef == null || realTimeDef;
          String templatePathName = ModelUtil.getTemplatePathName(newType);
          Set<String> syncTypes = needsSync ? ModelUtil.getJSSyncTypes(sys, newType) : null;
@@ -1354,7 +1355,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          }
          System.out.println("*** Adding page type: " + newType);
          addPage(templatePathName, pattern, newType, isURLPage, needsSync, isResource,
-                 DynUtil.getLayerPosition(newType), lockScope, QueryParamProperty.getQueryParamProperties(newType), syncTypes, realTime);
+                 DynUtil.getLayerPosition(newType), lockScope, QueryParamProperty.getQueryParamProperties(newType), syncTypes, realTime, mimeType);
       }
       initPageEntries();
    }

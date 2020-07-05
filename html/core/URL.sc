@@ -48,4 +48,6 @@ public @interface URL {
 
    /** Set to a list of URLs to be added to the set which are run for the automatic tests */
    String[] testURLs() default {};
+
+   String mimeType() default "";
 }
