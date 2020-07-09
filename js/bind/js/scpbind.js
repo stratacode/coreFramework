@@ -9,6 +9,8 @@ sc_PBindUtil_c.allObjects = {};
 sc_PBindUtil_c.getPropertyValue = function(obj, prop) {
    if (sc_instanceOf(prop, sc_IListener))
       return prop.getPropertyValue(obj);
+   if (sc_DynUtil_c.isType(obj))
+      sc_clInit(obj);
    return sc_DynUtil_c.getPropertyValue(obj, prop);
 }
 
