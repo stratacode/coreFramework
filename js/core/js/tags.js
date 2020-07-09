@@ -2339,7 +2339,9 @@ function js_Form() {
    this.submitCount = 0;
    this.submitInProgress = false;
    this.submitError = null;
+   this.submitResult = null;
 }
+
 js_Form_c = sc_newClass("sc.lang.html.Form", js_Form, js_HTMLElement, null);
 js_Form_c.eventAttNames = js_HTMLElement_c.eventAttNames.concat([ "submitCount", "submitEvent"]);
 
@@ -2411,7 +2413,7 @@ js_Form_c.submitFormData = function(url) {
             this.obj.setSubmitInProgress(false);
          },
          error: function(code, msg) {
-            this.obj.setSubmitError(code);
+            this.obj.setSubmitError(msg);
             this.obj.setSubmitInProgress(false);
             sc_error("Error from submitFormData result: " + code + ": " + msg);
          }

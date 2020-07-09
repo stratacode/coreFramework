@@ -42,8 +42,7 @@ public class MethodBinding extends AbstractMethodBinding implements IResponseLis
          System.out.println("*** Unable to resolve method in binding: " + this);
       else {
          //paramTypes = DynUtil.getParameterTypes(method);
-         // TODO? do we need IsStatic
-         //methodIsStatic = DynUtil.hasModifier(method, "static");
+         methodIsStatic = DynUtil.isStaticMethod(method);
       }
    }
 

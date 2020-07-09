@@ -75,10 +75,6 @@ public servlet.core extends webApp, meta, html.core {
           "      _ctx.setValue(\"<%= typeClassName %>\", _<%= lowerClassName %>);\n";
       registerScopeProcessor("appSession", appSessionScope);
 
-      // Causes PageInit.sc to be regenerated whenever the members of either type group are modified
-      addTypeGroupDependency("PageInit.sc", "sc.servlet.PageInit", "_init");
-      addTypeGroupDependency("PageInit.sc", "sc.servlet.PageInit", "_startup");
-
       sc.lang.DefaultAnnotationProcessor urlProc = new sc.lang.DefaultAnnotationProcessor();
       // Adds a static code snippet to register the page when you annotate a class with @URL.  If we happen to register an inner class the addPage still goes on the parent type
       urlProc.staticMixinTemplate = "sc.servlet.URLMixinTemplate";

@@ -115,12 +115,16 @@ sc_DynUtil_c.isRemoteMethod = function(meth) {
    return meth.remote == true;
 }
 
+sc_DynUtil_c.isStaticMethod = function(meth) {
+   return meth.methStatic == true;
+}
+
 sc_DynUtil_c.resolveStaticMethod = function(vartype, methName, returnType, sig) {
    return {type:sc_clInit(vartype), name:methName, methStatic:true, returnType:returnType, paramSig:sig};
 }
 
-sc_DynUtil_c.resolveStaticRemoteMethod = function(vartype, methName) {
-   var res = sc_DynUtil_c.resolveStaticMethod(vartype, methName);
+sc_DynUtil_c.resolveRemoteStaticMethod = function(vartype, methName, returnType, sig) {
+   var res = sc_DynUtil_c.resolveStaticMethod(vartype, methName, returnType, sig);
    res.remote = true;
    return res;
 }
@@ -159,7 +163,7 @@ sc_DynUtil_c.invokeRemote = function(def, ctx, destName, obj, method, paramValue
    paramValues = sc_vararg(arguments, 5);
    if (typeof sc_SyncManager_c == "undefined")
        throw new jv_UnsupportedOperationException("invokeRemote - no implementation loaded for invokeRemote");
-   return sc_SyncManager_c.invokeRemote(def, ctx, obj, null, method.name, method.returnType, method.paramSig, paramValues);
+   return sc_SyncManager_c.invokeRemote(def, ctx, obj, method.type, method.name, method.returnType, method.paramSig, paramValues);
 }
 
 sc_DynUtil_c.evalArithmeticExpression = function(operator, expectedType, lhsVal, rhsVal) {

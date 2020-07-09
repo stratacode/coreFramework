@@ -82,7 +82,8 @@ abstract class DownloadPage extends BasePage {
          }
       }
       catch (IOException exc) {
-         ctx.sendError(500, "Error reading file on server");
+         if (!ctx.response.isCommitted())
+            ctx.sendError(500, "Error reading file on server");
          return null;
       }
       ctx.requestComplete = true;

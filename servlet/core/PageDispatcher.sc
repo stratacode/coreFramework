@@ -907,7 +907,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          // Gets the contents of the 'initial sync layer' - i.e. the data to populate the current state for this page.
          // Using the jsHttp destination but force the output to javascript
          sb.append("\n\n<!-- Init SC JS -->\n");
-         sb.append("<script type='text/javascript'>\n");
+         sb.append("<script type='text/javascript' async>\n");
          if (sc.bind.Bind.trace) {
             sb.append("sc_Bind_c.trace = true;\n");
          }

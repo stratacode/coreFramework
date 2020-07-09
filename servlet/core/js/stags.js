@@ -1004,7 +1004,7 @@ js_Form_c.submitFormData = function(url) {
             this.obj.setSubmitInProgress(false);
          },
          error: function(code, msg) {
-            this.obj.setSubmitError(code);
+            this.obj.setSubmitError(msg);
             this.obj.setSubmitInProgress(false);
             sc_error("Error from submitFormData result: " + code + ": " + msg);
          }
@@ -1714,7 +1714,7 @@ syncMgr = sc_SyncManager_c = {
 
          var v = change.v;
          if (v != null) {
-            if (v.constructor !== String && v.constructor !== Number && v.constructor !== Date && v.constructor !== Boolean) {
+            if (v.constructor !== String && v.constructor !== Number && v.constructor !== Date && v.constructor !== Boolean && !Array.isArray(v)) {
                var evName;
                var exProps = null;
                var idProps = null;

@@ -14,5 +14,9 @@ public servlet.schtml extends core, html.schtml, webApp {
       //webProc.templatePrefix = "web";
 
       addSrcPath("web", "web");
+
+      // Causes PageInit.sc to be regenerated whenever the members of either type group are modified
+      addTypeGroupDependency("PageInit.sc", "sc.servlet.PageInit", "_init");
+      addTypeGroupDependency("PageInit.sc", "sc.servlet.PageInit", "_startup");
    }
 }
