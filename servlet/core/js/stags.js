@@ -451,6 +451,9 @@ js_HTMLElement_c.processEvent = function(elem, event, listener) {
    var ops = listener.otherProps;
    if (scObj !== undefined) {
 
+      if (event.type == "keyup" && event.constructor === Event)
+         return; // It doesn't seem to be specified, but a keyup event is fired for change but it's not a KeyboardEvent
+
       // Add this as a separate field so we can use the exposed parts of the DOM api from Java consistently
       event.currentTag = scObj;
       var eventValue, otherEventValues;
@@ -1501,7 +1504,7 @@ syncMgr = sc_SyncManager_c = {
                         pix = props.length; // finished this command
                      }
                      else
-                        sc_logError("Unrecognized property in stags sync layer: " + prop);
+                        sc_log("TODO: sync property received in stags sync layer for future 'reset' when session is lost: " + prop);
                   }
                }
                else {
@@ -1718,9 +1721,7 @@ syncMgr = sc_SyncManager_c = {
                var evName;
                var exProps = null;
                var idProps = null;
-               if (v.constructor === Event)
-                  evName = "Event";
-               else if (v.constructor === MouseEvent) {
+               if (v.constructor === MouseEvent) {
                   evName = "MouseEvent";
                   exProps = ["button", "clientX", "clientY", "screenX", "screenY", "altKey", "metaKey", "shiftKey", "ctrlKey"];
                }
@@ -1735,6 +1736,9 @@ syncMgr = sc_SyncManager_c = {
                else if (v.constructor === SubmitEvent) {
                   evName = "SubmitEvent";
                   idProps = ["target"];
+               }
+               else if (v.constructor === Event) { // submit, change
+                  evName = "Event";
                }
                else {
                   sc_logError("Property: " + change.p + " no serializer for: " + v);
