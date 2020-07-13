@@ -20,6 +20,8 @@ import sc.bind.Bind;
 import sc.bind.IBinding;
 import sc.bind.BindingDirection;
 
+import sc.dyn.IPropValidator;
+
 import sc.obj.EditorSettings;
 
 import sc.obj.Exec;
