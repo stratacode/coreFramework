@@ -1,0 +1,32 @@
+<div><%!
+      String placeholder = "Enter text...";
+
+      @sc.obj.Sync
+      @sc.obj.HTMLSettings(returnsHTML=true)
+      String content;
+
+      initScript := %>
+         var _tagObj = this;
+         $('#' + this.id).summernote({
+            callbacks: {
+            onChange: function(contents, $editable) {
+               sc_addScheduledJob(_tagObj,
+                  function() {
+                     sc_Bind_c.sendChangedEvent(_tagObj, "content", contents);
+                  }, 500, false);
+            }
+         },
+         placeholder: '<%= placeholder %>',
+         tabsize: 8,
+         height: 250,
+         toolbar: [
+           ['style', ['style']],
+           ['font', ['bold', 'underline', 'clear']],
+           ['color', ['color']],
+           ['para', ['ul', 'ol', 'paragraph']],
+           ['table', ['table']],
+           ['insert', ['link', 'picture', 'video']]
+        ]
+      }); <% ;
+
+     stopScript = %> $('#' + this.id).summernote('destroy'); <% ; %><%= content %></div>

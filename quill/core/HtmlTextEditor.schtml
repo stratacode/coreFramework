@@ -1,0 +1,7 @@
+<div><%!
+      String placeholder = "Enter text here...";
+      initScript := "var _qeditor = new Quill('#' + this.id, {theme: 'snow', placeholder: '" + placeholder + "'});\n   " +
+                    "var _tagObj = this;\n   "   +
+                    "_qeditor.on('text-change', function(delta) { sc_addScheduledJob(_tagObj, function() {console.log('qc: ' + JSON.stringify(_qeditor.getContents())); }, 500, false); });\n";
+   %>
+</div>
