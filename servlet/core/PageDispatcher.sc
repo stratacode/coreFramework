@@ -1273,7 +1273,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       // send only properties.
       SyncManager.addSyncType(ServerTagManager.class, new SyncProperties(null, null, new Object[] {"serverTags", "newServerTags", "removedServerTags"}, null, SyncPropOptions.SYNC_INIT, WindowScopeDefinition.scopeId));
       SyncManager.addSyncType(ServerTag.class, new SyncProperties(null, null, new Object[] {
-         new SyncPropOptions("id", SyncPropOptions.SYNC_INIT), new SyncPropOptions("props", SyncPropOptions.SYNC_INIT), new SyncPropOptions("liveEdit", 0, "on"), new SyncPropOptions("liveEditDelay", 0, 0)}, null, 0, WindowScopeDefinition.scopeId));
+         new SyncPropOptions("id", SyncPropOptions.SYNC_INIT), new SyncPropOptions("props", SyncPropOptions.SYNC_INIT),
+         new SyncPropOptions("liveEdit", 0, "on"), new SyncPropOptions("liveEditDelay", 0, 0),
+         new SyncPropOptions("initScript", 0, null), new SyncPropOptions("stopScript", 0, null)}, null, 0, WindowScopeDefinition.scopeId));
       SyncManager.addSyncType(Location.class, new SyncProperties(null, null, new Object[] {"href", "pathname", "search"}, null, 0, WindowScopeDefinition.scopeId));
       //SyncManager.addSyncType(ServerTag.ServerTagProp.class, new SyncProperties(null, null, new Object[] {"propName"}, null, SyncPropOptions.SYNC_INIT, WindowScopeDefinition.scopeId));
    }

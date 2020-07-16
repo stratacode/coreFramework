@@ -35,6 +35,8 @@ function js_HTMLElement() {
    this.invisTags = null;
    this.initState = 0;
    this.changedCount = 0;
+   this.initScript = null;
+   this.stopScript = null;
 
    // If this is a repeat wrapper, add a listener for the 'repeat' property change
    if (this.isRepeatTag())
@@ -252,7 +254,24 @@ js_Element_c.isRepeatTag = function() {
    return this.repeat !== null || sc_instanceOf(this, js_IRepeatWrapper);
 }
 
-// Hide this node in the editor - paralles the same annotation on Element in Java
+js_HTMLElement_c.runStopScript = function() {
+   if (this.stopScript != null && this.initScriptRun === true) {
+      this.initScriptRun = false;
+      return new Function(this.stopScript).call(this);
+   }
+}
+
+js_HTMLElement_c.runInitScript = function() {
+   if (this.initScript != null) {
+      sc_addScheduledJob(this,
+                          function initWrapper() {
+                              this.initScriptRun = true;
+                              new Function(this.initScript).call(this);
+                        }, 1, false);
+   }
+}
+
+// Hide this property in the editor - (for the same annotation on Element in Java)
 js_Element_c._PT = {parentNode:{EditorSettings:{visible:false}}};
 
 js_HTMLElement_c.toString = function() {
@@ -344,6 +363,26 @@ js_HTMLElement_c.setBodyOnly = function(nbo) {
          this.invalidate();
    }
    sc_Bind_c.sendEvent(sc_IListener_c.VALUE_CHANGED, this, "bodyOnly" , nbo);
+}
+
+js_HTMLElement_c.getBodyOnly = function() {
+   return this.bodyOnly;
+}
+
+js_HTMLElement_c.setInitScript = function(scr) {
+   this.initScript = scr;
+}
+
+js_HTMLElement_c.getInitScript = function() {
+   return this.initScript;
+}
+
+js_HTMLElement_c.setStopScript = function(scr) {
+   this.stopScript = scr;
+}
+
+js_HTMLElement_c.getStopScript = function() {
+   return this.stopScript;
 }
 
 js_HTMLElement_c.setHTMLClass = function(cl) {
@@ -464,6 +503,8 @@ js_HTMLElement_c.insertIntoDOM = function() {
 */
 
 js_HTMLElement_c.destroy = function() {
+   if (this.stopScript)
+      this.runStopScript();
    var origElem = this.element;
    this.element = null;
    this.domChanged(origElem, null);
@@ -635,6 +676,8 @@ js_HTMLElement_c.updateFromDOMElement = js_HTMLElement_c.setDOMElement = functio
    if (newElement !== this.element) {
       var orig = this.element;
       if (orig !== null) {
+          if (this.stopScript)
+             this.runStopScript();
           delete orig.scObj;
       }
 
@@ -649,6 +692,8 @@ js_HTMLElement_c.updateFromDOMElement = js_HTMLElement_c.setDOMElement = functio
             console.log("Warning: replacing object: " + sc_DynUtil_c.getInstanceId(newElement.scObj) + " with: " + sc_DynUtil_c.getInstanceId(this) + " for tag: " + this.tagName);
          }
          newElement.scObj = this;
+         if (this.initScript)
+            this.runInitScript();
       }
       this.domChanged(orig, newElement);
    }
@@ -2831,6 +2876,12 @@ js_Element_c.updateServerTag = function(tagObj, id, serverTag, addSync) {
             tagObj.setId(id);
             tagObj.serverContent = true;
             tagObj.updateFromDOMElement(element);
+            if (serverTag.initScript) {
+                tagObj.initScript = serverTag.initScript;
+                tagObj.runInitScript();
+            }
+            if (serverTag.stopScript)
+               tagObj.stopScript = serverTag.stopScript;
 
             if (addSync) {
                if (isRepeat)
@@ -3128,6 +3179,8 @@ js_HtmlPage_c.refreshServerTags = js_Page_c.refreshServerTags = function() {
                      rmTag = this.serverTagObjs[rmTag];
                      if (js_Element_c.verbose)
                         console.log("Removing serverTag object " + rmTag + ": removed from server");
+                     if (rmTag.stopScript)
+                        rmTag.runStopScript();
                      sc_DynUtil_c.dispose(rmTag);
                      delete serverTags[rmId];
                      delete this.serverTagObjs[rmId];

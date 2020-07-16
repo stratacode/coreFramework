@@ -405,6 +405,7 @@ sc_Bind_c = {
 function js_HTMLElement() {
    this.listenerProps = null; // List of tagObject properties which are being listened to on the server - received via serverTag.props
    this.element = null;
+   this.stopScript = null;
 }
 
 js_Element_c = js_HTMLElement_c = js_HTMLElement.prototype;
@@ -747,7 +748,14 @@ js_HTMLElement_c.click = function() {
    sc_Bind_c.sendChangedEvent(this, "clickEvent", evt);
 }
 
+js_HTMLElement_c.runStopScript = function() {
+   if (this.stopScript != null) {
+      return new Function(this.stopScript).call(this);
+   }
+}
+
 js_HTMLElement_c.destroy = function() {
+   this.runStopScript();
    var origElem = this.element;
    this.element = null;
    this.domChanged(origElem, null);
@@ -1322,6 +1330,8 @@ syncMgr = sc_SyncManager_c = {
                         st.id = stProps.id;
                      if (stProps.props)
                         st.props = stProps.props;
+
+                     // TODO: are the settings of these next few properties necessary?
                      if (stProps.liveEdit === undefined)
                         st.liveEdit = "on";
                      else
@@ -1330,6 +1340,11 @@ syncMgr = sc_SyncManager_c = {
                         st.liveEditDelay = 0;
                      else
                         st.liveEditDelay = stProps.liveEditDelay;
+
+                     if (stProps.initScript)
+                        st.initScript = stProps.initScript;
+                     if (stProps.stopScript)
+                        st.stopScript = stProps.stopScript;
                   }
                   else
                      sc_logError("No ServerTag for modify");
@@ -1606,6 +1621,16 @@ syncMgr = sc_SyncManager_c = {
 
                syncMgr.tagObjects[id] = tagObj;
 
+               if (serverTag.initScript) {
+                  sc_addScheduledJob(tagObj,
+                       function initWrapper() {
+                           new Function(serverTag.initScript).call(tagObj);
+                       }, 1, false);
+               }
+               if (serverTag.stopScript) {
+                  tagObj.stopScript = serverTag.stopScript;
+               }
+
                // TODO: addSyncInst logic here - listen for changes on the DOM attributes according to these properties and register a callback that
                // will queue up changes which we convert to the JSON to send to the server
             }
@@ -1637,6 +1662,11 @@ syncMgr = sc_SyncManager_c = {
          if (tagObj != null) {
             if (js_Element_c.verbose)
                sc_log("Removing serverTag object " + id + ": no longer in DOM");
+
+            tagObj.runStopScript();
+
+            delete syncMgr.tagObjects[id];
+
             sc_DynUtil_c.dispose(tagObj);
             tagObj = null;
          }
