@@ -7,15 +7,21 @@
 
       initScript := %>
          var _tagObj = this;
+         _tagObj.refreshScheduled = false;
          $('#' + this.id).summernote({
             callbacks: {
-            onChange: function(contents, $editable) {
-               sc_addScheduledJob(_tagObj,
-                  function() {
-                     sc_Bind_c.sendChangedEvent(_tagObj, "content", contents);
-                  }, 500, false);
-            }
-         },
+               onChange: function(contents, $editable) {
+                  _tagObj.content = contents;
+                  if (!_tagObj.refreshScheduled) {
+                     _tagObj.refreshScheduled = true;
+                     sc_addScheduledJob(_tagObj,
+                        function() {
+                           _tagObj.refreshScheduled = false;
+                           sc_Bind_c.sendChange(_tagObj, "content", _tagObj.content);
+                        }, 500, false);
+                  }
+               }
+            },
          placeholder: '<%= placeholder %>',
          tabsize: 8,
          height: 250,
