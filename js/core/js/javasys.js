@@ -13,11 +13,14 @@ jv_Object_c.getClass = function() {
    return this.constructor.prototype;
 }
 
+Error_c.equals = jv_Object_c.equals;
+Error_c.hashCode = jv_Object_c.hashCode;
+
 // All class objects have a getName method but our only way to add methods to java.lang.Class is via jv_Object here.
 jv_Object_c.getName = function() {
    if (this.hasOwnProperty("$protoName"))
       return this.$protoName;
-   throw new jv_UnsupportedOperationException();
+   // else - return undefined in case there's a field 'name' and we are calling DynUtil.getPropertyValue which tries the getX method first
 }
 
 function jv_Comparable() {}
@@ -36,6 +39,10 @@ Number_c.TYPE = Number_c;
 Number.prototype.hashCode = function() {
    return Math.floor(this) * 17;
 }
+
+Number.prototype.equals = jv_Object_c.equals;
+
+Number.prototype.getClass = jv_Object_c.getClass;
 
 Number.prototype.intValue = function() {
    return this < 0 ? Math.ceil(this) : Math.floor(this);
@@ -77,12 +84,8 @@ Number_c.toHexString = function(v) {
    return v.toString(16);
 }
 
-Object.prototype.hashCode = function() {
+jv_Object_c.hashCode = function() {
    return sc_id(this);
-}
-
-Object.prototype.equals = function(other) {
-   return other === this;
 }
 
 // Need some way to get to the original Object's toString method so we have a reasonable default
@@ -90,11 +93,8 @@ Object.prototype.equals = function(other) {
 //   return sc_DynUtil_c.getInstanceName(this);
 //}
 
-Object.prototype.getClass = function() {
-   return this.constructor.prototype;
-}
 
-Object.prototype.clone = function() {
+jv_Object_c.clone = function() {
    // TODO: will this get called for Node's the DOM?  If so should we call cloneNode?
 
    // Technically should throw here if this is not an instanceof Cloneable but that behavior is annoying anyway.
@@ -147,6 +147,8 @@ String.prototype.hashCode = function() {
    var len = this.length;
    return len == 0 ? 0 : len == 1 ? this.length * this.charCodeAt(0) * 53 : this.length * this.charCodeAt(0) * this.charCodeAt(len-1) * 7;
 }
+
+String.prototype.getClass = jv_Object_c.getClass;
 
 String.prototype.toString = function() {
    return this;
@@ -201,14 +203,24 @@ String.prototype.matches = function(p) {
 var Boolean_c = sc_newClass("java.lang.Boolean", Boolean, null, null);
 sc_addTypeAlias("java.lang.Boolean", "boolean");
 
+Boolean.prototype.getClass = jv_Object_c.getClass;
+
 Boolean_c.FALSE = false;
 Boolean_c.TRUE = true;
+
+Boolean_c.hashCode = jv_Object_c.hashCode;
+Boolean_c.equals = jv_Object_c.equals;
 
 function jv_Void() {}
 var jv_Void_c = sc_newClass("java.lang.Void", jv_Void, null, null);
 
+jv_Void_c.hashCode = jv_Object_c.hashCode;
+jv_Void_c.equals = jv_Object_c.equals;
+
 function jv_Byte() {}
 var jv_Byte_c = sc_newClass("java.lang.Byte", jv_Byte, null, null);
+jv_Byte_c.hashCode = jv_Object_c.hashCode;
+jv_Byte_c.equals = jv_Object_c.equals;
 
 Error.prototype.printStackTrace = function() {
   if (this.stack)
@@ -288,7 +300,7 @@ function jv_Enum(name, ord) {
    this._ordinal = ord;
 }
 
-jv_Enum_c = sc_newClass("java.lang.Enum", jv_Enum);
+jv_Enum_c = sc_newClass("java.lang.Enum", jv_Enum, jv_Object, null);
 
 jv_Enum_c.toString = jv_Enum_c.name = function() {
    return this._name;
@@ -320,7 +332,7 @@ function jv_StringBuilder() {
 }
 
 
-jv_StringBuilder_c = sc_newClass("java.lang.StringBuilder", jv_StringBuilder);
+jv_StringBuilder_c = sc_newClass("java.lang.StringBuilder", jv_StringBuilder, jv_Object, null);
 
 jv_StringBuilder_c.append = function(v) {
    if (v != null)
@@ -342,7 +354,17 @@ jv_StringBuilder_c.substring = jv_StringBuilder_c.subSequence = function(start, 
    return this.toString().substring(start, end); // TODO: this could be more efficient
 }
 
-Array.prototype.clone = function() {
+
+function jv_Array() {
+}
+
+Array_c = sc_newClass("Array", Array);
+
+Array_c.hashCode = jv_Object_c.hashCode;
+Array_c.equals = jv_Object_c.equals;
+Array_c.getClass = jv_Object_c.getClass;
+
+Array_c.clone = function() {
    var sz = this.length;
    var newArray = new Array(sz);
    var len = newArray.length;
@@ -352,10 +374,6 @@ Array.prototype.clone = function() {
    return newArray;
 }
 
-function jv_Array() {
-}
-
-Array_c = sc_newClass("Array", Array);
 
 jv_Array_c = sc_newClass("jv_Array", jv_Array, Array, null);
 
@@ -371,6 +389,9 @@ jv_Array_c.newInstance = function() {
    }
    return res;
 }
+
+jv_Array_c.hashCode = jv_Object_c.hashCode;
+jv_Array_c.equals = jv_Object_c.equals;
 
 function jv_Exception() {
    // TODO: simulate this on IE using callee and arguments perhaps?
@@ -404,6 +425,9 @@ function jv_Character() {
 }
 
 jv_Character_c = sc_newClass("java.lang.Character", jv_Character);
+
+jv_Character_c.hashCode = jv_Object_c.hashCode;
+jv_Character_c.equals = jv_Object_c.equals;
 
 jv_Character_c.isLowerCase = function(c) {
    return /[a-z]/.test(c);

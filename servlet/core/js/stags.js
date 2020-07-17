@@ -393,7 +393,7 @@ sc_DynUtil_c = {
 
 sc_Bind_c = {
    trace:false,
-   sendChangedEvent: function(obj,propName, val) {
+   sendChange: function(obj,propName, val) {
       if (sc_SyncManager_c.trace || sc_Bind_c.trace)
          sc_log("Sync client change: " + sc_instId(obj) + "." + propName + " = " + val);
       syncMgr.addChange(obj, propName, val);
@@ -498,10 +498,10 @@ js_HTMLElement_c.processEvent = function(elem, event, listener) {
 
       if (js_Element_c.trace && listener.scEventName != "mouseMoveEvent")
          sc_log("tag event: " + listener.propName + ": " + listener.scEventName + " = " + eventValue);
-      sc_Bind_c.sendChangedEvent(scObj, listener.propName, eventValue);
+      sc_Bind_c.sendChange(scObj, listener.propName, eventValue);
       if (ops) {
          for (opi = 0; opi < ops.length; opi++) {
-            sc_Bind_c.sendChangedEvent(scObj, ops[opi], otherEventValues[opi]);
+            sc_Bind_c.sendChange(scObj, ops[opi], otherEventValues[opi]);
          }
       }
 
@@ -643,11 +643,11 @@ js_HTMLElement_c.domChanged = function(origElem, newElem) {
                   this[listener.propName] = null; // set the event property to null initially the first time we have someone listening on it.  this is too late but do we want to initialize all of these fields to null on every tag object just so they are null, not undefined?   Just do not override an existing value or refreshBinding fires when we do not want it to
             }
             else {// Now that we know the value of the aliased property (e.g. innerHeight) we need to send a change event cause it changes once we have an element.
-               sc_Bind_c.sendChangedEvent(this, listener.propName, sc_DynUtil_c.getPropertyValue(this, listener.propName));
+               sc_Bind_c.sendChange(this, listener.propName, sc_DynUtil_c.getPropertyValue(this, listener.propName));
                var ops = listener.otherProps;
                if (ops) {
                   for (var opi = 0; opi < ops.length; opi++) {
-                     sc_Bind_c.sendChangedEvent(this, ops[opi], sc_DynUtil_c.getPropertyValue(this, ops[opi]));
+                     sc_Bind_c.sendChange(this, ops[opi], sc_DynUtil_c.getPropertyValue(this, ops[opi]));
                   }
                }
             }
@@ -745,7 +745,7 @@ js_HTMLElement_c.click = function() {
    evt.currentTarget = evt.target = this; // TODO: do not appear to be settable?
    this.clickEvent = evt;
    evt.currentTag = this;
-   sc_Bind_c.sendChangedEvent(this, "clickEvent", evt);
+   sc_Bind_c.sendChange(this, "clickEvent", evt);
 }
 
 js_HTMLElement_c.runStopScript = function() {
@@ -837,8 +837,8 @@ js_Input_c.setValue = function(newVal) {
       this.value = newVal;
       if (this.element !== null && this.element.value != newVal)
          this.element.value = newVal;
-      sc_log("Input.sendChangedEvent(" + newVal + ")");
-      sc_Bind_c.sendChangedEvent(this, "value" , newVal);
+      sc_log("Input.sendChange(" + newVal + ")");
+      sc_Bind_c.sendChange(this, "value" , newVal);
    }
    else
       sc_log("Input.setValue - not changed");
@@ -853,7 +853,7 @@ js_Input_c.setDisabled = function(newVal) {
       this.disabled = newVal;
       if (this.element !== null && this.element.disabled != newVal)
          this.element.disabled = newVal;
-      sc_Bind_c.sendChangedEvent(this, "disabled" , newVal);
+      sc_Bind_c.sendChange(this, "disabled" , newVal);
    }
 }
 
@@ -864,7 +864,7 @@ js_Input_c.getDisabled = function() {
 js_Input_c.setClickCount = function(ct) {
    if (ct != this.clickCount) {
       this.clickCount = ct;
-      sc_Bind_c.sendChangedEvent(this, "clickCount", this.clickCount);
+      sc_Bind_c.sendChange(this, "clickCount", this.clickCount);
    }
 }
 
@@ -877,7 +877,7 @@ js_Input_c.setChecked = function(ch) {
       this.checked = ch;
       if (this.element !== null && this.element.checked != ch)
          this.element.checked = ch;
-      sc_Bind_c.sendChangedEvent(this, "checked", ch);
+      sc_Bind_c.sendChange(this, "checked", ch);
    }
 }
 
@@ -926,7 +926,7 @@ js_Select_c.setSelectedIndex = function(newIx) {
          this.setSelectedValue(sc_arrayValue(ds, newIx));
       else
          this.setSelectedValue(null);
-      sc_Bind_c.sendChangedEvent(this, "selectedIndex", newIx);
+      sc_Bind_c.sendChange(this, "selectedIndex", newIx);
    }
 }
 
@@ -941,7 +941,7 @@ js_Select_c.setSelectedValue = function(newVal) {
       var ix = ds == null ? -1 : ds.indexOf(newVal);
       if (ix != this.selectedIndex)
          this.setSelectedIndex(ix);
-      sc_Bind_c.sendChangedEvent(this, "selectedValue", newVal);
+      sc_Bind_c.sendChange(this, "selectedValue", newVal);
    }
 }
 
@@ -957,7 +957,7 @@ js_Select_c.setOptionDataSource = function(newDS) {
       }
       this.optionDataSource = newDS;
    }
-   sc_Bind_c.sendChangedEvent(this, "optionDataSource" , newDS);
+   sc_Bind_c.sendChange(this, "optionDataSource" , newDS);
 }
 
 js_Select_c.getOptionDataSource = function() {
@@ -995,7 +995,7 @@ js_Form_c.sendSubmitEvent = function() {
    var evt = new Event('submit');
    evt["currentTarget"] = evt["target"] = this; // not using "." here because intelliJ complains these are constant - will any browsers barf on this?  If so we'll need to just create a new object and copy over any fields we need.
    this.submitEvent = evt;
-   sc_Bind_c.sendChangedEvent(this, "submitEvent", evt);
+   sc_Bind_c.sendChange(this, "submitEvent", evt);
 }
 
 js_Form_c.submitFormData = function(url) {
@@ -1039,7 +1039,7 @@ js_Form_c.domChanged = function(origElem, newElem) {
 js_Form_c.setSubmitCount = function(ct) {
    if (ct != this.submitCount) {
       this.submitCount = ct;
-      sc_Bind_c.sendChangedEvent(this, "submitCount" , this.submitCount);
+      sc_Bind_c.sendChange(this, "submitCount" , this.submitCount);
    }
 }
 
@@ -1049,7 +1049,7 @@ js_Form_c.getSubmitCount = function() {
 
 js_Form_c.setSubmitInProgress = function(v) {
    this.submitInProgress = v;
-   sc_Bind_c.sendChangedEvent(this, "submitInProgress" , this.submitInProgress);
+   sc_Bind_c.sendChange(this, "submitInProgress" , this.submitInProgress);
 }
 
 js_Form_c.getSubmitInProgress = function() {
@@ -1058,7 +1058,7 @@ js_Form_c.getSubmitInProgress = function() {
 
 js_Form_c.setSubmitError = function(e) {
    this.submitError = e;
-   sc_Bind_c.sendChangedEvent(this, "submitError" , this.submitError);
+   sc_Bind_c.sendChange(this, "submitError" , this.submitError);
 }
 
 js_Form_c.getSubmitError = function() {
@@ -1067,7 +1067,7 @@ js_Form_c.getSubmitError = function() {
 
 js_Form_c.setSubmitResult = function(e) {
    this.submitResult = e;
-   sc_Bind_c.sendChangedEvent(this, "submitResult" , this.submitResult);
+   sc_Bind_c.sendChange(this, "submitResult" , this.submitResult);
 }
 
 js_Form_c.getSubmitResult = function() {
@@ -1084,7 +1084,7 @@ js_Option_c.eventAttNames = js_HTMLElement_c.eventAttNames.concat(["selected", "
 
 js_Option_c.setOptionData = function(dv) {
    this.optionData = dv;
-   sc_Bind_c.sendChangedEvent(this, "optionData", dv);
+   sc_Bind_c.sendChange(this, "optionData", dv);
 }
 js_Option_c.getOptionData = function() {
    return this.optionData;
@@ -1095,7 +1095,7 @@ js_Option_c.setSelected = function(newSel) {
       this.selected = newSel;
       if (this.element !== null && this.element.selected != newSel)
          this.element.selected = newSel;
-      sc_Bind_c.sendChangedEvent(this, "selected" , newSel);
+      sc_Bind_c.sendChange(this, "selected" , newSel);
    }
 }
 
@@ -2091,7 +2091,7 @@ syncMgr = sc_SyncManager_c = {
    },
    sendWindowSizeEvents:function(wp) {
       for (var i = 0; i < wp.length; i++) {
-         sc_Bind_c.sendChangedEvent(syncMgr.windowWrap, wp[i] , window[wp[i]]);
+         sc_Bind_c.sendChange(syncMgr.windowWrap, wp[i] , window[wp[i]]);
       }
    },
    initDocumentSync:function(props) {

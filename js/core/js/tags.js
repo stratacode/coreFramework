@@ -44,7 +44,7 @@ function js_HTMLElement() {
 }
 
 js_indexPattern = "/index.html";
-js_Element_c = js_HTMLElement_c = sc_newClass("sc.lang.html.HTMLElement", js_HTMLElement, null, [sc_IChildInit, sc_IStoppable, sc_INamedChildren, sc_IObjChildren]);
+js_Element_c = js_HTMLElement_c = sc_newClass("sc.lang.html.HTMLElement", js_HTMLElement, jv_Object, [sc_IChildInit, sc_IStoppable, sc_INamedChildren, sc_IObjChildren]);
 
 // This is part of the SemanticNode class on the server and so the component code gen uses it even for client code
 // involving component types which extend Element.  Just noop it here.
@@ -2876,12 +2876,14 @@ js_Element_c.updateServerTag = function(tagObj, id, serverTag, addSync) {
             tagObj.setId(id);
             tagObj.serverContent = true;
             tagObj.updateFromDOMElement(element);
-            if (serverTag.initScript) {
-                tagObj.initScript = serverTag.initScript;
-                tagObj.runInitScript();
+            if (serverTag) {
+               if (serverTag.initScript) {
+                   tagObj.initScript = serverTag.initScript;
+                   tagObj.runInitScript();
+               }
+               if (serverTag.stopScript)
+                  tagObj.stopScript = serverTag.stopScript;
             }
-            if (serverTag.stopScript)
-               tagObj.stopScript = serverTag.stopScript;
 
             if (addSync) {
                if (isRepeat)
@@ -3555,7 +3557,7 @@ function js_Window() {
    window.sc_errorCountListener = errorCountChanged;
 }
 
-js_Window_c = sc_newClass("sc.lang.html.Window", js_Window, null, null);
+js_Window_c = sc_newClass("sc.lang.html.Window", js_Window, jv_Object, null);
 
 js_Window_c.getWindow = function() {
    if (js_Window_c.windowWrapper === undefined) {
@@ -3624,7 +3626,7 @@ function js_PageInfo() {
    this.queryParamProperties = null;
 }
 
-js_PageInfo_c = sc_newClass("sc.lang.html.PageInfo", js_PageInfo, null, null);
+js_PageInfo_c = sc_newClass("sc.lang.html.PageInfo", js_PageInfo, jv_Object, null);
 
 js_PageInfo_c.pages = {};
 
@@ -3645,7 +3647,7 @@ function js_BaseURLParamProperty(enclType, propName, propType, req) {
    this.required = req;
 }
 
-js_BaseURLParamProperty_c = sc_newClass("sc.lang.html.BaseURLParamProperty", js_BaseURLParamProperty, null, null);
+js_BaseURLParamProperty_c = sc_newClass("sc.lang.html.BaseURLParamProperty", js_BaseURLParamProperty, jv_Object, null);
 
 js_BaseURLParamProperty_c.setPropertyValue = function(pageInst, ev) {
    if (this.propType == Number_c) {
@@ -3871,3 +3873,6 @@ function sc_URLPath(u, n, k, p, rt) {
 
 sc_URLPath_c = sc_newClass("sc.js.URLPath", sc_URLPath, jv_Object, [sc_IObjectId]);
 
+Event.prototype.hashCode = jv_Object_c.hashCode;
+Event.prototype.equals = jv_Object_c.equals;
+Event.prototype.getClass = jv_Object_c.getClass;

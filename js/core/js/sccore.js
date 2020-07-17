@@ -120,10 +120,16 @@ function sc_newInnerClass(typeName, newConstr, outerClass, extendsClass, implArr
    return newProto;
 }
 
-// Called with variable number of dim args at the end like: sc_initArray(String_c, [["a","b"], ["c", "d"], ["e", "f"]], 3, 2) for a [3][2] array
-function sc_initArray(arrayClass, ndim, arr) { 
+function sc_initArrayInt(arrayClass, ndim, arr) {
    arr._class = arrayClass;
-   arr._ndim = ndim - 1;
+   arr._ndim = ndim;
+   //arr.hashCode = jv_Object_c.hashCode;
+   //arr.equals = jv_Object_c.equals;
+}
+
+// Called with variable number of dim args at the end like: sc_initArray(String_c, [["a","b"], ["c", "d"], ["e", "f"]], 3, 2) for a [3][2] array
+function sc_initArray(arrayClass, ndim, arr) {
+   sc_initArrayInt(arrayClass, ndim - 1, arr);
    return arr;
 }
 
@@ -138,8 +144,7 @@ function sc_initArrDim(array, arrayClass, args, dim) {
    var ndim = args.length - 2 - dim;
    if (dim == 0) {
       var res = new Array(len);
-      res._class = arrayClass;
-      res._ndim = ndim;
+      sc_initArrayInt(arrayClass, ndim, res);
       array = res;
       for (var j = 0; j < len; j++) {
          if (arrayClass == Number_c)
