@@ -405,6 +405,7 @@ sc_Bind_c = {
 function js_HTMLElement() {
    this.listenerProps = null; // List of tagObject properties which are being listened to on the server - received via serverTag.props
    this.element = null;
+   this.initScript = null;
    this.stopScript = null;
 }
 
@@ -746,6 +747,14 @@ js_HTMLElement_c.click = function() {
    this.clickEvent = evt;
    evt.currentTag = this;
    sc_Bind_c.sendChange(this, "clickEvent", evt);
+}
+
+js_HTMLElement_c.runInitScript = function() {
+   var tagObj = this;
+   sc_addScheduledJob(tagObj,
+        function initWrapper() {
+            new Function(tagObj.initScript).call(tagObj);
+        }, 1, false);
 }
 
 js_HTMLElement_c.runStopScript = function() {
@@ -1622,10 +1631,8 @@ syncMgr = sc_SyncManager_c = {
                syncMgr.tagObjects[id] = tagObj;
 
                if (serverTag.initScript) {
-                  sc_addScheduledJob(tagObj,
-                       function initWrapper() {
-                           new Function(serverTag.initScript).call(tagObj);
-                       }, 1, false);
+                  tagObj.initScript = serverTag.initScript;
+                  tagObj.runInitScript();
                }
                if (serverTag.stopScript) {
                   tagObj.stopScript = serverTag.stopScript;
@@ -1639,6 +1646,9 @@ syncMgr = sc_SyncManager_c = {
          else if (tagObj.element !== element) {
             if (js_Element_c.verbose)
                sc_log("Updating DOM element for tagObject with " + id);
+            if (tagObj.stopScript != null)
+               tagObj.runStopScript();
+
             if (serverTag != null && serverTag.props != null) {
                var oldProps = tagObj.listenerProps;
                if (!oldProps || oldProps.length !== serverTag.props.length) {
@@ -1650,6 +1660,9 @@ syncMgr = sc_SyncManager_c = {
             var props = serverTag == null || serverTag.props == null ? tagObj.eventAttNames : serverTag.props.concat(tagObj.eventAttNames);
             tagObj.listenerProps = props;
             tagObj.updateFromDOMElement(element);
+
+            if (tagObj.initScript != null)
+               tagObj.runInitScript();
          }
       }
       else if (id === "window") {
