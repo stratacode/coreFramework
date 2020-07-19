@@ -8,10 +8,28 @@
       initScript := %>
          var _tagObj = this;
          _tagObj.refreshScheduled = false;
+
+         function sn_ContentListener(scObj) {
+            sc_AbstractListener.call(this);
+            this.scObj = scObj;
+         }
+         sn_ContentListener_c = sc_newClass("sc.summernote.ContentListener", sn_ContentListener, sc_AbstractListener, null);
+         sn_ContentListener_c.valueValidated = function(obj, prop, detail, apply) {
+            var scObj = this.scObj;
+            if (_tagObj.content != _tagObj.lastEdit)
+               $('#' + _tagObj.id).summernote("code", _tagObj.content);
+         }
+
+         if (_tagObj.contentListener == null) {
+            _tagObj.contentListener = new sn_ContentListener(_tagObj);
+            sc_Bind_c.addListener(_tagObj, "content", _tagObj.contentListener,sc_IListener_c.VALUE_VALIDATED);
+         }
+
          $('#' + this.id).summernote({
             callbacks: {
                onChange: function(contents, $editable) {
                   _tagObj.content = contents;
+                  _tagObj.lastEdit = contents;
                   if (!_tagObj.refreshScheduled) {
                      _tagObj.refreshScheduled = true;
                      sc_addScheduledJob(_tagObj,
@@ -35,6 +53,14 @@
            ['insert', ['link', 'picture', 'video']],
            ['view', ['codeview', 'undo', 'redo']]
         ]
-      }); <% ;
+      });
 
-     stopScript = %> $('#' + this.id).summernote('destroy'); <% ; %><%= content %></div>
+
+      <% ;
+
+     stopScript = %>
+         $('#' + this.id).summernote('destroy');
+         if (this.contentListener != null) {
+            sc_Bind_c.removeListener(this, "content", this.contentListener, sc_IListener_c.VALUE_VALIDATED);
+         }
+     <% ; %><%= content %></div>

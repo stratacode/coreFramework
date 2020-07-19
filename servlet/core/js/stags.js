@@ -397,8 +397,38 @@ sc_Bind_c = {
       if (sc_SyncManager_c.trace || sc_Bind_c.trace)
          sc_log("Sync client change: " + sc_instId(obj) + "." + propName + " = " + val);
       syncMgr.addChange(obj, propName, val);
+   },
+
+   // Note: only supporting one listener, and valueValidated for each property here for now since this is only used
+   // as a hook for the JS init/stop script and the addListener/removeListener are called from the script and so should
+   // work like the version in the client/server runtime.
+   addListener: function(obj,propName,listener,mask) {
+      var ls = obj._bindListeners;
+      if (ls == null) {
+         obj._bindListeners = ls = {};
+      }
+      ls[propName] = listener;
+   },
+   removeListener: function(obj,propName,listener,mask) {
+      var ls = obj._bindListeners;
+      if (ls)
+        delete ls[propName];
+   },
+
+   sendChangeToListeners: function(obj,propName,val) {
+      var ls = obj._bindListeners;
+      if (ls) {
+         ls = ls[propName];
+         if (ls)
+            ls.valueValidated(obj, propName, val, true);
+      }
    }
 };
+
+// For compatibility with initScript/stopScript hooks with the client/server version
+function sc_AbstractListener(obj) {
+}
+var sc_IListener_c = {VALUE_VALIDATED:1};
 
 // --- HTML stuff
 
@@ -958,6 +988,7 @@ js_Select_c.getSelectedIndex = function() {
    return this.selectedIndex;
 }
 
+/*
 js_Select_c.setOptionDataSource = function(newDS) {
    if (newDS !== this.optionDataSource) {
       if (this.selectListener == null) {
@@ -972,6 +1003,7 @@ js_Select_c.setOptionDataSource = function(newDS) {
 js_Select_c.getOptionDataSource = function() {
    return this.optionDataSource;
 }
+*/
 
 js_Select_c.preChangeHandler = js_Input_c.preChangeHandler;
 js_Select_c.postChangeHandler = js_Input_c.postChangeHandler;
@@ -1527,8 +1559,15 @@ syncMgr = sc_SyncManager_c = {
                         }
                         pix = props.length; // finished this command
                      }
-                     else
+                     else {
+                        var scElem = chElem.scObj;
+                        if (scElem)
+                           scElem[prop] = val;
+                        if (scElem && scElem._bindListeners)
+                           sc_Bind_c.sendChangeToListeners(scElem, prop, val);
+
                         sc_log("TODO: sync property received in stags sync layer for future 'reset' when session is lost: " + prop);
+                     }
                   }
                }
                else {
