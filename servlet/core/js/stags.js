@@ -20,6 +20,8 @@ var sc$nextid = 1;
 var sc$dynStyles = {};
 var sc$resetState = {}; // any sync'd state that does not correspond to the DOM is stored here - to be sent back when we need to reset the server's session
 var sc$startTime = new Date().getTime();
+var sc$queuedMethods = {focus:true}
+var sc$domMethods = {focus:true}
 function sc_id(o) {
    if (!sc_hasProp(o, "sc$id"))
       o.sc$id = sc$nextid++;
@@ -1318,6 +1320,7 @@ syncMgr = sc_SyncManager_c = {
    refreshTagsScheduled: false,
    windowSyncProps: null,
    documentSyncProps: null,
+   queuedMethods: null,
    applySyncLayer: function(lang,json,syncSequence,detail) {
       if (sc_SyncManager_c.trace) {
          sc_log("Sync applying server changes (from: " + (detail ? detail : "init") + " request): " + json);
@@ -1544,17 +1547,24 @@ syncMgr = sc_SyncManager_c = {
                      else if (prop === "$meth") {
                         var args = chObj["args"];
                         var cid = chObj["callId"];
-                        var scElem = chElem.scObj;
-                        if (scElem) {
-                           var f = scElem[val];
-                           if (f) {
-                              var mres = f.apply(scElem, args);
-                              if (!mres)
-                                 mres = null; // cvt undefined to null for 'void' functions
-                              syncMgr.addMethReturn(mres, cid);
-                           }
-                           else {
-                              console.error("No method named: " + mn + " for remote call");
+                        if (sc$queuedMethods[val]) {
+                           if (syncMgr.queuedMethods == null)
+                              syncMgr.queuedMethods = [];
+                           syncMgr.queuedMethods.push({chElem:chElem, val:val, args:args, cid:cid});
+                        }
+                        else {
+                           var scElem = sc$domMethods[val] ? chElem : chElem.scObj;
+                           if (scElem) {
+                              var f = scElem[val];
+                              if (f) {
+                                 var mres = f.apply(scElem, args);
+                                 if (!mres)
+                                    mres = null; // cvt undefined to null for 'void' functions
+                                 syncMgr.addMethReturn(mres, cid);
+                              }
+                              else {
+                                 console.error("No method named: " + val + " for remote call");
+                              }
                            }
                         }
                         pix = props.length; // finished this command
@@ -1623,6 +1633,8 @@ syncMgr = sc_SyncManager_c = {
       }
       if (needsTagRefresh)
          syncMgr.schedRefreshTags();
+      else
+         syncMgr.runQueuedMethods();
    },
    // Called when the DOM body has changed - we might need to update the 'element' attached to one or more tagObject
    // definitions attached to the serverTags list.
@@ -1639,6 +1651,28 @@ syncMgr = sc_SyncManager_c = {
          }
          var curTagObj = tagObjects[id];
          syncMgr.updateServerTag(curTagObj, id, st);
+      }
+      syncMgr.runQueuedMethods();
+   },
+   runQueuedMethods: function() {
+      var meths = syncMgr.queuedMethods;
+      if (meths != null) {
+         syncMgr.queuedMethods = null;
+         for (var i = 0; i < meths.length; i++) {
+            var meth = meths[i];
+            var chElem = meth.chElem;
+            var name = meth.val;
+            var scElem = sc$domMethods[name] ? chElem : chElem.scObj;
+            if (scElem) {
+               var f = scElem[name];
+               if (f) {
+                  var mres = f.apply(scElem, meth.args);
+                  if (!mres)
+                     mres = null; // cvt undefined to null for 'void' functions
+                  syncMgr.addMethReturn(mres, meth.cid);
+               }
+            }
+         }
       }
    },
    // Called to create, or update a server tag object, pointing to the DOM element specified by 'id'.
