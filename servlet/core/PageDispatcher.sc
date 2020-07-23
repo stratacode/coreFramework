@@ -32,6 +32,7 @@ import sc.type.CTypeUtil;
 import sc.type.PTypeUtil;
 import sc.dyn.DynUtil;
 import sc.dyn.ITypeChangeListener;
+import sc.dyn.RemoteResult;
 
 import sc.lang.SCLanguage;
 import sc.lang.js.JSRuntimeProcessor;
@@ -1392,6 +1393,15 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
    /** Hook to allow tag objects to find the page type for a given URL at runtime */
    public IPageEntry lookupPageType(String url) {
       return pages.get(url);
+   }
+
+   public RemoteResult invokeRemote(Object obj, Object type, String methName, Object retType, String paramSig, Object...args) {
+      Context ctx = Context.getCurrentContext();
+      if (ctx == null)
+         throw new IllegalArgumentException("Not in a request context to call remote method");
+      ScopeDefinition scopeDef = WindowScopeDefinition;
+      ScopeContext scopeCtx = scopeDef.getScopeContext(true);
+      return SyncManager.invokeRemoteDest(scopeDef, scopeCtx, null, null, obj, type, methName, retType, paramSig, args);
    }
 
    public void log(String mesg) {
