@@ -1,8 +1,7 @@
 import sc.dyn.DynUtil;
+import sc.type.PTypeUtil;
 
 import static sc.bind.Bind.trace;
-
-
 
 /**
  * VariableBinding manages an instance of a binding expression like "a.b.c".  It has a direction attribute -
@@ -499,6 +498,17 @@ public class VariableBinding extends DestinationListener {
       return DynUtil.equalObjects(newValue, boundValues[index]);
    }
 
+   private class RunLater implements Runnable {
+      Object newVal;
+
+      RunLater(Object newVal) {
+         this.newVal = newVal;
+      }
+      public void run() {
+         doApplyBinding(newVal);
+      }
+   }
+
    boolean applyBinding(boolean onlyIfChanged) {
       boolean changed = false;
 
@@ -525,14 +535,24 @@ public class VariableBinding extends DestinationListener {
       }
 
       if (!onlyIfChanged || changed) {
-         if (dstProp == null)
-            ((IBinding) dstObj).applyBinding(null, newValue, this, false, false);
-         else if (newValue != PENDING_VALUE_SENTINEL)
-            PBindUtil.setPropertyValue(dstObj, dstProp, newValue);
-
+         if ((flags & Bind.DO_LATER) != 0) {
+            DynUtil.invokeLater(new RunLater(newValue), opts == null ? 0 : opts.priority);
+         }
+         else if (opts != null && opts.delay != -1) {
+            PTypeUtil.addScheduledJob(new RunLater(newValue), opts.delay, false);
+         }
+         else
+            doApplyBinding(newValue);
          return true;
       }
       return false;
+   }
+
+   void doApplyBinding(Object newValue) {
+      if (dstProp == null)
+         ((IBinding) dstObj).applyBinding(null, newValue, this, false, false);
+      else if (newValue != PENDING_VALUE_SENTINEL)
+         PBindUtil.setPropertyValue(dstObj, dstProp, newValue);
    }
 
    protected boolean applyReverseBinding() {

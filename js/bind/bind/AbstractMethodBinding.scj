@@ -1,4 +1,5 @@
 import sc.dyn.DynUtil;
+import sc.type.PTypeUtil;
 
 public abstract class AbstractMethodBinding extends DestinationListener {
    Object methObj; // Same as dstObj for a simple method call or the current 'this' object for the method for nested types
@@ -315,6 +316,19 @@ public abstract class AbstractMethodBinding extends DestinationListener {
       return DynUtil.equalObjects(v1, v2);
    }
 
+   private class InvokeLater implements Runnable {
+      Object obj, value;
+
+      InvokeLater(Object obj, Object value) {
+         this.obj = obj;
+         this.value = value;
+      }
+
+      public void run() {
+         invokeReverseMethod(obj, value);
+      }
+   }
+
    public void applyReverseBinding(Object obj, Object value, Object src) {
       boolean endLogIndent = false;
       try {
@@ -324,7 +338,14 @@ public abstract class AbstractMethodBinding extends DestinationListener {
          // Have to set boundValue here, not after invokeReverseMethod because that can in turn retrigger lots of stuff like
          // the removal of the listener etc.
          boundValue = value;
-         invokeReverseMethod(obj, value); // used to be methObj here but we need the accurate bound value here, not the cached one from last time
+         if ((flags & Bind.DO_LATER) != 0) {
+            DynUtil.invokeLater(new InvokeLater(obj, value), opts == null ? 0 : opts.priority);
+         }
+         else if (opts != null && opts.delay != -1) {
+            PTypeUtil.addScheduledJob(new InvokeLater(obj, value), opts.delay, false);
+         }
+         else
+            invokeReverseMethod(obj, value); // used to be methObj here but we need the accurate bound value here, not the cached one from last time
       }
       finally {
          if (endLogIndent)
