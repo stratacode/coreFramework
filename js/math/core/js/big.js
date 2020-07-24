@@ -919,6 +919,19 @@
   };
 
 
+  // Added for StrataCode's java support so we can use these in 
+  // the sync system.  Note that these methods get called
+  // for both the type and the instance.
+  P.hashCode = function() {
+     return sc_id(this);
+  }
+  P.equals = function(o) {
+     return this == o;
+  }
+  P.getClass = function(o) {
+     return this.constructor.prototype;
+  }
+
   // Export
 
 

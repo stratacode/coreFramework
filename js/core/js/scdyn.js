@@ -1211,6 +1211,16 @@ function sc_isName(prop, tab) {
    return res;
 }
 
+function sc_validateName(prop, tab) {
+   if (!tab)
+      tab = sc_propTable(prop);
+   var res = tab.isN;
+   if (!res) {
+      res = tab.isN = "validate" + tab.cap;
+   }
+   return res;
+}
+
 function sc_capitalizeProperty(prop) {
    if (prop == null || prop.length == 0)
       return prop;
@@ -1410,4 +1420,20 @@ sc_DynUtil_c.validateProperties = function(obj, propNames) {
       }
    }
    */
+}
+
+sc_DynUtil_c.validateProperty = function(obj, propName) {
+   var mn = sc_validateName(propName);
+   var vx = obj[mn];
+   if (typeof vx == "function") {
+      var v = sc_DynUtil_c.getProperty(obj, propName);
+      var err = vx.call(obj, v);
+      if (err == null)
+         obj.removePropError(propName);
+      else
+         obj.addPropError(propName, err);
+      return err;
+   }
+   else
+      throw new Exception("validateProperty: no validate method found for")
 }

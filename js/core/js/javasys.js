@@ -23,8 +23,13 @@ jv_Object_c.getName = function() {
    // else - return undefined in case there's a field 'name' and we are calling DynUtil.getPropertyValue which tries the getX method first
 }
 
+// Use with replaceWith when a Java interface should just be eliminated in the JS. We used to use jv_Object but
+// then started inheriting methods from that interface so this won't have that problem
+function jv_EmptyInterface() {}
+var jv_EmptyInterface_c = sc_newClass("sc.js.EmptyInterface", jv_EmptyInterface, null, null);
+
 function jv_Comparable() {}
-var jv_Comparable_c = sc_newClass("java.lang.Comparable", jv_Comparable, jv_Object, null);
+var jv_Comparable_c = sc_newClass("java.lang.Comparable", jv_Comparable, null, null);
 
 var Number_c = sc_newClass("java.lang.Number", Number, null, [jv_Comparable]);
 //sc_addTypeAlias("java.lang.Number", "java.lang.Byte");

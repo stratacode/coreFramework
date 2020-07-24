@@ -99,18 +99,20 @@ function sc_newInnerClass(typeName, newConstr, outerClass, extendsClass, implArr
 
    if (implArr) {
       newConstr.$implements = implArr;
-      /* Currently the interfaces is just a marker on the type and does not actually modify the type.  
-      var key; 
+      var key;
       var newProto = newConstr.prototype;
 
       for (var i = 0; i < implArr.length; i++) {
          var impl = implArr[i];
-	 for (key in impl) {
+         var implProto = impl.prototype;
+         for (key in implProto) {
+            if (key == "$extends" || key == "prototype" || key == "constructor" || key == "$protoName" || key == "$outerClass" || key == "_clInit"
+                /* || key == "equals" || key == "getClass" || key == "getName" || key == "hashCode" */) // TODO: right now generated interfaces inherit from jv_Object and probably should not so these methods come through
+               continue;
             if (!newProto.hasOwnProperty(key) && !newConstr.hasOwnProperty(key))
-	       newProto[key] = impl[key];
-	 }
+               newProto[key] = implProto[key];
+         }
       }
-      */
    }
 
    newConstr.$extendsClass = extendsClass;
@@ -419,7 +421,7 @@ function sc_noMeth(name) {
 sc$startTime = new Date().getTime();
 
 function sc_logPrefix() {
-   if (typeof sc_testVerifyMode !== undefined && sc_testVerifyMode)
+   if (typeof sc_testVerifyMode !== "undefined" && sc_testVerifyMode)
       return "";
    return sc_getTimeDelta(sc$startTime, new Date().getTime());
 }

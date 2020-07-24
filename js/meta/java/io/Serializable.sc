@@ -1,4 +1,4 @@
 // TODO: implement
-@sc.js.JSSettings(replaceWith="jv_Object")
+@sc.js.JSSettings(replaceWith="jv_EmptyInterface")
 Serializable {
 }
