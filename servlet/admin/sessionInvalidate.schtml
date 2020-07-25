@@ -3,6 +3,8 @@
    <%!
       @QueryParam
       boolean invalidateSession;
+      @QueryParam
+      boolean logout;
    %>
    <body>
       <%! HttpSession session; %>
@@ -13,8 +15,14 @@
          if (session == null)
             out.append("No session");
          else if (invalidateSession) {
+            // this happens if we just lose the session for some reason
             session.invalidate();
             out.append("Session invalidated<p>");
+         }
+         else if (logout) {
+            // This is what we do on logout - to explicitly remove everything
+            servletCtx.markSessionInvalid();
+            out.append("Session logout<p>");
          }
          else {
             %>
@@ -23,5 +31,6 @@
          <% } %>
       <p>
       <a href=':= pageBaseURL + "?invalidateSession" '>Invalidate session</a>
+      <a href=':= pageBaseURL + "?logout" '>Logout session</a>
    </body>
 </html>
