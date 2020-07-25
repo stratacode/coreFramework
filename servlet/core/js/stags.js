@@ -240,8 +240,7 @@ function sc_rlog(str) {
 }
 
 function sc_log(str) {
-   if (sc_PTypeUtil_c && !sc_PTypeUtil_c.testVerifyMode)
-      str = sc_logPrefix() + str;
+   str = sc_logPrefix() + str;
    sc_rlog(str);
    console.log(str);
 }
@@ -253,7 +252,7 @@ function sc_getConsoleLog() {
 }
 
 function sc_logPrefix() {
-   if (typeof sc_testVerifyMode !== undefined && sc_testVerifyMode)
+   if (typeof sc_testVerifyMode !== "undefined" && sc_testVerifyMode)
       return "";
    return sc_getTimeDelta(sc$startTime, new Date().getTime());
 }
@@ -1206,8 +1205,8 @@ js_ServerTag_c = {
    }
 };
 
-function sc_SyncListener(anyChanges) {
-   this.anyChanges = anyChanges;
+function sc_SyncListener(isWait) {
+   this.isWait = isWait;
    this.syncSequence = syncMgr.syncSequence;
 }
 
@@ -1219,10 +1218,10 @@ sc_SyncListener_c.syncResponse = function() {
       syncMgr.pendingSync = false;
       syncMgr.scheduleSync(0);
    }
-   if (this.anyChanges)
-      syncMgr.numSendsInProgress--;
-   else
+   if (this.isWait)
       syncMgr.numWaitsInProgress--;
+   else
+      syncMgr.numSendsInProgress--;
 
    if (syncMgr.numSendsInProgress < 0 || syncMgr.numWaitsInProgress < 0)
       sc_logError("Invalid case in syncResponse");
@@ -1258,7 +1257,7 @@ sc_SyncListener_c.response = function(responseText) {
                   processDef = nextText.substring(layerDefStart, layerDefStart + syncLen);
                   nextText = nextText.substring(layerDefStart + syncLen + 1);
                   if (lang === "json")
-                     syncMgr.applySyncLayer("json", processDef, this.syncSequence, this.anyChanges ? "send" : "wait");
+                     syncMgr.applySyncLayer("json", processDef, this.syncSequence, this.isWait ? "wait": "send");
                   else if (lang === "js")
                      eval(processDef);
                   else
@@ -1930,10 +1929,12 @@ syncMgr = sc_SyncManager_c = {
       var url = "/sync?url=" + encodeURI(window.location.pathname) + "&windowId=" + sc_windowId + paramStr;
 
       var anyChanges = json.length !== 0;
+      var isWait;
 
       if (!anyChanges && syncMgr.waitTime !== -1) {
          url += "&waitTime=" + syncMgr.waitTime;
          syncMgr.numWaitsInProgress++;
+         isWait = true;
          if (!syncMgr.exitListener) {
             syncMgr.exitListener = true;
             // Notifies the server this window is gone so it can close the sync connection. This is also one last time potentially to
@@ -1943,9 +1944,11 @@ syncMgr = sc_SyncManager_c = {
             }, false);
          }
       }
-      else
+      else {
          syncMgr.numSendsInProgress++;
-      if (!anyChanges) {
+         isWait = false;
+      }
+      if (isWait) {
          if (sc_SyncManager_c.trace)
             sc_log("Sending sync wait request: " + (syncMgr.waitTime === -1 ? "(no wait)" : "wait: " + syncMgr.waitTime));
       }
@@ -1954,7 +1957,7 @@ syncMgr = sc_SyncManager_c = {
             sc_log("Sending sync: " + json);
       }
       syncMgr.pendingSends.push(json);
-      sc_PTypeUtil_c.postHttpRequest(url, json, "text/plain", new sc_SyncListener(anyChanges));
+      sc_PTypeUtil_c.postHttpRequest(url, json, "text/plain", new sc_SyncListener(isWait));
    },
    autoSync:function() {
       if (syncMgr.pendingSends.length == 0) {
