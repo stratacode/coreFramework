@@ -124,7 +124,7 @@
 
     // Minus zero?
     if (n === 0 && 1 / n < 0) n = '-0';
-    else if (!NUMERIC.test(n += '')) throw Error(INVALID + 'number');
+    else if (!NUMERIC.test(n += '')) throw new jv_NumberFormatException(INVALID + 'number');
 
     // Determine sign.
     x.s = n.charAt(0) == '-' ? (n = n.slice(1), -1) : 1;
