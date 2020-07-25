@@ -2015,8 +2015,25 @@ js_Input_c.doChangeEvent = function(event) {
          if (scObj.value == "" && scObj.removeOnEmpty.value != null)
             this.removeAttribute("value");
       }
-      if (scObj.setChecked)
+      if (scObj.setChecked) {
          scObj.setChecked(this.checked);
+         // If this is a radio type it will have cleared the checked on the other buttons when we set this one
+         // so we need to clear them in the wrapper to keep them in sync.
+         if (this.checked && this.type == "radio") {
+            var name = this.name;
+            var rl = document.getElementsByName(name);
+            if (rl !== null) {
+               for (var i = 0; i < rl.length; i++) {
+                  var rde = rl[i];
+                  if (rde !== this) {
+                     var rtag = rde.scObj;
+                     if (rtag && !rde.checked)
+                        rtag.setChecked(false);
+                  }
+               }
+            }
+         }
+      }
 
       if (cs) {
          sc_ClientSyncManager_c.syncDelaySet = false;
