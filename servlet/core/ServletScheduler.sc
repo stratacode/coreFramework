@@ -41,7 +41,7 @@ class ServletScheduler implements sc.dyn.IScheduler {
    void execLaterJobs(int minPriority, int maxPriority) {
       Context ctx = Context.getCurrentContext();
       if (ctx == null) {
-         System.out.println("Warning - ServletScheduler.execLaterJobs called with no current context - session expired?");
+         System.out.println("Warning - ServletScheduler.execLaterJobs called with no current context - session expired or invalidated");
          return;
       }
       ctx.execLaterJobs(minPriority, maxPriority);
