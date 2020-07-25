@@ -13,6 +13,10 @@ jv_Object_c.getClass = function() {
    return this.constructor.prototype;
 }
 
+jv_Object_c.hashCode = function() {
+   return sc_id(this);
+}
+
 Error_c.equals = jv_Object_c.equals;
 Error_c.hashCode = jv_Object_c.hashCode;
 
@@ -57,10 +61,24 @@ Number.prototype.compareTo = function(o) {
    return o == this ? 0 : (o < this ? -1 : 1);
 }
 
-Number_c.parseInt = parseInt;
-Number_c.parseLong = parseInt;
-Number_c.parseDouble = parseFloat;
-Number_c.parseFloat = parseFloat;
+function sc_parseInt(s) {
+   var res = parseInt(s);
+   if (isNaN(res))
+      throw new jv_NumberFormatException("For input string: " + s);
+   return res;
+}
+
+function sc_parseFloat(s) {
+   var res = parseFloat(s);
+   if (isNaN(res))
+      throw new jv_NumberFormatException("For input string: " + s);
+   return res;
+}
+
+Number_c.parseInt = sc_parseInt;
+Number_c.parseLong = sc_parseInt;
+Number_c.parseDouble = sc_parseFloat;
+Number_c.parseFloat = sc_parseFloat;
 
 Number_c.valueOf = function(v) {
    // build in js method for comparison against a boolean or something
@@ -89,9 +107,6 @@ Number_c.toHexString = function(v) {
    return v.toString(16);
 }
 
-jv_Object_c.hashCode = function() {
-   return sc_id(this);
-}
 
 // Need some way to get to the original Object's toString method so we have a reasonable default
 //Object.prototype.toString = function() {
@@ -547,3 +562,7 @@ jv_Collections_c.singletonList = function(arg) {
 
 jv_Date = Date;
 jv_Date_c = sc_newClass("java.util.Date", Date, jv_Object, null);
+
+Date.prototype.hashCode = jv_Object_c.hashCode;
+Date.prototype.equals = jv_Object_c.equals;
+Date.prototype.getClass = jv_Object_c.getClass;
