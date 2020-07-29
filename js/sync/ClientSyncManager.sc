@@ -122,7 +122,7 @@ class ClientSyncManager extends SyncManager {
       if (autoSyncDest == null)
          sendSyncToAll(autoSyncGroup, statelessServer, false);
       else {
-         sendSync(autoSyncDest, autoSyncGroup, statelessServer, false, null, null);
+         sendSync(autoSyncDest, autoSyncGroup, statelessServer, false, null, null, null);
       }
       lastSentTime = System.currentTimeMillis();
    }

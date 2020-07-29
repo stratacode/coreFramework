@@ -126,6 +126,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       boolean hasServerTags; // There's no client tag object but there is one or more serverTags in the server version.  Server tags also need sync
       boolean resource; // Set to true for pages like .css pages that are resources. Similar to !dynContentPage but sccss is both a resource and a dynContentPage
       Set<String> syncTypes;
+      Set<String> resetSyncTypes;
 
       /* Set to true when the code has been updated on the fly and this PageEntry is not longer valid */
       boolean removed = false;
@@ -249,7 +250,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
     * extracting values from the URL.
     * The doSync flag indicates whether sync is enabled or disabled for this page.
     */
-   public static void addPage(String keyName, String pattern, Object pageType, boolean dynContentPage, boolean doSync, boolean isResource, int priority, String lockScope, List<QueryParamProperty> queryParamProps, Set<String> syncTypes, boolean realTime, String mimeType) {
+   public static void addPage(String keyName, String pattern, Object pageType, boolean dynContentPage, boolean doSync,
+                              boolean isResource, int priority, String lockScope, List<QueryParamProperty> queryParamProps,
+                              Set<String> syncTypes, Set<String> resetSyncTypes, boolean realTime, String mimeType) {
       PageEntry ent = new PageEntry();
       ent.keyName = keyName;
       ent.pattern = pattern;
@@ -271,6 +274,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       ent.mimeType = mimeType == null ? getMimeType(pattern) : mimeType;
       ent.queryParamProps = queryParamProps;
       ent.syncTypes = syncTypes;
+      ent.resetSyncTypes = resetSyncTypes;
       // Used to use the keyName here as the key but really can only have one per pattern anyway and need a precedence so sc.foo.index can override sc.bar.index.
       // TODO: now that we have multiple PageEntry's supporting each URL, should we have an option to support multiple handlers for the same pattern?  patternFilter=true?
       PageEntry oldEnt = pages.get(pattern);
@@ -294,7 +298,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          String dir = pattern.equals(indexPattern) ? "" : pattern.substring(0,pattern.length() - indexPattern.length());
          if (verbose)
             System.out.println("PageDispatcher: adding index page for: " + (dir.length() == 0 ? "doc root" : dir));
-         addPage(dir + "_index_", dir + "/", pageType, dynContentPage, doSync, isResource, priority, lockScope, queryParamProps, syncTypes, realTime, mimeType);
+         addPage(dir + "_index_", dir + "/", pageType, dynContentPage, doSync, isResource, priority, lockScope, queryParamProps, syncTypes, resetSyncTypes, realTime, mimeType);
       }
    }
 
@@ -729,6 +733,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       boolean realTimeEnabled = true;
 
       boolean origSyncTypes = false;
+      boolean origResetSyncTypes = false;
 
       OutputCtx outCtx = new OutputCtx();
       outCtx.validateCache = isPageView;
@@ -753,6 +758,19 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                   origSyncTypes = false;
                }
                ctx.curScopeCtx.syncTypeFilter.addAll(pageEnt.syncTypes);
+            }
+         }
+         if (pageEnt.resetSyncTypes != null) {
+            if (ctx.curScopeCtx.resetSyncTypeFilter == null) {
+               ctx.curScopeCtx.resetSyncTypeFilter = pageEnt.resetSyncTypes;
+               origResetSyncTypes = true;
+            }
+            else {
+               if (origResetSyncTypes) {
+                  ctx.curScopeCtx.resetSyncTypeFilter = new HashSet<String>(ctx.curScopeCtx.resetSyncTypeFilter);
+                  origResetSyncTypes = false;
+               }
+               ctx.curScopeCtx.resetSyncTypeFilter.addAll(pageEnt.resetSyncTypes);
             }
          }
 
@@ -921,7 +939,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             if (stateless)
                sb.append("   if (typeof sc_ClientSyncManager_c != 'undefined') sc_ClientSyncManager_c.statelessServer = true;\n");
 
-            CharSequence initSync = syncMgr.getInitialSync(syncScopeId, resetSync, "js", ctx.curScopeCtx.syncTypeFilter);
+            CharSequence initSync = syncMgr.getInitialSync(syncScopeId, resetSync, "js", ctx.curScopeCtx.syncTypeFilter, ctx.curScopeCtx.resetSyncTypeFilter);
 
             if (SyncManager.trace) {
                sb.append("   if (typeof sc_SyncManager_c != 'undefined') sc_SyncManager_c.trace = true;\n");
@@ -1353,12 +1371,13 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          boolean realTime = realTimeDef == null || realTimeDef;
          String templatePathName = ModelUtil.getTemplatePathName(newType);
          Set<String> syncTypes = needsSync ? ModelUtil.getJSSyncTypes(sys, newType) : null;
+         Set<String> resetSyncTypes = needsSync ? ModelUtil.getResetSyncTypes(sys, newType) : null;
          if (pattern == null) {
             pattern = templatePathName;
          }
          System.out.println("*** Adding page type: " + newType);
          addPage(templatePathName, pattern, newType, isURLPage, needsSync, isResource,
-                 DynUtil.getLayerPosition(newType), lockScope, QueryParamProperty.getQueryParamProperties(newType), syncTypes, realTime, mimeType);
+                 DynUtil.getLayerPosition(newType), lockScope, QueryParamProperty.getQueryParamProperties(newType), syncTypes, resetSyncTypes, realTime, mimeType);
       }
       initPageEntries();
    }

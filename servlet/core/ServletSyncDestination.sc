@@ -26,7 +26,11 @@ object ServletSyncDestination extends SyncDestination {
    }
 
    void init() {
-      SyncManager.addSyncDestination(this);
+      SyncManager mgr = SyncManager.addSyncDestination(this);
+      // Hook into the synchronization system so we can resolve sync updates for DOM elements - by id for which
+      // there is no tag class on the client - the server tags.  A resolver to lookup or create the tag object for
+      // this lookup in the sync system if there is one.
+      mgr.addFrameworkNameContext(new sc.db.DBSyncNameContext());
    }
 
    public void writeToDestination(String syncRequestStr, String syncGroup, IResponseListener listener, String paramStr, CharSequence codeUpdates) {

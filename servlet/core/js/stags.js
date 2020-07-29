@@ -18,7 +18,6 @@ function sc_newClass(typeName, newConstr, extendsConstr) {
 var sc$propNameTable = {};
 var sc$nextid = 1;
 var sc$dynStyles = {};
-var sc$resetState = {}; // any sync'd state that does not correspond to the DOM is stored here - to be sent back when we need to reset the server's session
 var sc$startTime = new Date().getTime();
 var sc$queuedMethods = {focus:true}
 var sc$domMethods = {focus:true}
@@ -1276,25 +1275,127 @@ sc_SyncListener_c.response = function(responseText) {
 
 sc_SyncListener_c.error = function(code, text) {
    sc_log("in error handler");
-   var errReq = this.syncResponse();
+   var errCmds = this.syncResponse();
    if (code === 205) { // session on server has expired - send the reset state and the original error request to be reapplied
-      sc_logError("*** Server session lost - sending empty reset");
-      var resetJ = {sync:[sc$resetState]};
-      syncMgr.writeToDestination(JSON.stringify(resetJ, null, 3) + " " + errReq,"&reset=true");
+      var rcmds = syncMgr.resetCmds;
+      var oidx = {}; // objectName: {propName: cix}
+
+      // Two steps to reset: build an index of the most recent change for each property, then go through the
+      // list and build a sync layer skipping any 'overridden' property values
+
+      // For each reset cmd received in reverse order, store the largest index for each property that's set
+      for (var cix = rcmds.length - 1; cix >= 0; cix--) {
+         var cmd = rcmds[cix];
+         if (cmd["$new"])
+            continue;
+         // An object definition like: {ObjectName:{p1:v1, p2, v2}}
+         var name = cmd.$name;
+         var cmdProps = cmd[name];
+         var pkg = cmd.$curPkg;
+         var fname = name;
+         if (pkg && pkg.length > 0)
+            fname = pkg + "." + name;
+         var oent = oidx[fname];
+         if (!oent) {
+            oent = {};
+            oidx[fname] = oent;
+         }
+         var pnames = Object.keys(cmdProps);
+         for (var pix = 0; pix < pnames.length; pix++) {
+            var pn = pnames[pix];
+            if (!oent[pn])
+               oent[pn] = cix;
+         }
+      }
+
+      var jsArr = [];
+      var curPkg = null;
+      var lastResProps = null;
+      var lastObjName = null;
+
+      for (cix = 0; cix < rcmds.length; cix++) {
+         var cmd = rcmds[cix];
+         var newPkg = cmd.$curPkg;
+         if (newPkg != curPkg) {
+            jsArr.push({$pkg:newPkg});
+            curPkg = newPkg;
+         }
+         var newArgs = cmd["$new"];
+         if (newArgs) {
+            jsArr.push({$new:newArgs}); // strip out $curPkg
+            lastObjName = null;
+         }
+         else {
+            var name = cmd.$name;
+            var cmdProps = cmd[name];
+            var fname = name;
+            if (curPkg && curPkg.length > 0)
+               fname = curPkg + "." + name;
+            oent = oidx[fname];
+            var pnames = Object.keys(cmdProps);
+            var newList;
+            var resProps;
+            if (lastObjName === fname) {
+               resProps = lastResProps;
+               newList = false;
+            }
+            else {
+               resProps = {};
+               newList = true;
+            }
+
+            var any = false;
+            for (var pix = 0; pix < pnames.length; pix++) {
+               var pn = pnames[pix];
+               if (oent[pn] === cix) {
+                  resProps[pn] = cmdProps[pn];
+                  any = true;
+               }
+               // else - overridden property
+            }
+            if (newList && any) {
+               rcmd = {};
+               rcmd[name] = resProps;
+               jsArr.push(rcmd);
+               lastObjName = fname;
+               lastResProps = resProps;
+            }
+         }
+      }
+
+      // Pending commands that we've never sent to the server go after we've caught the server back up to it's normal state
+      for (cix = 0; cix < errCmds.length; cix++) {
+         jsArr.push(errCmds[cix]);
+      }
+
+      var jStr;
+      if (jsArr.length != 0) {
+         sc_logError("*** Server session lost - sending reset with: " + jsArr.length + " commands");
+      }
+      else {
+         sc_logError("*** Server session lost - nothing to reset");
+      }
+      syncMgr.writeToDestination(sc_cmdsToSync(jsArr), jsArr, "&reset=true");
    }
    else if (code === 410) { // server shutdown
       syncMgr.connected = false;
       syncMgr.syncDestination.realTime = false;
-      sc_logError("*** Server shutdown - aborting request: " + errReq);
+      sc_logError("*** Server shutdown - aborting request: " + sc_cmdsToSync(errCmds));
    }
    else if (code === 500 || code === 0) {
       syncMgr.connected = false;
-      sc_logError("*** Server reported error code: " + code + " aborting sync: " + errReq);
+      sc_logError("*** Server reported error code: " + code + " aborting sync: " + sc_cmdsToSync(errCmds));
    }
    else
-      sc_logError("*** Unrecognized server error: " + code + " aborting sync: " + errReq);
+      sc_logError("*** Unrecognized server error: " + code + " aborting sync: " + sc_cmdsToSync(errCmds));
    syncMgr.postCompleteSync();
 };
+
+function sc_cmdsToSync(cmdsArr) {
+   if (cmdsArr.length == 0)
+      return "";
+   return JSON.stringify({sync:cmdsArr}, null, 3);
+}
 
 syncMgr = sc_SyncManager_c = {
    trace: false,
@@ -1320,6 +1421,7 @@ syncMgr = sc_SyncManager_c = {
    windowSyncProps: null,
    documentSyncProps: null,
    queuedMethods: null,
+   resetCmds:[],
    applySyncLayer: function(lang,json,syncSequence,detail) {
       if (sc_SyncManager_c.trace) {
          sc_log("Sync applying server changes (from: " + (detail ? detail : "init") + " request): " + json);
@@ -1342,6 +1444,16 @@ syncMgr = sc_SyncManager_c = {
       var serverTagsChanged = false; // has the list of serverTags changed
       var serverTagsReset = false; // Is this a brand new set of server tags or updates to the existing list
       var needsTagRefresh = false; // has the body of any element changed which might contain serverTags requiring a refresh
+      var rcmds = syncMgr.resetCmds;
+      var focusElem = document.activeElement;
+      var focusElemId = focusElem ? focusElem.id : null;
+      var selStart = -1, selEnd = -1, selDir = -1;
+      if (focusElem.setSelectionRange && focusElem.selectionStart != null) {
+         selStart = focusElem.selectionStart;
+         selEnd = focusElem.selectionEnd;
+         selDir = focusElem.selectionDirection;
+      }
+
       for (var i = 0; i < sl.length; i++) {
          var cmd = sl[i];
          var newArgs = cmd["$new"];
@@ -1350,14 +1462,27 @@ syncMgr = sc_SyncManager_c = {
             if (cl === "sc.js.ServerTag")
                newServerTags[newArgs[0]] = {name:newArgs[0]};
             // These map to system objects so no server tag instance
-            else if (cl !== "sc.js.ServerTagManager" && cl !== "sc.lang.html.Location" && cl !== "sc.lang.html.Document")
-               sc_logError("Unrecognized class for $new in stags.js: " + cl);
+            else if (cl !== "sc.js.ServerTagManager" && cl !== "sc.lang.html.Location" && cl !== "sc.lang.html.Document") {
+               cmd.$curPkg = curPkg;
+               if (js_Element_c.verbose)
+                  sc_log("Reset cmd[" + rcmds.length + "]: " + JSON.stringify(cmd, null, 3));
+               rcmds.push(cmd);
+            }
             continue;
          }
          var newPkg = cmd["$pkg"];
          if (newPkg != null) {
             curPkg = newPkg;
             continue;
+         }
+         var clearObjName = cmd["$clearResetState"]
+         if (clearObjName != null) {
+            sc_SyncManager_c.clearResetState(clearObjName);
+            continue;
+         }
+         var oldName = cmd["$cn"];
+         if (oldName != null) {
+            continue; // name change
          }
          var keys = Object.keys(cmd);
          if (keys.length === 1) {
@@ -1478,6 +1603,7 @@ syncMgr = sc_SyncManager_c = {
             }
             else {
                var chElem = document.getElementById(name);
+               var addToReset = false;
                if (chElem === null) {
                   if (name === "body")
                      chElem = document.body;
@@ -1575,14 +1701,19 @@ syncMgr = sc_SyncManager_c = {
                         if (scElem && scElem._bindListeners)
                            sc_Bind_c.sendChangeToListeners(scElem, prop, val);
 
-                        sc_log("TODO: sync property received in stags sync layer for future 'reset' when session is lost: " + prop);
+                        addToReset = true;
                      }
                   }
                }
-               else {
-                  if (js_Element_c.verbose)
-                     sc_log("Recording reset state: " + prop + ": " + val);
-                  sc$resetState[prop] = val;
+               else
+                  addToReset = true;
+
+               if (addToReset) {
+                  cmd.$name = name;
+                  cmd.$curPkg = curPkg;
+                  if (js_Element_c.trace)
+                     sc_log("Reset cmd[" + rcmds.length + "]: " + JSON.stringify(cmd, null, 3));
+                  rcmds.push(cmd);
                }
             }
          }
@@ -1630,8 +1761,20 @@ syncMgr = sc_SyncManager_c = {
             Object.assign(syncMgr.serverTags, updatedServerTags);
          }
       }
-      if (needsTagRefresh)
+      if (needsTagRefresh) {
          syncMgr.schedRefreshTags();
+
+         // If we refreshed any tags, restore the focus if that element has an id and still exists
+         if (focusElemId && focusElem != document.activeElement) {
+            var newFocusElem = document.getElementById(focusElemId);
+            if (newFocusElem) {
+               newFocusElem.focus();
+               if (selStart != -1) {
+                  newFocusElem.setSelectionRange(selStart, selEnd, selDir);
+               }
+            }
+         }
+      }
       else
          syncMgr.runQueuedMethods();
    },
@@ -1915,9 +2058,8 @@ syncMgr = sc_SyncManager_c = {
          }
       }
 
-      var jObj = {sync:jsArr};
-      var jStr = JSON.stringify(jObj, null, 3);
-      syncMgr.writeToDestination(jStr, "");
+      var jStr = sc_cmdsToSync(jsArr);
+      syncMgr.writeToDestination(jStr, jsArr, "");
       syncMgr.syncSequence++;
 
       syncMgr.pendingChanges = [];
@@ -1925,7 +2067,7 @@ syncMgr = sc_SyncManager_c = {
       // Allow another sync since this one has gone out
       syncMgr.syncScheduled = false;
    },
-   writeToDestination:function(json,paramStr) {
+   writeToDestination:function(json, cmdArr, paramStr) {
       var url = "/sync?url=" + encodeURI(window.location.pathname) + "&windowId=" + sc_windowId + paramStr;
 
       var anyChanges = json.length !== 0;
@@ -1956,13 +2098,13 @@ syncMgr = sc_SyncManager_c = {
          if (sc_SyncManager_c.trace)
             sc_log("Sending sync: " + json);
       }
-      syncMgr.pendingSends.push(json);
+      syncMgr.pendingSends.push(cmdArr);
       sc_PTypeUtil_c.postHttpRequest(url, json, "text/plain", new sc_SyncListener(isWait));
    },
    autoSync:function() {
       if (syncMgr.pendingSends.length == 0) {
          sc_log("autoSync - writing to destination");
-         syncMgr.writeToDestination("", "");
+         syncMgr.writeToDestination("", [], "");
       }
       else
          sc_log("autoSync - not writing to destination - " + syncMgr.pendingSends.length + " pending requests - numSends: " + syncMgr.numSendsInProgress + " numWaits:" + syncMgr.numWaitsInProgress);
@@ -2206,6 +2348,24 @@ syncMgr = sc_SyncManager_c = {
             sc_addEventListener(window, "resize", function(event) {
                syncMgr.sendWindowSizeEvents(syncMgr.windowSyncProps);
             });
+         }
+      }
+   },
+   clearResetState:function(objName) {
+      var rcmds = syncMgr.resetCmds;
+      var len = rcmds.length;
+      for (var i = 0; i < len; i++) {
+         var rcmd = rcmds[i];
+         var cmdName;
+         var newArgs = rcmd.$new;
+         if (newArgs)
+            cmdName = rcmd.$curPkg + '.' + newArgs[0];
+         else
+            cmdName = rcmd.$curPkg + '.' + rcmd.$name;
+         if (cmdName === objName) {
+            rcmds.splice(i, 1);
+            i--;
+            len--;
          }
       }
    }

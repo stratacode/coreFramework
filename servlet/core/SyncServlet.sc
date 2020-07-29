@@ -289,7 +289,7 @@ class SyncServlet extends HttpServlet {
             }
 
             // Now collect up all changes and write them as the response layer.
-            SyncResult syncRes = mgr.sendSync(syncGroup, pageEnt.pageScope.scopeId, false, false, codeUpdates, ctx.curScopeCtx.syncTypeFilter);
+            SyncResult syncRes = mgr.sendSync(syncGroup, pageEnt.pageScope.scopeId, false, false, codeUpdates, ctx.curScopeCtx.syncTypeFilter, ctx.curScopeCtx.resetSyncTypeFilter);
 
             // If there is nothing to send back to the client now, we have a waitTime supplied, and we do not have to send back the session cookie we can wait for changes for "real time" response to the client
             if ((codeUpdates == null || codeUpdates.length() == 0) && waitTime != -1 && !syncRes.anyChanges && syncRes.errorMessage == null && !newSession) {
