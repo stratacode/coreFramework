@@ -21,6 +21,9 @@ var sc$dynStyles = {};
 var sc$startTime = new Date().getTime();
 var sc$queuedMethods = {focus:true}
 var sc$domMethods = {focus:true}
+
+var sc_resizeObserver = null;
+
 function sc_id(o) {
    if (!sc_hasProp(o, "sc$id"))
       o.sc$id = sc$nextid++;
@@ -451,12 +454,13 @@ js_HTMLElement_c.trace = true;
 // Specifies the standard DOM events - each event can specify a set of alias properties.  A 'callback' function is lazily added to each domEvent entry the first time we need to listen for that DOM event on an object
 js_HTMLElement_c.domEvents = {clickEvent:{}, dblClickEvent:{}, mouseDownEvent:{}, mouseMoveEvent:{}, mouseDownMoveUp:{},
                               mouseOverEvent:{aliases:["hovered"], computed:true}, mouseOutEvent:{aliases:["hovered"], computed:true}, 
-                              mouseUpEvent:{}, keyDownEvent:{}, keyPressEvent:{}, keyUpEvent:{}, submitEvent:{}, changeEvent:{}, blurEvent:{}, focusEvent:{}, 
-                              resizeEvent:{aliases:["clientWidth","clientHeight","offsetWidth","offsetHeight"]}};
+                              mouseUpEvent:{}, keyDownEvent:{}, keyPressEvent:{}, keyUpEvent:{}, submitEvent:{}, changeEvent:{}, blurEvent:{}, focusEvent:{}};
 
 // the reverse direction for the aliases field of the domEvent entry
-js_HTMLElement_c.domAliases = {clientWidth:"resizeEvent", clientHeight:"resizeEvent", offsetWidth:"resizeEvent", offsetHeight:"resizeEvent", 
-                               hovered:["mouseOverEvent","mouseOutEvent"]};
+js_HTMLElement_c.domAliases = {hovered:["mouseOverEvent","mouseOutEvent"]};
+
+js_HTMLElement_c.resizeProps = ["clientWidth","clientHeight","offsetWidth","offsetHeight","scrollWidth","scrollHeight"];
+
 // Initialize the domEvent properties as null at the class level so we do not have to maintain them for each tag instance.
 var domEvents = js_HTMLElement_c.domEvents;
 for (var prop in domEvents) {
@@ -483,15 +487,16 @@ js_HTMLElement_c.processEvent = function(elem, event, listener) {
    var ops = listener.otherProps;
    if (scObj !== undefined) {
 
-      if (event.type == "keyup" && event.constructor === Event)
+      if (event != null && event.type == "keyup" && event.constructor === Event)
          return; // It doesn't seem to be specified, but a keyup event is fired for change but it's not a KeyboardEvent
 
       // Add this as a separate field so we can use the exposed parts of the DOM api from Java consistently
-      event.currentTag = scObj;
+      if (event != null)
+         event.currentTag = scObj;
       var eventValue, otherEventValues;
 
       if (listener.alias != null) {
-         // e.g. clientWidth or hovered - properties computed from other DOM events
+         // e.g. hovered - property computed from other DOM events
          // hovered depends on mouseOut/In - so we fire the change event here as necessary to reflect the proper state
          var computed = listener.computed;
          var origValue = null;
@@ -518,7 +523,7 @@ js_HTMLElement_c.processEvent = function(elem, event, listener) {
          }
       }
       // A regular domEvent like clickEvent - populate the event property in the object
-      else {
+      else if (event != null) {
          // e.g. clickEvent, resizeEvent
          eventValue = event;
          scObj[listener.propName] = event;
@@ -590,6 +595,18 @@ js_HTMLElement_c.getClientHeight = function() {
    return this.element.clientHeight;
 };
 
+js_HTMLElement_c.getScrollWidth = function() {
+   if (this.element == null)
+      return 0;
+   return this.element.scrollWidth;
+};
+
+js_HTMLElement_c.getScrollHeight = function() {
+   if (this.element == null)
+      return 0;
+   return this.element.scrollHeight;
+};
+
 js_HTMLElement_c.getHovered = function() {
    var mouseEvent = this.mouseOverEvent;
    var isMouseOver;
@@ -655,6 +672,10 @@ js_HTMLElement_c.removeDOMEventListeners = function(origElem) {
          }
          this._eventListeners = null;
       }
+      if (this._resizeListener) {
+         sc_resizeObserver.unobserve(oldElem);
+         this._resizeListener = false;
+      }
    }
 }
 
@@ -682,33 +703,74 @@ js_HTMLElement_c.domChanged = function(origElem, newElem) {
                   }
                }
             }
-
-            // Only IE supports the resize event on objects other than the window.
-            if (listener.eventName == "resize" && !newElem.attachEvent) {
-               sc_addEventListener(window, listener.eventName,
-                       function(evt) {
-                          js_HTMLElement_c.processEvent.call(window, newElem, evt, listener);
-                       }
-               );
-            }
             sc_addEventListener(newElem, listener.eventName, listener.callback);
          }
          this._eventListeners = curListeners;
+      }
+      var lps = this.listenerProps;
+      for (var i = 0; i < lps.length; i++) {
+         prop = lps[i];
+         if (js_HTMLElement_c.resizeProps.includes(prop)) {
+            if (!this._resizeListener) {
+               this._resizeListener = true;
+               if (typeof ResizeObserver === "function") {
+                  if (sc_resizeObserver == null) {
+                     sc_resizeObserver = new ResizeObserver(
+                        function(entries) {
+                           for (var i = 0; i < entries.length; i++) {
+                              var elem = entries[i].target;
+
+                              sc_checkSizeProps(elem);
+                           }
+                        }
+                     );
+                  }
+                  sc_resizeObserver.observe(newElem);
+               }
+               else {
+                  // TODO: in addition to this, we also need to maintain a list of observed elements and either use
+                  // mutation handler or after a refreshTags, just run a method to check the size of all observed elements.
+                  sc_addEventListener(window, "resize",
+                     function(evt) {
+                       sc_checkSizeProps(newElem);
+                     }
+                  );
+               }
+               // Set initial values and send change events
+               sc_checkSizeProps(newElem);
+            }
+         }
+      }
+   }
+}
+
+function sc_checkSizeProps(elem) {
+   var scObj = elem.scObj;
+   if (scObj) {
+      var lps = scObj.listenerProps;
+      for (var i = 0; i < scObj.listenerProps.length; i++) {
+         var lp = scObj.listenerProps[i];
+         if (js_HTMLElement_c.resizeProps.includes(lp)) {
+            var newVal = elem[lp];
+            if (scObj[lp] != newVal) {
+               scObj[lp] = newVal;
+               sc_Bind_c.sendChange(scObj, lp, newVal);
+            }
+         }
       }
    }
 }
 
 js_HTMLElement_c.initDOMListener = function(listener, prop, eventPropName) {
-   if (eventPropName == null)
+if (eventPropName == null)
       eventPropName = prop;
    else
-      listener.alias = true; // This is like clientWidth which is mapped to a separate resizeEvent
+      listener.alias = true; // This is like hovered which is mapped to a separate property
    // Convert from the sc event name, e.g. clickEvent to click
    listener.eventName = eventPropName === "mouseDownMoveUp" ? "mousedown" : sc_cvtEventPropToName(eventPropName);
    listener.scEventName = eventPropName;
    listener.propName = prop;
    listener.callback = sc_newEventArgListener(js_HTMLElement_c.eventHandler, listener);
-   // For resizeEvent we have four properties clientWidth, clientHeight, outerWidth, outerHeight all set from the same event and listener
    var als = listener.aliases;
    if (als && als.length > 1) {
       var ops = [];
@@ -745,6 +807,7 @@ js_HTMLElement_c.getDOMEventListeners = function() {
       var listener = null;
       var eventName = null;
       var handled = false;
+
       if (domEvents.hasOwnProperty(prop)) {
          listener = domEvents[prop];
       }

@@ -63,6 +63,9 @@ js_Element_c.refreshOnLoad = true;
 js_Element_c.wrap = js_Element_c.bodyOnly = false;
 js_Element_c.pendingType = js_Element_c.pendingEvent = null;
 js_Element_c.isPageElement = function() { return false; }
+
+var sc_resizeObserver = null;
+
 /*
 js_Element_c.getURLPaths = function() {
    return [];
@@ -750,6 +753,10 @@ js_HTMLElement_c.domChanged = function(origElem, newElem) {
          }
          this._eventListeners = null;
       }
+      if (this._resizeListener) {
+         sc_resizeObserver.unobserve(origElem);
+         this._resizeListener = false;
+      }
    }
    if (newElem !== null) {
       var curListeners = this.getDOMEventListeners();
@@ -785,7 +792,9 @@ js_HTMLElement_c.domChanged = function(origElem, newElem) {
             sc_addEventListener(newElem, listener.eventName, listener.callback);
          }
          this._eventListeners = curListeners;
+
       }
+      this.initResizeListener(newElem);
       var style = this.style;
       if (style != null && style != newElem.getAttribute("style"))
          newElem.setAttribute("style", this.style);
@@ -794,6 +803,61 @@ js_HTMLElement_c.domChanged = function(origElem, newElem) {
          newElem.focus();
    }
    this.notifyChanged();
+}
+
+js_HTMLElement_c.initResizeListener = function(newElem) {
+   var listeners = sc_getBindListeners(this);
+   for (var prop in listeners) {
+      if (prop != null && listeners.hasOwnProperty(prop)) {
+         if (js_HTMLElement_c.resizeProps.includes(prop)) {
+            if (!this._resizeListener) {
+               this._resizeListener = true;
+               if (typeof ResizeObserver === "function") {
+                  if (sc_resizeObserver == null) {
+                     sc_resizeObserver = new ResizeObserver(
+                        function(entries) {
+                           for (var i = 0; i < entries.length; i++) {
+                              var elem = entries[i].target;
+                              sc_checkSizeProps(elem);
+                           }
+                        }
+                     );
+                  }
+                  sc_resizeObserver.observe(newElem);
+               }
+               else {
+                  // TODO: in addition to this, we also need to maintain a list of observed elements and either use
+                  // mutation handler or after a refreshTags, just run a method to check the size of all observed elements.
+                  sc_addEventListener(window, "resize",
+                     function(evt) {
+                       sc_checkSizeProps(newElem);
+                     }
+                  );
+               }
+               // Set initial values and send change events
+               sc_checkSizeProps(newElem);
+            }
+         }
+      }
+   }
+}
+
+function sc_checkSizeProps(elem) {
+   var scObj = elem.scObj;
+   if (scObj) {
+      var listeners = sc_getBindListeners(scObj);
+      for (var prop in listeners) {
+         if (prop != null && listeners.hasOwnProperty(prop)) {
+            if (js_HTMLElement_c.resizeProps.includes(prop)) {
+               var newVal = elem[prop];
+               if (scObj[prop] != newVal) {
+                  scObj[prop] = newVal;
+                  sc_Bind_c.sendChange(scObj, prop, newVal);
+               }
+            }
+         }
+      }
+   }
 }
 
 js_HTMLElement_c.initDOMListener = function(listener, prop, scEventName) {
@@ -807,7 +871,6 @@ js_HTMLElement_c.initDOMListener = function(listener, prop, scEventName) {
    listener.scEventName = scEventName;
    listener.propName = prop;
    listener.callback = sc_newEventArgListener(js_HTMLElement_c.eventHandler, listener);
-   // For resizeEvent we have four properties clientWidth and the other property clientHeight - both set from the same event and listener
    var als = listener.aliases;
    if (als && als.length > 1) {
       var ops = [];
@@ -1820,11 +1883,12 @@ js_HTMLElement_c.invalidateRepeatTags = function() {
 // Specifies the standard DOM events - each event can specify a set of alias properties.  A 'callback' function is lazily added to each domEvent entry the first time we need to listen for that DOM event on an object
 js_HTMLElement_c.domEvents = {clickEvent:{}, dblClickEvent:{}, mouseDownEvent:{}, mouseMoveEvent:{}, mouseDownMoveUp:{},
                                mouseOverEvent:{aliases:["hovered"], computed:true}, mouseOutEvent:{aliases:["hovered"], computed:true}, 
-                               mouseUpEvent:{}, keyDownEvent:{}, keyPressEvent:{}, keyUpEvent:{}, submitEvent:{}, changeEvent:{}, blurEvent:{}, focusEvent:{}, 
-                               resizeEvent:{aliases:["clientWidth","clientHeight","offsetWidth","offsetHeight"]}};
+                               mouseUpEvent:{}, keyDownEvent:{}, keyPressEvent:{}, keyUpEvent:{}, submitEvent:{}, changeEvent:{}, blurEvent:{}, focusEvent:{}};
+
 // the reverse direction for the aliases field of the domEvent entry
-js_HTMLElement_c.domAliases = {clientWidth:"resizeEvent", clientHeight:"resizeEvent", offsetWidth:"resizeEvent", offsetHeight:"resizeEvent", 
-                               hovered:["mouseOverEvent","mouseOutEvent"]};
+js_HTMLElement_c.domAliases = {hovered:["mouseOverEvent","mouseOutEvent"]};
+
+js_HTMLElement_c.resizeProps = ["clientWidth","clientHeight","offsetWidth","offsetHeight","scrollWidth","scrollHeight"];
 
 // Initialize the domEvent properties as null at the class level so we do not have to maintain them for each tag instance.
 var domEvents = js_HTMLElement_c.domEvents;
@@ -1947,6 +2011,18 @@ js_HTMLElement_c.getClientHeight = function() {
    if (this.element == null)
       return 0;
    return this.element.clientHeight;
+}
+
+js_HTMLElement_c.getScrollWidth = function() {
+   if (this.element == null)
+      return 0;
+   return this.element.scrollWidth;
+}
+
+js_HTMLElement_c.getScrollHeight = function() {
+   if (this.element == null)
+      return 0;
+   return this.element.scrollHeight;
 }
 
 js_HTMLElement_c.getHovered = function() {

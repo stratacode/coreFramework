@@ -851,6 +851,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                if (page instanceof Element) {
                   Element pageElem = (Element) page;
                   pageElem.addServerTags(pageEnt.pageScope, stCtx, false);
+                  pageElem.validateServerTags(pageEnt.pageScope, stCtx, false);
 
                   // For server tag pages, if there are listeners on the window object properties like innerWidth/Height or document properties, add ServerTags for
                   // window and document too
