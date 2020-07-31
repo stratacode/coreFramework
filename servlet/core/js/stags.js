@@ -23,6 +23,7 @@ var sc$queuedMethods = {focus:true}
 var sc$domMethods = {focus:true}
 
 var sc_resizeObserver = null;
+var sc_resizeCheckElems = [];
 
 function sc_id(o) {
    if (!sc_hasProp(o, "sc$id"))
@@ -673,8 +674,11 @@ js_HTMLElement_c.removeDOMEventListeners = function(origElem) {
          this._eventListeners = null;
       }
       if (this._resizeListener) {
-         sc_resizeObserver.unobserve(oldElem);
+         sc_resizeObserver.unobserve(origElem);
          this._resizeListener = false;
+         var ix = sc_resizeCheckElems.indexOf(origElem);
+         if (ix != -1)
+            sc_resizeCheckElems.splice(ix, 1);
       }
    }
 }
@@ -713,6 +717,7 @@ js_HTMLElement_c.domChanged = function(origElem, newElem) {
          if (js_HTMLElement_c.resizeProps.includes(prop)) {
             if (!this._resizeListener) {
                this._resizeListener = true;
+               sc_resizeCheckElems.push(newElem);
                if (typeof ResizeObserver === "function") {
                   if (sc_resizeObserver == null) {
                      sc_resizeObserver = new ResizeObserver(
@@ -741,6 +746,13 @@ js_HTMLElement_c.domChanged = function(origElem, newElem) {
             }
          }
       }
+   }
+}
+
+function sc_checkSizes() {
+   for (var i = 0; i < sc_resizeCheckElems.length; i++) {
+      var elem = sc_resizeCheckElems[i];
+      sc_checkSizeProps(elem);
    }
 }
 
@@ -1857,6 +1869,7 @@ syncMgr = sc_SyncManager_c = {
          var curTagObj = tagObjects[id];
          syncMgr.updateServerTag(curTagObj, id, st);
       }
+      sc_checkSizes();
       syncMgr.runQueuedMethods();
    },
    runQueuedMethods: function() {
