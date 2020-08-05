@@ -19,23 +19,33 @@ public class ArithmeticBinding extends AbstractMethodBinding {
    protected Object invokeMethod(Object obj, boolean pendingChild) {
       Object lhsVal = boundParams[0].getPropertyValue(obj, false, pendingChild);
       paramValues[0] = lhsVal;
-      boolean isString = lhsVal instanceof String;
+      boolean isString = lhsVal instanceof CharSequence;
+      boolean hasUnsetParams = lhsVal == null || lhsVal == UNSET_VALUE_SENTINEL;
       for (int i = 1; i < boundParams.length; i++) {
          Object nextVal;
-         // TODO: do we need to add some form of typing to the binding interface?  Arithmetic expressions would
-         // propagate their type.  The top-level guy would get the type from the dst property mapper.
+         // TODO: we really need to add some form of typing to the binding interface so we know up front if it's a string
+         // arithmetic expression or not. Right now, we go through and skip unset values (either null or an 'a.b.c' where
+         // b is null count as unset to make it more convenient to build up tag expressions which might concatenate a value
+         // that's not available. We can discover the type of the expression in many cases by looking at the parent's property type.
          paramValues[i] = nextVal = boundParams[i].getPropertyValue(obj, false, pendingChild);
-         isString = isString || nextVal instanceof String;
          if (nextVal == PENDING_VALUE_SENTINEL || lhsVal == PENDING_VALUE_SENTINEL) {
             return PENDING_VALUE_SENTINEL;
          }
-         if (nextVal == UNSET_VALUE_SENTINEL || lhsVal == UNSET_VALUE_SENTINEL) {
-            return UNSET_VALUE_SENTINEL;
-         } 
-         if (!isString && (lhsVal == null || nextVal == null))
-            return UNSET_VALUE_SENTINEL;
+
+         boolean nextIsUnset = nextVal == UNSET_VALUE_SENTINEL || nextVal == null;
+
+         if (nextIsUnset) {
+            hasUnsetParams = true;
+            continue;
+         }
          try {
-            lhsVal = DynUtil.evalArithmeticExpression(operator, isString ? String.class : null, lhsVal, paramValues[i]);
+            if (nextVal instanceof CharSequence) {
+               isString = true;
+            }
+            if (lhsVal == UNSET_VALUE_SENTINEL || lhsVal == null)
+               lhsVal = nextVal;
+            else
+               lhsVal = DynUtil.evalArithmeticExpression(operator, isString ? String.class : null, lhsVal, nextVal);
          }
          catch (ArithmeticException exc) {
             if (Bind.trace || (flags & Bind.TRACE) != 0)
@@ -44,6 +54,8 @@ public class ArithmeticBinding extends AbstractMethodBinding {
             return UNSET_VALUE_SENTINEL;
          }
       }
+      if (!isString && hasUnsetParams)
+         return UNSET_VALUE_SENTINEL;
       return lhsVal;
    }
 
