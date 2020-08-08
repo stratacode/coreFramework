@@ -13,8 +13,8 @@
 %>
         
 static {
-   sc.lang.html.PageInfo.addPage("<%= typeName %>", "<%= url %>", <%= typeIsDynamic ? "sc.dyn.DynUtil.findType(\"" + typeName + "\")" : typeBaseName + ".class" %>, <%= QueryParamProperty.toValueString(objType) %>,
-                                  <%= URLParamProperty.toValueString(objType, pattern) %>);
+   sc.lang.html.PageInfo.addPage("<%= typeName %>", "<%= url %>", <%= typeIsDynamic ? "sc.dyn.DynUtil.findType(\"" + typeName + "\")" : typeBaseName + ".class" %>, <%= QueryParamProperty.toValueString(objType, constructorProperties) %>,
+                                  <%= URLParamProperty.toValueString(objType, pattern, constructorProperties) %>, <%= constructorPropInit %>);
 }
 
 <% } %>

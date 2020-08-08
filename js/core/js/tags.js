@@ -3723,21 +3723,23 @@ js_PageInfo_c = sc_newClass("sc.lang.html.PageInfo", js_PageInfo, jv_Object, nul
 
 js_PageInfo_c.pages = {};
 
-js_PageInfo_c.addPage = function(pageTypeName, pattern, pageType, queryParams, urlParts) {
+js_PageInfo_c.addPage = function(pageTypeName, pattern, pageType, queryParams, urlParts, constructorProps) {
    var pi = new js_PageInfo();
    pi.pageTypeName = pageTypeName;
    pi.pattern = pattern;
    pi.pageType = pageType;
    pi.queryParamProperties = queryParams;
    pi.urlParts = urlParts;
+   pi.constructorProps = constructorProps;
    js_PageInfo_c.pages[pageTypeName] = pi;
 }
 
-function js_BaseURLParamProperty(enclType, propName, propType, req) {
+function js_BaseURLParamProperty(enclType, propName, propType, req, constructor) {
    this.enclType = enclType;
    this.propName = propName;
    this.propType = propType;
    this.required = req;
+   this.constructor = constructor;
 }
 
 js_BaseURLParamProperty_c = sc_newClass("sc.lang.html.BaseURLParamProperty", js_BaseURLParamProperty, jv_Object, null);
@@ -3756,23 +3758,23 @@ js_BaseURLParamProperty_c.setPropertyValue = function(pageInst, ev) {
 }
 
 // Stores the meta-data for each page type
-function js_QueryParamProperty(enclType, propName, paramName, propType, req) {
+function js_QueryParamProperty(enclType, propName, paramName, propType, req, constructor) {
    if (arguments.length == 0) {
       enclType = propName = paramName = null;
       req = false;
    }
-   js_BaseURLParamProperty.call(this, enclType, propName, propType, req);
+   js_BaseURLParamProperty.call(this, enclType, propName, propType, req, constructor);
    this.paramName = paramName;
 }
 
 // Stores the meta-data for each page type
-function js_URLParamProperty(enclType, propName, propType, parseletName, req) {
+function js_URLParamProperty(enclType, propName, propType, parseletName, req, constructor) {
    if (arguments.length == 0) {
       enclType = propName = null;
       req = false;
       parseletName = null;
    }
-   js_BaseURLParamProperty.call(this, enclType, propName, propType, req);
+   js_BaseURLParamProperty.call(this, enclType, propName, propType, req, constructor);
    this.parseletName = parseletName;
 }
 

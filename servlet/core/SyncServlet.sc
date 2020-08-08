@@ -133,7 +133,8 @@ class SyncServlet extends HttpServlet {
       Context ctx = null;
       try {
          TreeMap<String,String> queryParams = Context.initQueryParams(request);
-         List<PageDispatcher.PageEntry> pageEnts = pageDispatcher.getPageEntries(url, queryParams);
+         TreeMap<String,Object> urlProps = new TreeMap<String,Object>();
+         List<PageDispatcher.PageEntry> pageEnts = pageDispatcher.getPageEntries(url, queryParams, urlProps);
          if (pageEnts == null || pageEnts.size() == 0) {
             try {
                response.sendError(HttpServletResponse.SC_NOT_FOUND, "No page found for url: " + url + " in sync request");
@@ -225,11 +226,11 @@ class SyncServlet extends HttpServlet {
          if (url != null) {
 
             // The applySyncLayer call may have updated the pageEnts applicable for this URL. If so, the old ones will be removed and
-            pageEnts = pageDispatcher.validatePageEntries(pageEnts, url, queryParams);
+            pageEnts = pageDispatcher.validatePageEntries(pageEnts, url, queryParams, urlProps);
 
             // Setting initial = isReset here and resetSync = false. - when we are resetting it's the initial sync though we toss this page output.  It just sets up the page to be like the client's state when it's first page was shipped out.
             // TODO: setting traceBuffer = null here since we never see this output but are there any cases where it might help to debug things?
-            pageOutput = pageDispatcher.getPageOutput(ctx, url, pageEnts, curScopeCtx, isReset, false, sys, null);
+            pageOutput = pageDispatcher.getPageOutput(ctx, url, pageEnts, urlProps, curScopeCtx, isReset, false, sys, null);
             if (pageOutput == null)
                return true; // Request was redirected, response closed
          }
@@ -239,11 +240,11 @@ class SyncServlet extends HttpServlet {
          if (reset != null) {
             applySyncLayer(ctx, request, receiveLanguage, pageEnt, session, url, syncGroup, true);
 
-            pageEnts = pageDispatcher.validatePageEntries(pageEnts, url, queryParams);
+            pageEnts = pageDispatcher.validatePageEntries(pageEnts, url, queryParams, urlProps);
 
             // Also render the page after we do the reset so that we lazily init any objects that need synchronizing in this output
             // This time we render with initial = false and resetSync = true - so we do not record any changed made during this page rendering.  We're just resyncing the state of the application to be where the client is already.
-            pageOutput = pageDispatcher.getPageOutput(ctx, url, pageEnts, curScopeCtx, false, false, sys, traceBuffer);
+            pageOutput = pageDispatcher.getPageOutput(ctx, url, pageEnts, urlProps, curScopeCtx, false, false, sys, traceBuffer);
             if (pageOutput == null)
                return true;
          }

@@ -1,4 +1,6 @@
-<%@ import sc.lang.html.QueryParamProperty; %><%
+<%@ import sc.lang.html.QueryParamProperty;
+    import sc.lang.pattern.Pattern;
+    import sc.lang.html.URLParamProperty; %><%
    if (!isAbstract && !isAbstractElement) {
       Boolean isDynContentObj = (Boolean) getAnnotationValue("sc.html.URL", "dynContent");
       boolean isDynContent = isDynContentObj == null || isDynContentObj;
@@ -13,10 +15,15 @@
       if (url == null) {
          url = templatePathName;
       }
+      Pattern pattern = Pattern.initURLPattern(objType, url);
 %>
         
 static {
-   sc.servlet.PageDispatcher.addPage("<%= templatePathName %>", "<%= url %>", <%= typeIsDynamic ? "sc.dyn.DynUtil.findType(\"" + typeName + "\")" : typeBaseName + ".class" %>, <%= isDynContent %>, <%= isSync %>, <%= isResource %>, <%= layer.layerPosition %>, <%= lockScope == null ? "null" : '"' + lockScope + '"' %>, <%= QueryParamProperty.toValueString(objType) %>, <%= syncTypeNames %>, <%= resetSyncTypeNames %>, <%= realTime %>, <%= mimeType == null ? "null" : '"' + mimeType + '"' %>);
+   sc.servlet.PageDispatcher.addPage("<%= templatePathName %>", "<%= url %>",
+           <%= typeIsDynamic ? "sc.dyn.DynUtil.findType(\"" + typeName + "\")" : typeBaseName + ".class" %>,
+           <%= isDynContent %>, <%= isSync %>, <%= isResource %>, <%= layer.layerPosition %>, <%= lockScope == null ? "null" : '"' + lockScope + '"' %>,
+           <%= QueryParamProperty.toValueString(objType, constructorProperties) %>, <%= URLParamProperty.toValueString(objType, pattern, constructorProperties) %>, <%= syncTypeNames %>,
+           <%= resetSyncTypeNames %>, <%= realTime %>, <%= mimeType == null ? "null" : '"' + mimeType + '"' %>, <%= constructorPropInit %>);
 }
 
 <% } %>

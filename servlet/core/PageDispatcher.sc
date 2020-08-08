@@ -49,6 +49,7 @@ import sc.obj.CurrentScopeContext;
 import sc.obj.Constant;
 
 import sc.lang.html.QueryParamProperty;
+import sc.lang.html.URLParamProperty;
 
 import sc.js.URLPath;
 
@@ -141,6 +142,15 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       // Stores the list of query parameters (if any) for the given page - created with @QueryParam
       @Constant
       public List<QueryParamProperty> queryParamProps;
+
+      // The list of properties found in the urlPattern - URLParamProperty, Optional or Strings
+      @Constant
+      public List<Object> urlParts;
+
+      // The list of properties - found in the queryParamProps or urlParts - to pass to the page object on creation.
+      // These come from the CompilerSettings.constructorProperties annotation.
+      @Constant
+      public List<String> constructorProps;
 
       public String toString() {
          if (pattern == null)
@@ -252,7 +262,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
     */
    public static void addPage(String keyName, String pattern, Object pageType, boolean dynContentPage, boolean doSync,
                               boolean isResource, int priority, String lockScope, List<QueryParamProperty> queryParamProps,
-                              Set<String> syncTypes, Set<String> resetSyncTypes, boolean realTime, String mimeType) {
+                              List<Object> urlParts, Set<String> syncTypes, Set<String> resetSyncTypes, boolean realTime,
+                              String mimeType, List<String> constructorProps) {
       PageEntry ent = new PageEntry();
       ent.keyName = keyName;
       ent.pattern = pattern;
@@ -272,9 +283,11 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       // context because the sccss files conflict with the main page when driving the test scripts (e.g. prepDemoTodo)
       ent.hasServerTags = !isResource && DynUtil.isAssignableFrom(Element.class, pageType);
       ent.mimeType = mimeType == null ? getMimeType(pattern) : mimeType;
+      ent.urlParts = urlParts;
       ent.queryParamProps = queryParamProps;
       ent.syncTypes = syncTypes;
       ent.resetSyncTypes = resetSyncTypes;
+      ent.constructorProps = constructorProps;
       // Used to use the keyName here as the key but really can only have one per pattern anyway and need a precedence so sc.foo.index can override sc.bar.index.
       // TODO: now that we have multiple PageEntry's supporting each URL, should we have an option to support multiple handlers for the same pattern?  patternFilter=true?
       PageEntry oldEnt = pages.get(pattern);
@@ -298,7 +311,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          String dir = pattern.equals(indexPattern) ? "" : pattern.substring(0,pattern.length() - indexPattern.length());
          if (verbose)
             System.out.println("PageDispatcher: adding index page for: " + (dir.length() == 0 ? "doc root" : dir));
-         addPage(dir + "_index_", dir + "/", pageType, dynContentPage, doSync, isResource, priority, lockScope, queryParamProps, syncTypes, resetSyncTypes, realTime, mimeType);
+         addPage(dir + "_index_", dir + "/", pageType, dynContentPage, doSync, isResource, priority, lockScope, queryParamProps, urlParts, syncTypes, resetSyncTypes, realTime, mimeType, constructorProps);
       }
    }
 
@@ -316,25 +329,32 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
        }
    }
 
-   public List<PageEntry> validatePageEntries(List<PageEntry> pageEnts, String uri, TreeMap<String,String> queryParams) {
+   public List<PageEntry> validatePageEntries(List<PageEntry> pageEnts, String uri, TreeMap<String,String> queryParams, TreeMap<String,Object> urlProps) {
       for (int i = 0; i < pageEnts.size(); i++) {
          PageEntry pageEnt = pageEnts.get(i);
          // The types were updated and the type for this entry was modified since this request started
          if (pageEnt.removed) {
-            return getPageEntries(uri, queryParams);
+            return getPageEntries(uri, queryParams, urlProps);
          }
       }
       return pageEnts;
    }
 
-   public List<PageEntry> getPageEntries(String uri, TreeMap<String,String> queryParams) {
+   public List<PageEntry> getPageEntries(String uri, TreeMap<String,String> queryParams, TreeMap<String,Object> urlProps) {
       ArrayList<PageEntry> matchedEnts = null;
       for (PageEntry pageEnt:pages.values()) {
          // TODO: performance optimization where we compute the prefix of each pattern, use that as an index to retrieve the list of
          // patterns, similar to how IndexedChoice works for parselets.  Maybe we should build an IndexedChoice of the
          // page parselets and use that logic?  This could be part of the URLPatternLanguage.  It could start out as just an orderedChoice of
          // the registered URL pattern to pageEntry mappings.
-         if (language.matchString(uri, pageEnt.patternParselet)) {
+         boolean parseletMatch = language.matchString(uri, pageEnt.patternParselet);
+         boolean patternMatch = pageEnt.urlPattern.updateMap(uri, urlProps);
+         if (patternMatch != parseletMatch) {
+            System.out.println("*** Error - parselets don't match");
+            patternMatch = pageEnt.urlPattern.updateMap(uri, urlProps);
+         }
+
+         if (patternMatch || parseletMatch) {
             if (pageEnt.queryParamProps != null) {
                boolean allReqFound = true;
                for (QueryParamProperty prop:pageEnt.queryParamProps) {
@@ -372,6 +392,10 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             else {
                matchedEnts = new ArrayList<PageEntry>();
                matchedEnts.add(pageEnt);
+               // TODO: Originally thought we'd support more than one match per URL but for now just support one since it's
+               // a lot less efficient and the urlProps hash map needs to be cleared or copied to keep it separate for
+               // the successful and partially failed match
+               break;
             }
          }
       }
@@ -521,8 +545,18 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       return orig == null || orig.length() == 0 ? " " + opt : orig + ", " + opt;
    }
 
-   public List<Object> initPageObjects(Context ctx, String uri, List<PageEntry> pageEnts, HttpSession session, 
-                                       CurrentScopeContext curScopeCtx, boolean reset, boolean initial,
+   private List<Object> getConstructorArgs(List<String> constructorProps, Map<String,Object> urlProps) {
+      if (constructorProps == null || constructorProps.size() == 0)
+         return null;
+      List<Object> res = new ArrayList<Object>(constructorProps.size());
+      for (String constructorProp:constructorProps) {
+         res.add(urlProps == null ? null : urlProps.get(constructorProp));
+      }
+      return res;
+   }
+
+   public List<Object> initPageObjects(Context ctx, String uri, List<PageEntry> pageEnts, Map<String,Object> urlProps,
+                                       HttpSession session, CurrentScopeContext curScopeCtx, boolean reset, boolean initial,
                                        boolean resetSync, LayeredSystem sys) {
       if (pageEnts == null)
          return null;
@@ -541,6 +575,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
 
             Object pageType = pageEnt.pageType;
             boolean isObject = ModelUtil.isObjectType(pageType);
+            List<Object> constrArgs = getConstructorArgs(pageEnt.constructorProps, urlProps);
 
             if (doSync) {
 
@@ -573,7 +608,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             boolean newInst = false;
 
             // For page objects that are classes, we'll create the class and register it here
-            if (!isObject) {
+            if (!isObject || constrArgs != null) {
                String typeName = ModelUtil.getTypeName(pageType);
                ScopeDefinition scopeDef = getScopeDefForPageType(pageType);
                if (scopeDef != null) {
@@ -581,7 +616,10 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                   if (scopeCtx != null) {
                      inst = scopeCtx.getValue(typeName);
                      if (inst == null) {
-                        inst = ModelUtil.getAndRegisterGlobalObjectInstance(pageType);
+                        if (constrArgs != null)
+                           inst = DynUtil.newInnerInstance(pageType, null, null, constrArgs.toArray());
+                        else
+                           inst = ModelUtil.getAndRegisterGlobalObjectInstance(pageType);
                         scopeCtx.setValue(typeName, inst);
                         // Register this instance by name but don't initialize it.
                         SyncManager.registerSyncInst(inst, typeName, scopeDef.scopeId, false);
@@ -1004,7 +1042,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
              ix = referrer.indexOf("?");
              if (ix != -1)
                 referrer = referrer.substring(0,ix);
-             List<PageEntry> refPageEnts = getPageEntries(referrer, null);
+             List<PageEntry> refPageEnts = getPageEntries(referrer, null, null);
              if (refPageEnts != null) {
                 for (PageEntry refPageEnt:refPageEnts) {
                    if (!refPageEnt.resource) {
@@ -1033,7 +1071,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
 
       try {
          boolean isDynPage = false;
-         List<PageEntry> pageEnts = getPageEntries(uri, queryParams);
+         TreeMap<String,Object> urlProps = new TreeMap<String,Object>();
+         List<PageEntry> pageEnts = getPageEntries(uri, queryParams, urlProps);
 
          if (pageEnts != null && pageEnts.size() > 0) {
             int sz = pageEnts.size();
@@ -1056,8 +1095,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             LayeredSystem sys = LayeredSystem.getCurrent();
             if (sys != null && sys.options.autoRefresh) {
                if (sys.rebuild()) {
+                  urlProps.clear();
                   // Refresh the page entries since they may have been updated after the rebuild
-                  pageEnts = getPageEntries(uri, queryParams);
+                  pageEnts = getPageEntries(uri, queryParams, urlProps);
                   if (pageEnts == null || pageEnts.size() == 0) { // The URL mapping we originally mapped must have been removed?
                       if (verbose)
                          ctx.log("Page request: " + uri + " previously matched a page but after refresh, page is gone!");
@@ -1078,7 +1118,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                curScopeCtx = initPageContext(ctx, uri, pageEnts, session, sys);
 
                // Make sure the page object is initialized for this request
-               insts = initPageObjects(ctx, uri, pageEnts, session, curScopeCtx, true, true, false, sys);
+               insts = initPageObjects(ctx, uri, pageEnts, urlProps, session, curScopeCtx, true, true, false, sys);
 
                // Something in creating the object rejected, redirected or whatever
                if (ctx != null && ctx.requestComplete) {
@@ -1300,8 +1340,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       //SyncManager.addSyncType(ServerTag.ServerTagProp.class, new SyncProperties(null, null, new Object[] {"propName"}, null, SyncPropOptions.SYNC_INIT, WindowScopeDefinition.scopeId));
    }
 
+   // TODO: is this used anymore?
    public List<PageDispatcher.PageEntry> getPageEntriesOrError(Context ctx, String url) {
-      List<PageDispatcher.PageEntry> pageEnts = getPageEntries(url, ctx.queryParams);
+      List<PageDispatcher.PageEntry> pageEnts = getPageEntries(url, ctx.queryParams, null);
       if (pageEnts == null) {
          ctx.sendError(HttpServletResponse.SC_NOT_FOUND, "No page found for url: " + url);
          return null;
@@ -1309,11 +1350,11 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       return pageEnts;
    }
 
-   public StringBuilder getPageOutput(Context ctx, String url, List<PageDispatcher.PageEntry> pageEnts, CurrentScopeContext curScopeCtx,
+   public StringBuilder getPageOutput(Context ctx, String url, List<PageDispatcher.PageEntry> pageEnts, Map<String,Object> urlProps, CurrentScopeContext curScopeCtx,
                                       boolean initSync, boolean resetSync, LayeredSystem sys, StringBuilder traceBuffer) {
       StringBuilder pageOutput = null;
       try {
-         List<Object> insts = pageDispatcher.initPageObjects(ctx, url, pageEnts, ctx.session, curScopeCtx, false, initSync, resetSync, sys);
+         List<Object> insts = pageDispatcher.initPageObjects(ctx, url, pageEnts, urlProps, ctx.session, curScopeCtx, false, initSync, resetSync, sys);
          ctx.pageInsts = insts;
 
          if (insts != null) {
@@ -1376,9 +1417,14 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          if (pattern == null) {
             pattern = templatePathName;
          }
+
+         List<String> constructorProps = sc.lang.java.ClassDeclaration.getConstructorPropNamesForType(sys, newType, ModelUtil.getLayerForType(sys, newType));
+
          System.out.println("*** Adding page type: " + newType);
          addPage(templatePathName, pattern, newType, isURLPage, needsSync, isResource,
-                 DynUtil.getLayerPosition(newType), lockScope, QueryParamProperty.getQueryParamProperties(newType), syncTypes, resetSyncTypes, realTime, mimeType);
+                 DynUtil.getLayerPosition(newType), lockScope, QueryParamProperty.getQueryParamProperties(newType),
+                 URLParamProperty.getURLParamProperties(sys, newType, pattern), syncTypes, resetSyncTypes, realTime,
+                 mimeType, constructorProps);
       }
       initPageEntries();
    }
