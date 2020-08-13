@@ -357,7 +357,7 @@ class Context {
             windowCtx.lastRequestTime = System.currentTimeMillis();
             ctxList.add(windowCtx);
 
-            SyncManager.addSyncInst(windowCtx.window, true, false, "window", null);
+            SyncManager.addSyncInst(windowCtx.window, true, false, true, "window", null);
 
             if (verbose) {
                log("new window");

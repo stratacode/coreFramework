@@ -935,11 +935,11 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             mgr = new ServerTagManager();
             wctx.setValue("sc.js.PageServerTagManager", mgr);
             mgr.serverTags = stCtx.serverTags;
-            SyncManager.addSyncInst(mgr, false, true, "window", null);
+            SyncManager.addSyncInst(mgr, false, true, true, "window", null);
             // Setting initDefault=false here because the browser's initial version of this object is already set
             // and trying to change it here would lead to an infinite loop when setting href back onto itself
-            SyncManager.addSyncInst(wctx.window.location, false, false, "window", null);
-            SyncManager.addSyncInst(wctx.window.document, false, false, "window", null);
+            SyncManager.addSyncInst(wctx.window.location, false, false, true, "window", null);
+            SyncManager.addSyncInst(wctx.window.document, false, false, true, "window", null);
          }
          else {
             mgr.updateServerTags(stCtx);

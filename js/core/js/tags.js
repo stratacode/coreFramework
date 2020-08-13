@@ -2989,7 +2989,7 @@ js_Element_c.updateServerTag = function(tagObj, id, serverTag, addSync) {
                // Synchronize the tag instance - this will add listeners for the properties we need to listen for the tag object.
                // The tag object will then listen for the appropriate DOM events and update the tag object as necessary.  That will
                // trigger queuing of sync events for these properties.
-               sc_SyncManager_c.addSyncInst(tagObj, false, false, null, new sc_SyncProperties(null, null, props, 0), 0, 0);
+               sc_SyncManager_c.addSyncInst(tagObj, false, false, false, null, new sc_SyncProperties(null, null, props, 0), 0, 0);
             }
          }
       }

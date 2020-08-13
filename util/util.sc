@@ -3,6 +3,11 @@ package sc.util;
 import java.util.List;
 import sc.util.ArrayList;
 
+// TODO: should we deprecate ArrayList in this class and switch to an explicit
+// use of BArrayList? It's confusing to have a class with the same name that does
+// different things.
+import sc.util.BArrayList;
+
 import sc.util.NumberConverter;
 import sc.util.IntConverter;
 import sc.util.ComponentList;
