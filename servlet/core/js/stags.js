@@ -2279,6 +2279,7 @@ syncMgr = sc_SyncManager_c = {
                      break;
                   }
                   if (avix < stlen - 1) {
+                     // TODO: do we need this part? It's commented out in tags.js
                      if (c == '\\') {
                         avix++;
                         var nc = startTagTxt.charAt(avix);
@@ -2296,8 +2297,9 @@ syncMgr = sc_SyncManager_c = {
                               attVal += '\r';
                            }
                            else {
-                              sc_logError("Unrecognized escape");
-                              return;
+                              // the pattern attribute at least takes patterns like \d* or \x
+                              attVal += '\\';
+                              attVal += nc;
                            }
                            continue;
                         }
