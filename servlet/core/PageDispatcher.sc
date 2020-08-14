@@ -502,11 +502,12 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             scopeCtxs.add(scopeCtx);
             if (scopeName != null && scopeName.equals("window"))
                windowAdded = true;
-         }
-         if (!windowAdded && ctx != null) {
-            scopeNames.add("window");
-            scopeCtxs.add(ctx.getWindowScopeContext(true));
-            // presumably we've already locked at the session, app, global, etc level so no need to lock the lower-level window
+
+            if (!windowAdded && ctx != null) {
+               scopeNames.add("window");
+               scopeCtxs.add(ctx.getWindowScopeContext(true));
+               // presumably we've already locked at the session, app, global, etc level so no need to lock the lower-level window
+            }
          }
       }
 
@@ -778,37 +779,44 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
 
       int syncScopeId = WindowScopeDefinition.scopeId;
 
-      WindowScopeContext wctx = ctx.getWindowScopeContext(true);
-      ServerTagManager mgr = (ServerTagManager) wctx.getValue("sc.js.PageServerTagManager");
-      ServerTagContext stCtx = new ServerTagContext(mgr);
+      WindowScopeContext wctx = null;
+      ServerTagContext stCtx = null;
+      ServerTagManager mgr = null;
 
       for (PageEntry pageEnt:pageEnts) {
          // Merge the set of sync types for each of the matching page entries - using the original set for the common case where this is only one
          // but not creating a new HashSet for 2 and more
-         if (pageEnt.syncTypes != null) {
-            if (ctx.curScopeCtx.syncTypeFilter == null) {
-               ctx.curScopeCtx.syncTypeFilter = pageEnt.syncTypes;
-               origSyncTypes = true;
+         if (pageEnt.dynContentPage) {
+            if (wctx == null) {
+               wctx = ctx.getWindowScopeContext(true);
+               mgr = (ServerTagManager) wctx.getValue("sc.js.PageServerTagManager");
+               stCtx = new ServerTagContext(mgr);
             }
-            else {
-               if (origSyncTypes) {
-                  ctx.curScopeCtx.syncTypeFilter = new HashSet<String>(ctx.curScopeCtx.syncTypeFilter);
-                  origSyncTypes = false;
+            if (pageEnt.syncTypes != null) {
+               if (ctx.curScopeCtx.syncTypeFilter == null) {
+                  ctx.curScopeCtx.syncTypeFilter = pageEnt.syncTypes;
+                  origSyncTypes = true;
                }
-               ctx.curScopeCtx.syncTypeFilter.addAll(pageEnt.syncTypes);
-            }
-         }
-         if (pageEnt.resetSyncTypes != null) {
-            if (ctx.curScopeCtx.resetSyncTypeFilter == null) {
-               ctx.curScopeCtx.resetSyncTypeFilter = pageEnt.resetSyncTypes;
-               origResetSyncTypes = true;
-            }
-            else {
-               if (origResetSyncTypes) {
-                  ctx.curScopeCtx.resetSyncTypeFilter = new HashSet<String>(ctx.curScopeCtx.resetSyncTypeFilter);
-                  origResetSyncTypes = false;
+               else {
+                  if (origSyncTypes) {
+                     ctx.curScopeCtx.syncTypeFilter = new HashSet<String>(ctx.curScopeCtx.syncTypeFilter);
+                     origSyncTypes = false;
+                  }
+                  ctx.curScopeCtx.syncTypeFilter.addAll(pageEnt.syncTypes);
                }
-               ctx.curScopeCtx.resetSyncTypeFilter.addAll(pageEnt.resetSyncTypes);
+            }
+            if (pageEnt.resetSyncTypes != null) {
+               if (ctx.curScopeCtx.resetSyncTypeFilter == null) {
+                  ctx.curScopeCtx.resetSyncTypeFilter = pageEnt.resetSyncTypes;
+                  origResetSyncTypes = true;
+               }
+               else {
+                  if (origResetSyncTypes) {
+                     ctx.curScopeCtx.resetSyncTypeFilter = new HashSet<String>(ctx.curScopeCtx.resetSyncTypeFilter);
+                     origResetSyncTypes = false;
+                  }
+                  ctx.curScopeCtx.resetSyncTypeFilter.addAll(pageEnt.resetSyncTypes);
+               }
             }
          }
 
@@ -930,7 +938,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
         i++;
       }
 
-      if (stCtx.serverTags != null && stCtx.serverTags.size() > 0) {
+      if (stCtx != null && stCtx.serverTags != null && stCtx.serverTags.size() > 0) {
          if (mgr == null) {
             mgr = new ServerTagManager();
             wctx.setValue("sc.js.PageServerTagManager", mgr);
