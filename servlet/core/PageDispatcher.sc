@@ -1253,18 +1253,24 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
    }
 
    public static SyncSession getSyncSession(HttpSession session, String uri, boolean create) {
-       HashMap<String,SyncSession> syncSessions = (HashMap<String,SyncSession>) session.getAttribute("syncSessions");
-       if (syncSessions == null) {
-          syncSessions = new HashMap<String,SyncSession>();
-          session.setAttribute("syncSessions", syncSessions);
-       }
-       SyncSession sess = syncSessions.get(uri);
-       if (sess == null && create) {
-          sess = new SyncSession();
-          sess.uri = uri;
-          syncSessions.put(uri, sess);
-       }
-       return sess;
+      try {
+         HashMap<String,SyncSession> syncSessions = (HashMap<String,SyncSession>) session.getAttribute("syncSessions");
+         if (syncSessions == null) {
+            syncSessions = new HashMap<String,SyncSession>();
+            session.setAttribute("syncSessions", syncSessions);
+         }
+         SyncSession sess = syncSessions.get(uri);
+         if (sess == null && create) {
+            sess = new SyncSession();
+            sess.uri = uri;
+            syncSessions.put(uri, sess);
+         }
+         return sess;
+      }
+      // The session expired
+      catch (IllegalStateException exc) {
+         return null;
+      }
    }
 
    /**
