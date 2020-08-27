@@ -15,10 +15,11 @@ function js_HTMLElement() {
    this.id = null;
    this.repeat = null;
    this.replaceWith = null;
-   if (arguments.length === 3) {
+   if (arguments.length === 4) {
       this.parentNode = arguments[0];
-      this.repeatVar = arguments[1];
-      this.repeatIndex = arguments[2];
+      this.id = arguments[1];
+      this.repeatVar = arguments[2];
+      this.repeatIndex = arguments[3];
    }
    else if (arguments.length === 0) {
       this.repeatVar = null;
