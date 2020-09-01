@@ -113,4 +113,27 @@ public class TextUtil {
       return map != null && map.containsKey(key);
    }
 
+   public static String formatUserDate(Date date, boolean includeTime) {
+      if (date == null)
+         return "null";
+      StringBuilder sb = new StringBuilder();
+      sb.append(date.getYear() + 1900);
+      sb.append("-");
+      sb.append(twoDigit(date.getMonth()+1));
+      sb.append("-");
+      sb.append(date.getDate());
+      if (includeTime) {
+         sb.append(" ");
+         sb.append(date.getHours());
+         sb.append(":");
+         sb.append(date.getMinutes());
+      }
+      return sb.toString();
+   }
+
+   public static String twoDigit(int val) {
+      if (val < 10)
+         return "0" + val;
+      return String.valueOf(val);
+   }
 }
