@@ -1068,6 +1068,10 @@ sc_PTypeUtil_c.getThreadName = function() {
    return "js-thread";
 }
 
+sc_PTypeUtil_c.getTimeDelta = function(t1, t2) {
+   return sc_getTimeDelta(t1, t2);
+}
+
 sc_DynUtil_c.isArray = sc_PTypeUtil_c.isArray = function(type) {
    if (type === null)
       return false;

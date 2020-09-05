@@ -7,6 +7,8 @@ import sc.db.DBPropertySettings;
 import sc.db.DBUtil;
 import sc.db.DBObject;
 
+import sc.db.Query;
+
 import java.util.Map;
 import java.util.List;
 

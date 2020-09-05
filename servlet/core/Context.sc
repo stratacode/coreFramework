@@ -540,7 +540,7 @@ class Context {
       long now = System.currentTimeMillis();
       if (lastLogTime == -1)
          lastLogTime = now;
-      String res = PerfMon.formatTime(now) + PerfMon.getTimeDelta(lastLogTime, now);
+      String res = PerfMon.formatTime(now) + PTypeUtil.getTimeDelta(lastLogTime, now);
       lastLogTime = now;
       return res;
    }
