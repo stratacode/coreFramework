@@ -113,15 +113,43 @@ public class TextUtil {
       return map != null && map.containsKey(key);
    }
 
+   private final static long hourMillis = 1000 * 60 * 60;
+   private final static long dayMillis = hourMillis * 24;
+
    public static String formatUserDate(Date date, boolean includeTime) {
       if (date == null)
-         return "null";
+         return "";
+      Date now = new Date();
       StringBuilder sb = new StringBuilder();
-      sb.append(date.getYear() + 1900);
-      sb.append("-");
-      sb.append(twoDigit(date.getMonth()+1));
-      sb.append("-");
-      sb.append(date.getDate());
+      long nowTime = now.getTime();
+      long dateTime = date.getTime();
+      boolean handled = false;
+      long delta = nowTime - dateTime;
+      if (delta > 0 || -delta < hourMillis) {
+         if (delta < dayMillis) {
+            if (now.getDate() == date.getDate())
+               sb.append("today");
+            else if (new Date(dateTime + dayMillis).getDate() == now.getDate())
+               sb.append("yesterday");
+            handled = true;
+         }
+         else if (new Date(dateTime + dayMillis).getDate() == now.getDate()) {
+            sb.append("yesterday");
+            handled = true;
+         }
+      }
+      else if (delta < 0 && -delta < dayMillis && new Date(nowTime + dayMillis).getDate() == date.getDate()) {
+         sb.append("tomorrow");
+         handled = true;
+      }
+
+      if (!handled) {
+         sb.append(date.getYear() + 1900);
+         sb.append("-");
+         sb.append(twoDigit(date.getMonth()+1));
+         sb.append("-");
+         sb.append(date.getDate());
+      }
       if (includeTime) {
          sb.append(" ");
          sb.append(date.getHours());
