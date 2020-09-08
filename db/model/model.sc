@@ -6,6 +6,7 @@ import sc.db.DBTypeSettings;
 import sc.db.DBPropertySettings;
 import sc.db.DBUtil;
 import sc.db.DBObject;
+import sc.db.DBTransaction;
 
 import sc.db.Query;
 
