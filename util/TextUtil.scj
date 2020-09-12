@@ -154,7 +154,7 @@ public class TextUtil {
          sb.append(" ");
          sb.append(date.getHours());
          sb.append(":");
-         sb.append(date.getMinutes());
+         sb.append(twoDigit(date.getMinutes()));
       }
       return sb.toString();
    }
