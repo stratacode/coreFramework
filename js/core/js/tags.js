@@ -43,6 +43,7 @@ function js_HTMLElement() {
    if (this.isRepeatTag())
       this.initRepeatListener();
 }
+var js_Element = js_HTMLElement;
 
 js_indexPattern = "/index.html";
 js_Element_c = js_HTMLElement_c = sc_newClass("sc.lang.html.HTMLElement", js_HTMLElement, jv_Object, [sc_IChildInit, sc_IStoppable, sc_INamedChildren, sc_IObjChildren]);
