@@ -311,6 +311,7 @@ Error.prototype.printStackTrace = function() {  // Used in generated code
 sc_PTypeUtil_c = {
    postHttpRequest: function(url, postData, contentType, listener) {
       var httpReq = new XMLHttpRequest();
+      listener.responseHandled = false;
       httpReq.open("POST", url, true);
       httpReq.onload = function(evt) {
          var stat = httpReq.status;
@@ -559,6 +560,9 @@ js_HTMLElement_c.processEvent = function(elem, event, listener) {
          else if (event.type !== "mousemove")
             console.error("unrecognized event type!");
       }
+
+      if (listener.scEventName === "clickEvent")
+         event.stopPropagation();
 
       // TODO: for event properties should we delete the property here or set it to null?  flush the queue of events if somehow a queue is enabled here?
    }
@@ -1140,6 +1144,7 @@ js_Form_c.submitFormData = function(url) {
       this.setSubmitError(null);
       this.setSubmitResult(null);
       this.setSubmitCount(this.getSubmitCount()+1);
+      syncMgr.pendingSends.push([]);
       sc_PTypeUtil_c.postHttpRequest(url, formData, null, listener);
    }
 }
@@ -1287,6 +1292,10 @@ function sc_SyncListener(isWait) {
 sc_SyncListener_c = sc_newClass("SyncListener", sc_SyncListener, null);
 
 sc_SyncListener_c.syncResponse = function() {
+   if (syncMgr.pendingSends.length == 0) {
+      sc_logError("syncResponse called with no pending requests");
+      return [];
+   }
    var res = syncMgr.pendingSends.pop();
    if (syncMgr.pendingSync) {
       syncMgr.pendingSync = false;
@@ -1305,6 +1314,7 @@ sc_SyncListener_c.syncResponse = function() {
 
 sc_SyncListener_c.response = function(responseText) {
    sc_log("in response handler");
+   this.responseHandled = true;
    this.syncResponse();
    var syncLayerStart = "sync:";
    syncMgr.connected = true; // Success from server means we are connected
@@ -1349,7 +1359,12 @@ sc_SyncListener_c.response = function(responseText) {
 };
 
 sc_SyncListener_c.error = function(code, text) {
+   if (this.responseHandled) {
+      sc_log("Ignoring error on completed response: " + code + ": " + text);
+      return;
+   }
    sc_log("in error handler");
+   this.responseHandled = true;
    var errCmds = this.syncResponse();
    if (code === 205) { // session on server has expired - send the reset state and the original error request to be reapplied
       var rcmds = syncMgr.resetCmds;
@@ -1361,7 +1376,7 @@ sc_SyncListener_c.error = function(code, text) {
       // For each reset cmd received in reverse order, store the largest index for each property that's set
       for (var cix = rcmds.length - 1; cix >= 0; cix--) {
          var cmd = rcmds[cix];
-         if (cmd["$new"])
+         if (cmd["$new"] || cmd["$syncState"])
             continue;
          // An object definition like: {ObjectName:{p1:v1, p2, v2}}
          var name = cmd.$name;
@@ -1396,8 +1411,13 @@ sc_SyncListener_c.error = function(code, text) {
             curPkg = newPkg;
          }
          var newArgs = cmd["$new"];
+         var syncState = cmd["$syncState"];
          if (newArgs) {
             jsArr.push({$new:newArgs}); // strip out $curPkg
+            lastObjName = null;
+         }
+         else if (syncState) {
+            jsArr.push({$syncState:syncState}); // strip out $curPkg
             lastObjName = null;
          }
          else {
