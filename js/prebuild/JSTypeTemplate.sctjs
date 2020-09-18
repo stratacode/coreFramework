@@ -31,13 +31,13 @@ if (needsConstructor) {
                else {
                   int methCt = 0;
                   for (JSMethod paramMeth:paramMeths) { %><%= methCt == 0 ? "\n      " : "else "%>if (<%
-                         int pct = 0;
+                         int pct = paramMeth.outerParamOffset;
                          for (JSParameter param:paramMeth.parameters) {
                             %><%= pct == paramMeth.outerParamOffset ? "" : " && "
                             %><%= param.instanceOf%>(arguments[<%= pct++ %>], <%= param.type %><%= param.numDimsStr %>)<%
                          }
                      %>) { <%
-                     pct = 0;
+                     pct = paramMeth.outerParamOffset;
                      for (JSParameter param:paramMeth.parameters) { %>
          var <%= param.name %> = arguments[<%= pct++ %>];<% } %><%=
                        paramMeth.getMethodBody(3) %>}<% methCt++;
