@@ -59,3 +59,55 @@ sc_TextUtil_c.escapeQuotes = function(input) {
 sc_TextUtil_c.hasMapEntry = function(m,k) {
    return m !== null && m.get(k) !== null;
 }
+
+sc_TextUtil_c.hourMillis = 1000 * 60 * 60;
+sc_TextUtil_c.dayMillis = sc_TextUtil_c.hourMillis * 24;
+
+sc_TextUtil_c.formatUserDate = function(date, includeTime) {
+   if (date == null)
+      return "";
+   var now = new Date();
+   var sb = new jv_StringBuilder();
+   var nowTime = now.getTime();
+   var dateTime = date.getTime();
+   var handled = false;
+   var delta = nowTime - dateTime;
+   if (delta > 0 || -delta < sc_TextUtil_c.hourMillis) {
+      if (delta < sc_TextUtil_c.dayMillis) {
+         if (now.getDate() == date.getDate())
+            sb.append("today");
+         else if (new Date(dateTime + sc_TextUtil_c.dayMillis).getDate() == now.getDate())
+            sb.append("yesterday");
+         handled = true;
+      }
+      else if (new Date(dateTime + sc_TextUtil_c.dayMillis).getDate() == now.getDate()) {
+         sb.append("yesterday");
+         handled = true;
+      }
+   }
+   else if (delta < 0 && -delta < sc_TextUtil_c.dayMillis && new Date(nowTime + sc_TextUtil_c.dayMillis).getDate() == date.getDate()) {
+      sb.append("tomorrow");
+      handled = true;
+   }
+
+   if (!handled) {
+      sb.append(date.getYear() + 1900);
+      sb.append("-");
+      sb.append(sc_TextUtil_c.twoDigit(date.getMonth()+1));
+      sb.append("-");
+      sb.append(date.getDate());
+   }
+   if (includeTime) {
+      sb.append(" ");
+      sb.append(date.getHours());
+      sb.append(":");
+      sb.append(sc_TextUtil_c.twoDigit(date.getMinutes()));
+   }
+   return sb.toString();
+}
+
+sc_TextUtil_c.twoDigit = function(val) {
+   if (val < 10)
+      return "0" + val;
+   return val.toString();
+}
