@@ -38,6 +38,30 @@
                            sc_Bind_c.sendChange(_tagObj, "content", _tagObj.content);
                         }, 500, false);
                   }
+               },
+               onChangeCodeView: function(contents, $editable) {
+                  _tagObj.content = contents;
+                  _tagObj.lastEdit = contents;
+                  if (!_tagObj.refreshScheduled) {
+                     _tagObj.refreshScheduled = true;
+                     sc_addScheduledJob(_tagObj,
+                        function() {
+                           _tagObj.refreshScheduled = false;
+                           sc_Bind_c.sendChange(_tagObj, "content", _tagObj.content);
+                        }, 500, false);
+                  }
+               },
+               onBlurCodeview: function(contents, $editable) {
+                  _tagObj.content = contents;
+                  _tagObj.lastEdit = contents;
+                  if (!_tagObj.refreshScheduled) {
+                     _tagObj.refreshScheduled = true;
+                     sc_addScheduledJob(_tagObj,
+                        function() {
+                           _tagObj.refreshScheduled = false;
+                           sc_Bind_c.sendChange(_tagObj, "content", _tagObj.content);
+                        }, 500, false);
+                  }
                }
             },
          placeholder: '<%= placeholder %>',
