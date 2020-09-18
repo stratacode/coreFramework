@@ -704,4 +704,8 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>,
             array[i] = (E) stream.readObject();
         }
     }
+
+     public void sort(Comparator<? super E> comp) {
+        Arrays.sort((E[]) array, firstIndex, size+firstIndex, comp);
+    }
 }
