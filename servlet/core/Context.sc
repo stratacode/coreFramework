@@ -372,7 +372,7 @@ class Context {
       return windowCtx;
    }
 
-   private final static int WindowIdSeparatorScale = 100;
+   final static int WindowIdSeparatorScale = 100;
 
    // Include some integer based on the session id in the windowId to make it resilient to restarts.
    // Although windowId only has to be unique within a given session and is not used for authentication access - that's

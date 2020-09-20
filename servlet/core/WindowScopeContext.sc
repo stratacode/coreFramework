@@ -102,4 +102,11 @@ public class WindowScopeContext extends BaseScopeContext {
             System.err.println("*** Failed to remove CurrentScopeContext for scopeContextName: " + scopeContextName);
       }
    }
+
+   public String toString() {
+      StringBuilder sb = new StringBuilder();
+      sb.append("window:");
+      sb.append(windowId % Context.WindowIdSeparatorScale);
+      return sb.toString();
+   }
 }

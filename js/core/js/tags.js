@@ -10,6 +10,7 @@ function js_HTMLElement() {
    this.bodyValid = true;
    this.startValid = true;
    this.repeatTagsValid = true;
+   this.repeatTags = null;
    this.tagName = null;
    this.element = null;
    this.id = null;
@@ -2592,15 +2593,7 @@ function js_Page() {
    sc_addLoadMethodListener(this, js_Page_c.onPageLoad);
    sc_runLaterScheduled = true;
    this.refreshedOnce = false;
-   var pi = js_PageInfo_c.pages[this.$protoName];
-   if (pi == null) {
-      this.queryParamProperties = null;
-      this.urlParts = null;
-   }
-   else {
-      this.queryParamProperties = pi.queryParamProperties;
-      this.urlParts = pi.urlParts;
-   }
+   this.pageInfo = js_PageInfo_c.pages[this.$protoName];
    // Set page properties and add listeners to update the URL state
    this.updatePageFromURL(true);
    // Signal to others not to bother refreshing individually - avoids refreshing individual tags when we are going to do it at the page level anyway
@@ -2785,54 +2778,22 @@ js_HtmlPage_c.updatePageFromURL = js_Page_c.updatePageFromURL = function(addList
    this.pageURL = url;
    this.urlChanged = false;
    var updateURLListener = addListener ? new js_RefreshURLListener(this) : null;
-   var urlPropNames = [];
-   var urlPropValues = {__pns:urlPropNames};
-   if (this.urlParts != null) {
-      this.processURLParams(window.location.pathname, this.urlParts, false, urlPropValues, updateURLListener);
-   }
-   if (this.queryParamProperties != null) {
-      var qps = this.queryParamProperties;
-      var qix = url.indexOf('?');
-      var foundProps = {};
-      if (qix != -1 && qix < url.length - 1) {
-         var qstr = url.substring(qix+1);
-         var qarr = qstr.split('&');
-         for (var i = 0; i < qarr.length; i++) {
-            var qent = qarr[i];
-            var eix = qent.indexOf('=');
-            if (eix != -1 && eix < qent.length) {
-               var en = qent.substring(0, eix);
-               var ev = decodeURIComponent(qent.substring(eix+1));
-               for (var j = 0; j < qps.size(); j++) {
-                  var qp = qps.get(j);
-                  if (en.equals(qp.paramName)) {
-                     qp.setPropertyValue(this, ev);
-                     foundProps[qp.propName] = true;
-                  }
-               }
-            }
-         }
-      }
-      // Make sure any properties not in the URL get reset to null - this is required for resetting values
-      // like when implementing the back button.
-      for (var j = 0; j < qps.size(); j++) {
-         var qp = qps.get(j);
-         if (!foundProps[qp.propName])
-            qp.setPropertyValue(this, null);
-      }
+   var urlProps = [];
+   var urlPropValues = {};
+   if (this.pageInfo != null) {
+      this.pageInfo.addURLProperties(urlPropValues, urlProps);
 
-      if (updateURLListener !== null) {
-         for (var q = 0; q < qps.size(); q++) {
-            var qp = qps.get(q);
-            var pn = qp.propName;
-            urlPropValues[pn] = sc_DynUtil_c.getPropertyValue(this, pn);
-            urlPropNames.push(pn);
+      for (var i = 0; i < urlProps.length; i++) {
+         var up = urlProps[i];
+         var pn = up.propName;
+         up.setPropertyValue(this, urlPropValues[pn]);
+         if (updateURLListener !== null) {
             sc_Bind_c.addListener(this, pn, updateURLListener, sc_IListener_c.VALUE_VALIDATED);
          }
       }
    }
    this.lastURLProps = urlPropValues;
-   if (addListener && urlPropNames.length > 0) {
+   if (addListener && urlProps.length > 0) {
       var thisPage = this;
       history.replaceState(urlPropValues, "init page state");
       // Called every time local navigation changes both: a click on an a href="#" link or back/forward
@@ -2844,110 +2805,6 @@ js_HtmlPage_c.updatePageFromURL = js_Page_c.updatePageFromURL = function(addList
          //thisPage.updatePageFromURL(false);
       });
    }
-}
-
-js_HtmlPage_c.processURLParams = js_Page_c.processURLParams = function(url, ups, opt, newURLProps, updateURLListener) {
-   var urlNext = url;
-   for (var i = 0; i < ups.size(); i++) {
-      var up = ups.get(i);
-      if (sc_instanceOf(up, String)) {
-         if (urlNext.startsWith(up)) {
-            urlNext = urlNext.substring(up.length);
-         }
-         else if (urlNext === "/" && up.startsWith(js_indexPattern))
-            urlNext = urlNext.substring(js_indexPattern.length);
-         else {
-            var matched = false;
-            // window.location.pathname might be the file system path for a client-only app - if so, 
-            // need to skip the file system path name part in our URL parsing logic
-            if (i === 0) {
-               var path = "web" + up;
-               var ix = urlNext.indexOf(path);
-               if (ix !== -1) {
-                  urlNext = urlNext.substring(ix+1);
-                  matched = true;
-               }
-            }
-            if (!matched) {
-               if (!opt)
-                  console.error("url: " + url + " expected to find: " + up + " but found: " + urlNext);
-               break;
-            }
-         }
-      }
-      else if (up.parseletName) { // js_URLParamProperty
-         var val;
-         var ct = 0;
-         if (urlNext.length === 0) {
-            if (!opt)
-               console.error("url: " + url + " does not match pattern");
-            break;
-         }
-         if (up.parseletName === "urlString") {
-            val = "";
-            for (; ct < urlNext.length; ct++) {
-               var c = urlNext.charAt(ct);
-               if (c.match(/[-a-zA-Z0-9$_\+.!\*\(\),]/)) {
-                  val += c;
-               }
-               else
-                  break;
-            }
-         }
-         else if (up.parseletName === "integerLiteral") {
-            if (urlNext.charAt(0) === '-') {
-               val = '-';
-               ct++;
-            }
-            else
-               val = "";
-            for (; ct < urlNext.length; ct++) {
-               var c = urlNext.charAt(ct);
-               if (c.match(/[0-9]/)) {
-                  val += c;
-               }
-               else
-                  break;
-            }
-            val = parseInt(val);
-         }
-         else if (up.parseletName === "identifier") {
-            val = "";
-            var c = urlNext.charAt(0);
-            if (c.match(/[a-zA-Z0-9_]/)) {
-               val += c;
-               ct++;
-            }
-            for (; ct < urlNext.length; ct++) {
-               var c = urlNext.charAt(ct);
-               if (c.match(/[a-zA-Z0-9_]/)) {
-                  val += c;
-               }
-               else
-                  break;
-            }
-         }
-         else
-            console.error("Unrecognized parselet type for url parameter: " + up.parseletName);
-         up.setPropertyValue(this, val);
-         urlNext = urlNext.substring(ct);
-
-         // List for property changes and update the URL
-         if (up.propName !== null && updateURLListener !== null) {
-            var pn = up.propName;
-            newURLProps[pn] = val;
-            newURLProps.__pns.push(pn);
-            sc_Bind_c.addListener(this, pn, updateURLListener, sc_IListener_c.VALUE_VALIDATED);
-         }
-      }
-      else if (up.urlParts) { // js_OptionalURLParam
-         if (urlNext.length === 0) {
-            break;
-         }
-         urlNext = this.processURLParams(urlNext, up.urlParts, true, newURLProps, updateURLListener);
-      }
-   }
-   return urlNext;
 }
 
 // Called to create, or update a server tag object, pointing to the DOM element specified by 'id'.
@@ -3461,8 +3318,8 @@ js_HtmlPage_c.appendURLParts = js_Page_c.appendURLParts = function(baseURL, ups,
 }
 
 js_HtmlPage_c.updateURLFromProperties = js_Page_c.updateURLFromProperties = function() {
-   var qps = this.queryParamProperties;
-   var ups = this.urlParts;
+   var qps = this.pageInfo.queryParamProperties;
+   var ups = this.pageInfo.urlParts;
 
    var newURLProps = {};
    var baseURL = location.href;
@@ -3719,6 +3576,9 @@ function js_PageInfo() {
    this.pattern = null;
    this.pageType = null;
    this.queryParamProperties = null;
+   this.urlProps = []; // Array of all QueryParamProperties/URLParamProperties found in the current URL
+   this.urlPropValues = {}; // PropName to value map for all urlProps of initial URL values
+   this.urlPropsInited = false;
 }
 
 js_PageInfo_c = sc_newClass("sc.lang.html.PageInfo", js_PageInfo, jv_Object, null);
@@ -3734,6 +3594,178 @@ js_PageInfo_c.addPage = function(pageTypeName, pattern, pageType, queryParams, u
    pi.urlParts = urlParts;
    pi.constructorProps = constructorProps;
    js_PageInfo_c.pages[pageTypeName] = pi;
+}
+
+js_PageInfo_c.initURLProperties = function(className) {
+   if (!this.urlPropsInited) {
+      this.urlPropsInited = true;
+      this.addURLProperties(this.urlPropValues, this.urlProps);
+   }
+}
+
+js_PageInfo_c.findURLProp = function(propName) {
+   for (var i = 0; i < this.urlProps.length; i++) {
+      var urlProp = this.urlProps[i];
+      if (urlProp.propName === propName)
+         return urlProp;
+   }
+   return null;
+}
+
+js_PageInfo_c.getURLProperty = function(className, propName) {
+   var page = js_PageInfo_c.pages[className];
+   if (page != null) {
+      page.initURLProperties(className);
+      var val = page.urlPropValues[propName];
+      if (!val)
+         return null;
+      var urlProp = page.findURLProp(propName);
+      return urlProp == null ? val : urlProp.convertToPropertyValue(val);
+   }
+   else
+      sc_logError("No PageInfo object for getURLProperty: " + className + "." + propName);
+}
+
+js_PageInfo_c.addURLProperties = function(urlPropValues, urlProps) {
+   var url = window.location.href;
+   var ups = this.urlParts;
+   if (ups != null) {
+      this.processURLParams(window.location.pathname, ups, false, urlPropValues, urlProps);
+   }
+   var qps = this.queryParamProperties;
+   if (qps != null) {
+      var qix = url.indexOf('?');
+      var found = {};
+      if (qix != -1 && qix < url.length - 1) {
+         var qstr = url.substring(qix+1);
+         var qarr = qstr.split('&');
+         for (var i = 0; i < qarr.length; i++) {
+            var qent = qarr[i];
+            var eix = qent.indexOf('=');
+            if (eix != -1 && eix < qent.length) {
+               var en = qent.substring(0, eix);
+               var ev = decodeURIComponent(qent.substring(eix+1));
+               for (var j = 0; j < qps.size(); j++) {
+                  var qp = qps.get(j);
+                  if (en.equals(qp.paramName)) {
+                     urlProps.push(qp);
+                     urlPropValues[qp.propName] = ev;
+                     found[qp.propName] = true;
+                  }
+               }
+            }
+         }
+      }
+      // Make sure any properties not in the URL get reset to null - this is required for resetting values
+      // like when implementing the back button.
+      for (var j = 0; j < qps.size(); j++) {
+         var qp = qps.get(j);
+         if (!found[qp.propName]) {
+            urlProps.push(qp);
+            urlPropValues[qp.propName] = null;
+         }
+      }
+   }
+}
+
+js_PageInfo_c.processURLParams = function(url, ups, opt, newURLPropValues, allURLProps) {
+   var urlNext = url;
+   for (var i = 0; i < ups.size(); i++) {
+      var up = ups.get(i);
+      if (sc_instanceOf(up, String)) {
+         if (urlNext.startsWith(up)) {
+            urlNext = urlNext.substring(up.length);
+         }
+         else if (urlNext === "/" && up.startsWith(js_indexPattern))
+            urlNext = urlNext.substring(js_indexPattern.length);
+         else {
+            var matched = false;
+            // window.location.pathname might be the file system path for a client-only app - if so,
+            // need to skip the file system path name part in our URL parsing logic
+            if (i === 0) {
+               var path = "web" + up;
+               var ix = urlNext.indexOf(path);
+               if (ix !== -1) {
+                  urlNext = urlNext.substring(ix+1);
+                  matched = true;
+               }
+            }
+            if (!matched) {
+               if (!opt)
+                  console.error("url: " + url + " expected to find: " + up + " but found: " + urlNext);
+               break;
+            }
+         }
+      }
+      else if (up.parseletName) { // js_URLParamProperty
+         var val;
+         var ct = 0;
+         if (urlNext.length === 0) {
+            if (!opt)
+               console.error("url: " + url + " does not match pattern");
+            break;
+         }
+         if (up.parseletName === "urlString") {
+            val = "";
+            for (; ct < urlNext.length; ct++) {
+               var c = urlNext.charAt(ct);
+               if (c.match(/[-a-zA-Z0-9$_\+.!\*\(\),]/)) {
+                  val += c;
+               }
+               else
+                  break;
+            }
+         }
+         else if (up.parseletName === "integerLiteral") {
+            if (urlNext.charAt(0) === '-') {
+               val = '-';
+               ct++;
+            }
+            else
+               val = "";
+            for (; ct < urlNext.length; ct++) {
+               var c = urlNext.charAt(ct);
+               if (c.match(/[0-9]/)) {
+                  val += c;
+               }
+               else
+                  break;
+            }
+            val = parseInt(val);
+         }
+         else if (up.parseletName === "identifier") {
+            val = "";
+            var c = urlNext.charAt(0);
+            if (c.match(/[a-zA-Z0-9_]/)) {
+               val += c;
+               ct++;
+            }
+            for (; ct < urlNext.length; ct++) {
+               var c = urlNext.charAt(ct);
+               if (c.match(/[a-zA-Z0-9_]/)) {
+                  val += c;
+               }
+               else
+                  break;
+            }
+         }
+         else
+            console.error("Unrecognized parselet type for url parameter: " + up.parseletName);
+
+         var pn = up.propName;
+         newURLPropValues[pn] = val;
+         allURLProps.push(up);
+
+         urlNext = urlNext.substring(ct);
+      }
+      else if (up.urlParts) { // js_OptionalURLParam
+         if (urlNext.length === 0) {
+            break;
+         }
+         urlNext = this.processURLParams(urlNext, up.urlParts, true, newURLPropValues, allURLProps);
+      }
+   }
+   return urlNext;
 }
 
 function js_BaseURLParamProperty(enclType, propName, propType, req, constructor) {
@@ -3757,6 +3789,19 @@ js_BaseURLParamProperty_c.setPropertyValue = function(pageInst, ev) {
       return;
    }
    sc_DynUtil_c.setPropertyValue(pageInst, this.propName, ev);
+}
+
+js_BaseURLParamProperty_c.convertToPropertyValue = function(ev) {
+   if (this.propType == Number_c) {
+      if (ev == null || ev.length == 0)
+         return; // if we have no value, just don't set the number
+      ev = Number.parseInt(ev);
+   }
+   else if (this.propType != String_c) {
+      console.error("No converter for query param property type: " + this.propName + ": " + this.propType);
+      return;
+   }
+   return ev;
 }
 
 // Stores the meta-data for each page type
