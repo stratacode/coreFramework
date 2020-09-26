@@ -37,7 +37,7 @@ public @interface URL {
    boolean dynContent() default true;
    /** Set to true for css, images or other files. If resources are dynamic, the app id is chosen from the referer(sic) header */
    boolean resource() default false;
-   /** Set this to true so that a base type is not itself asigned a URL but all sub-types in the chain are assigned the URL.  If you want to bury
+   /** Set this to true so that a base type is not itself assigned a URL but all sub-types in the chain are assigned the URL.  If you want to bury
     the @URL annotation on a subclass, so it's not set on each individual class, using this option avoids having an entry for the abstract base class. */
    boolean subTypesOnly() default false;
    /** Set to the scope name to be used for locking purposes in the PageDispatcher and Sync requests.  Defaults to the scope of the instance if not set.  Set to none to disable locking.  */
