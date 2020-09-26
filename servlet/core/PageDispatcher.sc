@@ -634,7 +634,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                newInst = true;
             }
             if (newInst) {
-               initPageInst(inst);
+               initPageInst(inst, curScopeCtx);
             }
             insts.add(inst);
 
@@ -731,7 +731,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                newInst = true;
             }
             if (newInst) {
-               initPageInst(inst);
+               initPageInst(inst, curScopeCtx);
             }
             insts.add(inst);
          }
@@ -741,13 +741,18 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       return insts;
    }
 
-   public void initPageInst(Object pageObj) {
-
+   public void initPageInst(Object pageObj, CurrentScopeContext curScopeCtx) {
       if (pageObj instanceof IPage) {
          IPage page = (IPage) pageObj;
          if (page.cache == null)
             page.cache = sc.lang.html.CacheMode.Enabled;
          page.pageDispatcher = this;
+         if (page.currentScopeContexts == null) {
+            page.currentScopeContexts = new ArrayList<CurrentScopeContext>();
+            page.currentScopeContexts.add(curScopeCtx);
+         }
+         else if (curScopeCtx.indexInList(page.currentScopeContexts) == -1)
+            page.currentScopeContexts.add(curScopeCtx);
       }
    }
 

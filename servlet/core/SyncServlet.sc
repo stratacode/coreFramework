@@ -30,6 +30,8 @@ import sc.sync.SyncManager;
 import sc.sync.RuntimeIOException;
 import sc.sync.SyncResult;
 
+import sc.dyn.ScheduledJob;
+
 import sc.js.URLPath;
 
 import sc.db.DBTransaction;
@@ -330,6 +332,7 @@ class SyncServlet extends HttpServlet {
                         if (tx != null)
                            tx.commit();
 
+                        // Here's where we wait for some event on the listener or a timeout of waitTime
                         try {
                            listener.waiting = true;
                            listener.wait(waitTime);
@@ -346,6 +349,8 @@ class SyncServlet extends HttpServlet {
                finally {
                   windowCtx.removeChangeListener(listener);
                }
+
+               // Now we've woken up and are ready to look for events
 
                if (Context.shuttingDown) {
                    if (verbosePage)
@@ -364,6 +369,15 @@ class SyncServlet extends HttpServlet {
                      ctx.log("sync woke - acquiring locks: " + " after " + (System.currentTimeMillis() - sleepStartTime) + " millis " + getDebugInfo(request, response));
 
                   curScopeCtx.startScopeContext(true);
+
+                  // Any jobs queued up for this thread to run get queued up to be run in this thread first (e.g. a refreshTags call
+                  // because some server tags were changed)
+                  List<ScheduledJob> jobs = curScopeCtx.getEventScopeContext().toRunLater;
+                  if (jobs != null) {
+                     for (ScheduledJob job:jobs)
+                        DynUtil.invokeLater(job.toInvoke, job.priority);
+                     jobs.clear();
+                  }
 
                   // This curScopeCtx may have received data binding events from objects it created before we called 'wait'.  When we validate those bindings in startScopeContext, it might have queued additional jobs
                   // that we should perform before we try to do the next sync context.
