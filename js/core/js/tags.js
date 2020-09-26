@@ -16,6 +16,7 @@ function js_HTMLElement() {
    this.id = null;
    this.repeat = null;
    this.replaceWith = null;
+   this.repeatSync = false;
    if (arguments.length === 4) {
       this.parentNode = arguments[0];
       this.id = arguments[1];
@@ -346,8 +347,13 @@ js_HTMLElement_c.isVisibleInView = function() {
    if (!this.visible)
       return false;
    var par = this.getEnclosingTag();
-   if (par != null)
-      return par.isVisibleInView();
+   if (par != null) {
+      var parVis = par.isVisibleInView();
+      if (js_HTMLElement_c.isAltId(this.getId()))
+         return !parVis;
+      else
+         return parVis;
+   }
    if (this.isPageElement())
       return true;
    else {
@@ -447,7 +453,7 @@ js_HTMLElement_c.destroyRepeatTags = function() {
    if (repeatTags !== null) {
       for (var i = 0; i < repeatTags.length; i++) {
          var childTag = repeatTags[i];
-         childTag.destroy();
+         this.removeRepeatElement(childTag);
       }
       this.repeatTags = null;
    }
@@ -987,9 +993,14 @@ js_HTMLElement_c.setRepeat = function(r) {
          sc_Bind_c.addListener(r, null, this.repeatListener, sc_IListener_c.VALUE_INVALIDATED);
    }
    this.repeat = r;
-   if (r !== null && this.repeatTags === undefined) {
-      this.repeatTags = null;
-      this.invalidateRepeatTags();
+   if (r !== null) {
+      if (this.repeatTags === undefined) {
+         this.repeatTags = null;
+         this.invalidateRepeatTags();
+      }
+      else if (this.repeatTags === null)
+         this.invalidateRepeatTags();
+      // TODO: else do we need to invalidate the repeat tags here
    }
    sc_Bind_c.sendChangedEvent(this, "repeat");
 }
@@ -1392,8 +1403,12 @@ js_HTMLElement_c.removeElement = function(tag, ix, updateDOM) {
    }
    this.repeatTags.splice(ix,1);
    // Needs to be done after updateDOM as it sets the element = null.
-   tag.destroy();
+   this.removeRepeatElement(tag);
    return needsRefresh;
+}
+
+js_HTMLElement_c.removeRepeatElement = function(tag) {
+   tag.destroy();
 }
 
 js_HTMLElement_c.moveElement = function(tag, oldIx, newIx, updateDOM) {
@@ -1509,6 +1524,17 @@ js_HTMLElement_c.getChildrenById = function(id) {
    return res;
 }
 
+var _sc_altIdSuffix = "__alt";
+
+js_HTMLElement_c.isAltId = function(id) {
+   var ix = id == null ? -1 : id.indexOf(_sc_altIdSuffix);
+   if (ix == -1)
+      return false;
+   var idLen = id.length;
+   var suffLen = _sc_altIdSuffix.length;
+   return ix != -1 && (ix + suffLen == idLen || id.charAt(ix + suffLen) === '_');
+}
+
 js_HTMLElement_c.getAltChildren = function() {
    if (!this.getObjChildren)
       return null;
@@ -1520,9 +1546,7 @@ js_HTMLElement_c.getAltChildren = function() {
       var child = children[i];
       var ix;
       if (child.getId) {
-         var id = child.getId();
-         var ix = id.indexOf("__alt");
-         if (ix != -1 && ix == id.length - 5) {
+         if (js_HTMLElement_c.isAltId(child.getId())) {
             if (res == null) res = [];
             res.push(child);
          }
@@ -1712,7 +1736,7 @@ js_HTMLElement_c.createRepeatElement = function(rv, ix, oldTag) {
    if (this.wrap)
       elem.bodyOnly = true;
    elem.parentNode = this;
-   if (elem != null && sync)
+   if (elem != null && sync && this.repeatSync)
       js_HTMLElement_c.registerSyncInstAndChildren(elem);
    if (flush)
        sc_SyncManager_c.flushSyncQueue();
