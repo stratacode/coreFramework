@@ -115,5 +115,10 @@ sys.std {
       requestScope.temporaryScope = true;
       requestScope.addDependentType(sc.obj.RequestScopeDefinition.class);
       registerScopeProcessor("request", requestScope);
+
+      // Adding these scopes as aliases so that they can be used in code without web framework dependencies
+      registerScopeAlias("session", "global");
+      registerScopeAlias("appSession", "global");
+      registerScopeAlias("window", "global");
    }
 }

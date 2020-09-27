@@ -45,6 +45,10 @@ abstract class UploadPage extends BasePage {
       }
 
       HttpServletRequest req = ctx.request;
+      //if (req.getMethod().equalsIgnoreCase("GET")) {
+      //   return new StringBuilder("Media upload page - use POST of a multi-part form to upload media files");
+      //}
+
       if (!req.getMethod().equalsIgnoreCase("POST")) {
          ctx.sendError(400, "File upload expected to use POST method not: " + req.getMethod());
          ctx.requestComplete = true;

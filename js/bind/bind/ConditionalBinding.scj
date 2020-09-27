@@ -78,29 +78,40 @@ public class ConditionalBinding extends AbstractMethodBinding {
             Number constVal = (Number) topConstBind.value;
             ConstantBinding innerConst;
             VariableBinding innerVar;
+            Object innerConstVal;
             if (arithBind.boundParams[0] instanceof ConstantBinding && arithBind.boundParams[1] instanceof VariableBinding) {
                innerConst = (ConstantBinding) arithBind.boundParams[0];
                innerVar = (VariableBinding) arithBind.boundParams[1];
+               innerConstVal = innerConst.value;
             }
             else if (arithBind.boundParams[1] instanceof ConstantBinding && arithBind.boundParams[0] instanceof VariableBinding) {
                innerVar = (VariableBinding) arithBind.boundParams[0];
                innerConst = (ConstantBinding) arithBind.boundParams[1];
+               innerConstVal = innerConst.value;
+            }
+            else if (arithBind.boundParams[0] instanceof VariableBinding && arithBind.boundParams[1] instanceof VariableBinding) {
+               // TODO: on the server, we use the metadata of the property in the binding to pick whether to modify the first
+               // or second parameter but this implementation always chooses the first value as the variable because the client
+               // right now does not have this metadata.
+               innerVar = (VariableBinding) arithBind.boundParams[0];
+               VariableBinding constVar = (VariableBinding) arithBind.boundParams[1];
+               innerConstVal = constVar.getBoundValue(false);
             }
             else
                throw new UnsupportedOperationException("Unsupported conditional reverse binding pattern");
-            Object innerConstVal = innerConst.value;
             if (!(innerConstVal instanceof Number)) {
                throw new UnsupportedOperationException("Unsupported conditional reverse binding data type");
             }
-            long innerNum = ((Number) innerConstVal).longValue();
-            if ((operator.equals("!=") && constVal.longValue() == 0) || (operator.equals("==") && constVal.longValue() == innerNum)) {
+            // TODO: The Java version is also coded to handle 64 bits but this version can only do 32 because of the JS converter converting all numbers to a JS number
+            Integer innerNum = ((Number) innerConstVal).intValue();
+            if ((operator.equals("!=") && constVal.intValue() == 0) || (operator.equals("==") && constVal.intValue() == innerNum)) {
                Boolean bval = (Boolean) value;
                Number curVal = (Number) innerVar.getBoundValue(false);
                if (curVal == null)
                   return null;
-               long curBits = curVal.longValue();
+               int curBits = curVal.intValue();
 
-               long newBits;
+               int newBits;
                if (bval)
                   newBits = curBits | innerNum;
                else
