@@ -273,10 +273,29 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
    }
 
    boolean runPageTest(URLPath urlPath, String scopeContextName) {
-      String typeName = sc.type.CTypeUtil.capitalizePropertyName(urlPath.name);
-      String testScriptName = "test" + typeName + ".scr";
+      String pathName = urlPath.name;
+      int pathIx = pathName.lastIndexOf("/");
+      String dirName;
+      String fileName;
+      if (pathIx == -1) {
+         dirName = null;
+         fileName = pathName;
+      }
+
+      else {
+         dirName = pathName.substring(0, pathIx);
+         fileName = pathName.substring(pathIx+1);
+      }
+
+      String typeName = sc.type.CTypeUtil.capitalizePropertyName(fileName);
+      String testScriptName = (dirName == null ? "" : dirName + "/") + "test" + typeName + ".scr";
+      return runPageTestScript(urlPath, scopeContextName, testScriptName);
+   }
+
+   boolean runPageTestScript(URLPath urlPath, String scopeContextName, String testScriptName) {
       if (cmd.exists(testScriptName)) {
-         if (!(clientSync || !urlPath.realTime)) // TODO: in this case, we'd like to convert the testApp.scr file into a program to download when we run in testMode
+         String typeName = sc.type.CTypeUtil.capitalizePropertyName(urlPath.name);
+         if (!(clientSync || !urlPath.realTime))
             System.out.println("Skipping " + testScriptName + " for type: " + typeName + " - scripts not yet supported for client-only application");
          else {
             System.out.println("--- Running " + testScriptName + " for type: " + typeName);
@@ -296,13 +315,16 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
             System.out.println("- Done: " + testScriptName);
             return true;
          }
-     }
-     return false;
+      }
+      return false;
    }
 
    public void loadAllPages() {
       int numLoaded = 0;
-      System.out.println("--- Loading all pages from: " + urlPaths.size() + " urls");
+      if (sys.options.testPattern == null)
+         System.out.println("--- Loading all pages from: " + urlPaths.size() + " urls");
+      else
+         System.out.println("--- Loading pages matching: " + sys.options.testPattern);
       boolean indexSkipped = false;
       for (URLPath urlPath:urlPaths) {
          boolean doSync = clientSync && urlPath.realTime;
@@ -312,8 +334,15 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
             continue;
          }
 
-         if (!sys.testPatternMatches(urlPath.name))
+         // If @URL has testScripts={"none"} just don't test that URL
+         String[] testScripts = urlPath.testScripts;
+         if (testScripts != null && testScripts.length == 1 && testScripts[0].equals("none"))
             continue;
+
+         if (!sys.testPatternMatches(urlPath.name)) {
+            System.out.println("Skipping test: " + urlPath.name);
+            continue;
+         }
 
          Object pageType = urlPath.pageType;
          List<QueryParamProperty> queryParams = pageType == null ? null : QueryParamProperty.getQueryParamProperties(pageType);
@@ -341,13 +370,31 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
          }
 
          try {
-            boolean ranPageTest = runPageTest(urlPath, scopeContextName);
+            boolean ranPageTest = false;
+            if (urlPath.testScripts == null || urlPath.testScripts.length == 0)
+               ranPageTest = runPageTest(urlPath, scopeContextName);
+            else {
+               for (String testScriptName:urlPath.testScripts) {
+                  if (runPageTestScript(urlPath, scopeContextName, testScriptName))
+                     ranPageTest = true;
+               }
+            }
 
-            saveClientConsole(urlPath, scopeContextName);
+            try {
+               saveClientConsole(urlPath, scopeContextName);
+            }
+            catch (IllegalArgumentException exc) {
+               System.err.println("*** Failed to retrieve Javascript console log for URL: " + urlPath + ": " + exc);
+               throw exc;
+            }
 
             // Save the page after it's run a page test. Otherwise, it's the same thing and not worth the effort
             if (doSync && ranPageTest)
                savePage(urlPath.name, getClientBodyHTML(scopeContextName));
+         }
+         catch (IllegalArgumentException exc) {
+            System.err.println("*** Error running page test for: " + urlPath + ": " + exc);
+            throw exc;
          }
          finally {
             endSession(processRes.processHandle);

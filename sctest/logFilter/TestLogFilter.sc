@@ -40,7 +40,9 @@ public class TestLogFilter {
 
    // List of globally applied patterns which are filtered. The output line will look like the input line except that
    // named variables are replaced with the variable name. e.g. replacing an id with "digits" or a date with {date}.
-  public String[] globalReplacePatterns = {};
+  public String[] globalReplacePatterns = {
+    "{whiteSpace}\"sessionMarker\":\"{marker=escapedString}\""
+  };
 
    public ArrayList<Pattern> excludePatterns;
    public ArrayList<Pattern> replacePatterns;
@@ -75,6 +77,11 @@ public class TestLogFilter {
                 "ref:db:{id=digits}"
          };
       }
+
+      object longLinesFilter extends FilterOption {
+         optionName = "longLines";
+         maxLineLength = 256;
+      }
    }
 
    public Language language = SCLanguage.getSCLanguage();
@@ -82,8 +89,11 @@ public class TestLogFilter {
    public class FilterOption {
       String optionName;
       boolean replace = false;
+      int maxLineLength = -1;
       String[] patternStrings;
    }
+
+   int maxLineLength = -1;
 
    public void init(String[] args) {
       excludePatterns = new ArrayList<Pattern>(globalExcludePatterns.length);
@@ -93,14 +103,36 @@ public class TestLogFilter {
       appendPatternList(replacePatterns, globalReplacePatterns);
 
       for (String arg:args) {
+         boolean found = false;
          for (FilterOption opt:options) {
-            if (arg.startsWith("-") && opt.optionName.equals(arg.substring(1))) {
-               ArrayList<Pattern> patternList = opt.replace ? replacePatterns : excludePatterns;
-               appendPatternList(patternList, opt.patternStrings);
+            if (arg.startsWith("-")) {
+               if (opt.optionName.equals(arg.substring(1))) {
+                  found = true;
+                  if (opt.maxLineLength != -1)
+                     maxLineLength = opt.maxLineLength;
+                  if (opt.patternStrings != null) {
+                     ArrayList<Pattern> patternList = opt.replace ? replacePatterns : excludePatterns;
+                     appendPatternList(patternList, opt.patternStrings);
+                  }
+               }
             }
          }
+         if (!found)
+            System.err.println("*** Invalid option to logFilter: " + arg + " should be one of: " + getOptionUsage());
       }
    }
+
+   String getOptionUsage() {
+      StringBuilder sb = new StringBuilder();
+      for (FilterOption opt:options) {
+         if (sb.length() > 0)
+            sb.append(" ");
+         sb.append("-");
+         sb.append(opt.optionName);
+      }
+      return sb.toString();
+   }
+
 
    public void appendPatternList(ArrayList<Pattern> patternList, String[] patternStrings) {
       for (int i = 0; i < patternStrings.length; i++) {
@@ -119,10 +151,16 @@ public class TestLogFilter {
          BufferedReader bufIn = new BufferedReader(new InputStreamReader(in));
          for (String nextLine = bufIn.readLine(); nextLine != null; nextLine = bufIn.readLine()) {
             boolean excluded = false;
-            for (Pattern excludePattern:excludePatterns) {
-               if (excludePattern.matchSimpleString(nextLine)) {
-                  excluded = true;
-                  break;
+            if (maxLineLength != -1 && nextLine.length() > maxLineLength) {
+               excluded = true;
+               out.println("<excluded-long-line>");
+            }
+            if (!excluded) {
+               for (Pattern excludePattern:excludePatterns) {
+                  if (excludePattern.matchSimpleString(nextLine)) {
+                     excluded = true;
+                     break;
+                  }
                }
             }
             if (!excluded) {

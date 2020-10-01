@@ -4,6 +4,9 @@ function sc_TextUtil() {
 var sc_TextUtil_c = sc_newClass("sc_TextUtil", sc_TextUtil, null, null);
 
 sc_TextUtil_c.format = function(format, number) {
+   if (!number) {
+      return "0"; // In the server version number is a primitive so is never null
+   }
    var prec = format.length;
    var ix = format.indexOf(".");
    if (ix != -1)

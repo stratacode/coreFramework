@@ -37,7 +37,7 @@
                      else if (value instanceof PatternVariable) {
                         PatternVariable patVar = (PatternVariable) value;
                         VarPageURLElement elem;
-                        if (patVar.parseletName.equals("urlString") || patVar.parseletName.equals("identifier")) {
+                        if (patVar.parseletName.equals("urlString") || patVar.parseletName.equals("identifier") || patVar.parseletName.equals("urlPath")) {
                            elem = new StringVarPageURLElement();
                         }
                         else if (patVar.parseletName.equals("integer") || patVar.parseletName.equals("integerLiteral")) {
@@ -89,6 +89,8 @@
                <%!
                   String propName;
                   String getElementValue() {
+                     if (propName == null)
+                        return "";
                      Object propVal = otherProps == null ? null : otherProps.get(propName);
                      if (propVal == null && patternInst != null)
                         propVal = DynUtil.getProperty(patternInst, propName);

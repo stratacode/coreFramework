@@ -4029,12 +4029,13 @@ sc_ServerTag_c.getObjectId = function ()  {
    return "sc.js.st_" + this.id;
 };
 
-function sc_URLPath(u, n, k, p, rt) {
+function sc_URLPath(u, n, k, p, rt, ts) {
    this.url = u;
    this.name = n;
    this.keyName = k;
    this.pageType = p;
    this.realTime = rt;
+   this.testScripts = ts;
 }
 
 sc_URLPath_c = sc_newClass("sc.js.URLPath", sc_URLPath, jv_Object, [sc_IObjectId]);
