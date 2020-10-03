@@ -13,6 +13,7 @@ import sc.util.PerfMon;
 
 import sc.type.PTypeUtil;
 import sc.lang.html.Window;
+import sc.lang.html.IPageDispatcher;
 
 import java.util.Enumeration;
 import java.util.TreeMap;
@@ -65,11 +66,14 @@ class Context {
    /** Set this to true when the server will restart */
    static boolean restarting = false;
 
+   IPageDispatcher pageDispatcher;
+
    static boolean verbose = false;
    static boolean trace = false;
    static boolean testMode = false;
 
-   Context(HttpServletRequest req, HttpServletResponse res, String requestURL, String requestURI, TreeMap<String,String> queryParams) {
+   Context(IPageDispatcher pageDispatcher, HttpServletRequest req, HttpServletResponse res, String requestURL, String requestURI, TreeMap<String,String> queryParams) {
+      this.pageDispatcher = pageDispatcher;
       request = req;
       response = res;
       this.requestURL = requestURL;
@@ -160,14 +164,14 @@ class Context {
       return ctx;
    }
 
-   static Context initContext(HttpServletRequest request, HttpServletResponse response, String requestURL, String requestURI, TreeMap<String,String> queryParams, boolean isDynPage) {
+   static Context initContext(IPageDispatcher pageDispatcher, HttpServletRequest request, HttpServletResponse response, String requestURL, String requestURI, TreeMap<String,String> queryParams, boolean isDynPage) {
       Context ctx;
       if (requestURI == null)
          requestURI = request.getRequestURI();
       if (requestURL == null)
          requestURL = buildRequestURL(request, requestURI);
 
-      currentContextStore.set(ctx = new Context(request, response, requestURL, requestURI, queryParams));
+      currentContextStore.set(ctx = new Context(pageDispatcher, request, response, requestURL, requestURI, queryParams));
 
       if (isDynPage) {
          response.addHeader("Cache-Control", "no-store");
@@ -352,7 +356,9 @@ class Context {
             String queryStr = request.getQueryString();
             String fullURL = queryParams == null ? requestURL : requestURL + "?" + queryStr;
             String userAgent = request.getHeader("User-Agent");
-            windowCtx = new WindowScopeContext(windowId, Window.createNewWindow(fullURL, request.getServerName(), request.getServerPort(), request.getRequestURI(), request.getPathInfo(), queryStr, userAgent));
+            windowCtx = new WindowScopeContext(windowId, Window.createNewWindow(fullURL, request.getServerName(),
+                               request.getServerPort(), request.getRequestURI(), request.getPathInfo(), queryStr,
+                               userAgent, pageDispatcher));
             windowCtx.init();
             windowCtx.lastRequestTime = System.currentTimeMillis();
             ctxList.add(windowCtx);

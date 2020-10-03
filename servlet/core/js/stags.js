@@ -1687,6 +1687,26 @@ syncMgr = sc_SyncManager_c = {
                   window.location[pname] = lps[pname];
                }
             }
+            else if (name === "History") {
+               var mObj = cmd[name];
+               var mName = mObj.$meth;
+               var callId = mObj.callId;
+               var args = mObj.args;
+               if (mName === "replaceState") {
+                  window.history.replaceState(args[0], args[1], args[2])
+                  syncMgr.addMethReturn(null, callId);
+               }
+               else if (mName === "pushState") {
+                  window.history.pushState(args[0], args[1], args[2])
+                  syncMgr.addMethReturn(null, callId);
+               }
+               else if (mName === "go") {
+                  window.history.go(args[0])
+                  syncMgr.addMethReturn(null, callId);
+               }
+               else
+                  sc_logError("No support for history method: " + mName);
+            }
             else if (name === "DynUtil") { // Support some select remote methods for testing
                var mObj = cmd[name];
                var mName = mObj.$meth;
