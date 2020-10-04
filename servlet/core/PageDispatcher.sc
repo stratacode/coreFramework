@@ -658,9 +658,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                else
                   newInst = true; // TODO: need a way to tell if the page object was created in the getAndRegisterGlobalObjectInstance call
             }
-            if (newInst) {
-               initPageInst(inst, curScopeCtx, pageEnt, urlProps);
-            }
+            initPageInst(inst, curScopeCtx, pageEnt, urlProps);
             insts.add(inst);
 
             if (verbose) {
@@ -755,9 +753,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                inst = ModelUtil.getAndRegisterGlobalObjectInstance(pageType);
                newInst = true;
             }
-            if (newInst) {
-               initPageInst(inst, curScopeCtx, pageEnt, urlProps);
-            }
+            initPageInst(inst, curScopeCtx, pageEnt, urlProps);
             insts.add(inst);
          }
 
@@ -771,21 +767,41 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          IPage page = (IPage) pageObj;
          if (page.cache == null)
             page.cache = sc.lang.html.CacheMode.Enabled;
+         boolean newPageInst = page.pageDispatcher == null;
+
          page.pageDispatcher = this;
-         if (page.currentScopeContexts == null) {
-            page.currentScopeContexts = new ArrayList<CurrentScopeContext>();
-            page.currentScopeContexts.add(curScopeCtx);
+
+         if (curScopeCtx != null) {
+            WindowScopeContext winCtx = (WindowScopeContext) curScopeCtx.getScopeContextByName("window");
+            if (winCtx != null) {
+               boolean foundPage = false;
+               if (winCtx.currentPages == null)
+                  winCtx.currentPages = new ArrayList<IPage>();
+               else
+                  foundPage = winCtx.currentPages.contains(page);
+               if (!foundPage) {
+                  winCtx.currentPages.add(page);
+
+                  if (page.currentScopeContexts == null) {
+                     page.currentScopeContexts = new ArrayList<CurrentScopeContext>();
+                     page.currentScopeContexts.add(curScopeCtx);
+                  }
+                  else if (curScopeCtx.indexInList(page.currentScopeContexts) == -1)
+                     page.currentScopeContexts.add(curScopeCtx);
+               }
+            }
          }
-         else if (curScopeCtx.indexInList(page.currentScopeContexts) == -1)
-            page.currentScopeContexts.add(curScopeCtx);
 
          page.setPageProperties(urlProps);
-         List<String> urlPropNames = pageEnt.allURLProps;
-         URLRefreshListener listener = new URLRefreshListener(page, pageEnt);
-         if (urlPropNames != null) {
-            for (int i = 0; i < urlPropNames.size(); i++) {
-               String urlPropName = urlPropNames.get(i);
-               Bind.addListener(page, urlPropName, listener, sc.bind.IListener.VALUE_VALIDATED);
+
+         if (newPageInst) {
+            List<String> urlPropNames = pageEnt.allURLProps;
+            URLRefreshListener listener = new URLRefreshListener(page, pageEnt);
+            if (urlPropNames != null) {
+               for (int i = 0; i < urlPropNames.size(); i++) {
+                  String urlPropName = urlPropNames.get(i);
+                  Bind.addListener(page, urlPropName, listener, sc.bind.IListener.VALUE_VALIDATED);
+               }
             }
          }
       }

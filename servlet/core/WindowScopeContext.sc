@@ -26,6 +26,8 @@ public class WindowScopeContext extends BaseScopeContext {
 
    long lastRequestTime = -1;
 
+   List<IPage> currentPages;
+
    public WindowScopeContext(int windowId, Window window) {
       this.windowId = windowId;
       this.window = window;
@@ -100,6 +102,24 @@ public class WindowScopeContext extends BaseScopeContext {
       if (scopeContextName != null) {
          if (!CurrentScopeContext.remove(scopeContextName))
             System.err.println("*** Failed to remove CurrentScopeContext for scopeContextName: " + scopeContextName);
+      }
+
+      if (currentPages != null) {
+         List<IPage> removePages = currentPages;
+         currentPages = null;
+         for (int pix = 0; pix < removePages.size(); pix++) {
+            IPage removePage = removePages.get(pix);
+            List<CurrentScopeContext> curScopes = removePage.getCurrentScopeContexts();
+            if (curScopes != null) {
+               for (int csx = 0; csx < curScopes.size(); csx++) {
+                  CurrentScopeContext curScope = curScopes.get(csx);
+                  if (curScope.scopeContexts.contains(this)) {
+                     curScopes.remove(csx);
+                     csx--;
+                  }
+               }
+            }
+         }
       }
    }
 

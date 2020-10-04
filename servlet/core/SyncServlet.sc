@@ -227,7 +227,8 @@ class SyncServlet extends HttpServlet {
          boolean isReset = reset != null;
          if (url != null) {
 
-            // The applySyncLayer call may have updated the pageEnts applicable for this URL. If so, the old ones will be removed and
+            // The applySyncLayer call may have updated the pageEnts applicable for this URL based on changes made to the code as part of the refresh system call.
+            // If so, the old ones will be removed and the new ones returned here so this will just update them.
             pageEnts = pageDispatcher.validatePageEntries(pageEnts, url, queryParams, urlProps);
 
             // Setting initial = isReset here and resetSync = false. - when we are resetting it's the initial sync though we toss this page output.  It just sets up the page to be like the client's state when it's first page was shipped out.

@@ -2673,6 +2673,7 @@ function js_HtmlPage() {
    //this.pageURL = null;
    this.queryParamProperties = null;
    this.pageJSFiles = null;
+   this.pageProperties = null;
 }
 
 js_HtmlPage_c = sc_newClass("sc.lang.html.HtmlPage", js_HtmlPage, js_Html, null);
@@ -3517,6 +3518,34 @@ function errorCountChanged() {
 function getThisPathname() {
    return this.pathname;
 }
+
+function js_History() {}
+
+js_History_c = sc_newClass("sc.lang.html.History", js_History, jv_Object, [sc_IObjectId]);
+
+js_History_c.getHistory = function() {
+   if (js_History_c.historyWrapper === undefined) {
+      js_History_c.historyWrapper = new js_History();
+      sc_SyncManager_c.registerSyncInst(js_History_c.historyWrapper);
+   }
+   return js_History_c.historyWrapper;
+};
+
+js_History_c.replaceState = function(s,t,u) {
+   history.replaceState({},t,u); // TODO: need to convert 's' from jv_HashMap to js object
+}
+
+js_History_c.pushState = function(s,t,u) {
+   history.pushState({},t,u);
+}
+
+js_History_c.go = function(i) {
+   history.go(i);
+}
+
+js_History_c.getObjectId = function ()  {
+   return "sc.lang.html.History";
+};
 
 function js_Window() {
    js_Window_c.windowWrapper = this; // avoid recursive infinite loop
