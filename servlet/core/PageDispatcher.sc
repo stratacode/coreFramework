@@ -363,15 +363,17 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          // patterns, similar to how IndexedChoice works for parselets.  Maybe we should build an IndexedChoice of the
          // page parselets and use that logic?  This could be part of the URLPatternLanguage.  It could start out as just an orderedChoice of
          // the registered URL pattern to pageEntry mappings.
-         boolean parseletMatch = language.matchString(uri, pageEnt.patternParselet);
+         // this causes an error in parselets which do a RTypeUtil.findClass lookup for dynamic types
+         //boolean parseletMatch = language.matchString(uri, pageEnt.patternParselet);
          // TODO: remove the parseletMatch case above since it's slower
          boolean patternMatch = pageEnt.urlPattern.updateMap(uri, urlProps);
+         /*
          if (patternMatch != parseletMatch) {
             System.out.println("*** Error - parselets don't match");
             patternMatch = pageEnt.urlPattern.updateMap(uri, urlProps);
          }
-
-         if (patternMatch || parseletMatch) {
+         */
+         if (patternMatch) {
             if (pageEnt.queryParamProps != null) {
                boolean allReqFound = true;
                for (QueryParamProperty prop:pageEnt.queryParamProps) {
@@ -681,10 +683,12 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             if (inst != null && initial) {
                hasInst = true;
                // If necessary, parse the URI again but this time set properties as necessary in inst - the pageObject.
-               String svClassName = pageEnt.patternParselet.getSemanticValueClassName();
+               String svClassName = DynUtil.getTypeName(pageEnt.pageType, false);
                Object svClass = sc.dyn.DynUtil.findType(svClassName);
-               if (svClass != null && ModelUtil.isInstance(svClass, inst))
-                  language.parseIntoInstance(uri, pageEnt.patternParselet, inst);
+               if (svClass != null && ModelUtil.isInstance(svClass, inst)) {
+                  //language.parseIntoInstance(uri, pageEnt.patternParselet, inst);
+                  pageEnt.urlPattern.updateInstance(uri, inst);
+               }
 
                // Loop over the query param properties defined for this page and set the corresponding properties in the pageObject
                if (pageEnt.queryParamProps != null) {
