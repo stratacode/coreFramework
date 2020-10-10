@@ -1,5 +1,6 @@
 <%@ import sc.lang.html.QueryParamProperty;
     import sc.lang.pattern.Pattern;
+    import sc.lang.java.ModelUtil;
     import sc.lang.html.URLParamProperty; %><%
    if (!isAbstract && !isAbstractElement) {
       Boolean isDynContentObj = (Boolean) getAnnotationValue("sc.html.URL", "dynContent");
@@ -16,6 +17,7 @@
          url = templatePathName;
       }
       Pattern pattern = Pattern.initURLPattern(objType, url);
+      String constructorPropSig = ModelUtil.getConstructorPropSignature(objType);
 %>
         
 static {
@@ -23,7 +25,8 @@ static {
            <%= typeIsDynamic ? "sc.dyn.DynUtil.findType(\"" + typeName + "\")" : typeBaseName + ".class" %>,
            <%= isDynContent %>, <%= isSync %>, <%= isResource %>, <%= layer.layerPosition %>, <%= lockScope == null ? "null" : '"' + lockScope + '"' %>,
            <%= QueryParamProperty.toValueString(objType, constructorProperties) %>, <%= URLParamProperty.toValueString(objType, pattern, constructorProperties) %>, <%= syncTypeNames %>,
-           <%= resetSyncTypeNames %>, <%= realTime %>, <%= mimeType == null ? "null" : '"' + mimeType + '"' %>, <%= constructorPropInit %>);
+           <%= resetSyncTypeNames %>, <%= realTime %>, <%= mimeType == null ? "null" : '"' + mimeType + '"' %>,
+           <%= constructorPropInit %>, <%= constructorPropSig == null ? "null" : '"' + constructorPropSig + '"' %>);
 }
 
 <% } %>

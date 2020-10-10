@@ -3632,13 +3632,15 @@ function js_PageInfo() {
    this.urlProps = []; // Array of all QueryParamProperties/URLParamProperties found in the current URL
    this.urlPropValues = {}; // PropName to value map for all urlProps of initial URL values
    this.urlPropsInited = false;
+   this.constructorProps = null;
+   this.constructorPropSig = null;
 }
 
 js_PageInfo_c = sc_newClass("sc.lang.html.PageInfo", js_PageInfo, jv_Object, null);
 
 js_PageInfo_c.pages = {};
 
-js_PageInfo_c.addPage = function(pageTypeName, pattern, pageType, queryParams, urlParts, constructorProps) {
+js_PageInfo_c.addPage = function(pageTypeName, pattern, pageType, queryParams, urlParts, constructorProps, constructorPropSig) {
    var pi = new js_PageInfo();
    pi.pageTypeName = pageTypeName;
    pi.pattern = pattern;
@@ -3646,6 +3648,7 @@ js_PageInfo_c.addPage = function(pageTypeName, pattern, pageType, queryParams, u
    pi.queryParamProperties = queryParams;
    pi.urlParts = urlParts;
    pi.constructorProps = constructorProps;
+   pi.constructorPropSig = constructorPropSig;
    js_PageInfo_c.pages[pageTypeName] = pi;
 }
 

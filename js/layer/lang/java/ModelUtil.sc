@@ -289,4 +289,8 @@ public class ModelUtil {
       }
       throw new IllegalArgumentException();
    }
+
+   public static String getConstructorPropSignature(Object type) {
+      return null;
+   }
 }

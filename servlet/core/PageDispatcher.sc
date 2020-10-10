@@ -154,6 +154,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       @Constant
       public List<String> constructorProps;
 
+      @Constant
+      public String constructorSig;
+
       // The complete list of url and query param property names
       @Constant
       public List<String> allURLProps;
@@ -269,7 +272,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
    public static void addPage(String keyName, String pattern, Object pageType, boolean dynContentPage, boolean doSync,
                               boolean isResource, int priority, String lockScope, List<QueryParamProperty> queryParamProps,
                               List<Object> urlParts, Set<String> syncTypes, Set<String> resetSyncTypes, boolean realTime,
-                              String mimeType, List<String> constructorProps) {
+                              String mimeType, List<String> constructorProps, String constructorSig) {
       PageEntry ent = new PageEntry();
       ent.keyName = keyName;
       ent.pattern = pattern;
@@ -294,6 +297,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       ent.syncTypes = syncTypes;
       ent.resetSyncTypes = resetSyncTypes;
       ent.constructorProps = constructorProps;
+      ent.constructorSig = constructorSig;
       if (ent.urlParts != null) {
          ent.allURLProps = new ArrayList<String>(ent.urlPattern.getPatternPropNames());
       }
@@ -327,7 +331,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          String dir = pattern.equals(indexPattern) ? "" : pattern.substring(0,pattern.length() - indexPattern.length());
          if (verbose)
             System.out.println("PageDispatcher: adding index page for: " + (dir.length() == 0 ? "doc root" : dir));
-         addPage(dir + "_index_", dir + "/", pageType, dynContentPage, doSync, isResource, priority, lockScope, queryParamProps, urlParts, syncTypes, resetSyncTypes, realTime, mimeType, constructorProps);
+         addPage(dir + "_index_", dir + "/", pageType, dynContentPage, doSync, isResource, priority, lockScope, queryParamProps,
+                 urlParts, syncTypes, resetSyncTypes, realTime, mimeType, constructorProps, constructorSig);
       }
    }
 
@@ -589,6 +594,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       int sz = pageEnts.size();
       List<Object> insts = new ArrayList<Object>(sz);
       boolean hasInst = false;
+      String constrSig = null;
 
       int i = 0;
       for (PageEntry pageEnt:pageEnts) {
@@ -601,6 +607,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             Object pageType = pageEnt.pageType;
             boolean isObject = ModelUtil.isObjectType(pageType);
             List<Object> constrArgs = getConstructorArgs(pageEnt.constructorProps, urlProps);
+            constrSig = pageEnt.constructorSig;
 
             if (doSync) {
 
@@ -642,7 +649,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                      inst = scopeCtx.getValue(typeName);
                      if (inst == null) {
                         if (constrArgs != null)
-                           inst = DynUtil.newInnerInstance(pageType, null, null, constrArgs.toArray());
+                           inst = DynUtil.newInnerInstance(pageType, null, constrSig, constrArgs.toArray());
                         else
                            inst = ModelUtil.getAndRegisterGlobalObjectInstance(pageType);
                         scopeCtx.setValue(typeName, inst);
@@ -945,6 +952,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             // A redirect or something happened in handling the page
             if (ctx.requestComplete)
                return null;
+
+            if (sb == null)
+               System.err.println("*** Null return from page");
 
             if (pageEnt.dynContentPage) {
 
@@ -1484,6 +1494,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          String resultSuffix = (String) DynUtil.getInheritedAnnotationValue(newType, "sc.obj.ResultSuffix", "value");
          Boolean realTimeDef = (Boolean) DynUtil.getInheritedAnnotationValue(newType, "sc.html.URL", "realTime");
          String mimeType = (String) DynUtil.getInheritedAnnotationValue(newType, "sc.html.URL", "mimeType");
+         String constructorSig = ModelUtil.getConstructorPropSignature(newType);
          boolean realTime = realTimeDef == null || realTimeDef;
          String templatePathName = ModelUtil.getTemplatePathName(newType);
          Set<String> syncTypes = needsSync ? ModelUtil.getJSSyncTypes(sys, newType) : null;
@@ -1498,7 +1509,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          addPage(templatePathName, pattern, newType, isURLPage, needsSync, isResource,
                  DynUtil.getLayerPosition(newType), lockScope, QueryParamProperty.getQueryParamProperties(newType),
                  URLParamProperty.getURLParamProperties(sys, newType, pattern), syncTypes, resetSyncTypes, realTime,
-                 mimeType, constructorProps);
+                 mimeType, constructorProps, constructorSig);
       }
       initPageEntries();
    }

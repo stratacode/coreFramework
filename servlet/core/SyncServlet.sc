@@ -446,6 +446,12 @@ class SyncServlet extends HttpServlet {
                if (tx != null)
                   tx.commit();
 
+               ctx.execLaterJobs();
+
+               if (ctx.toInvokeLater != null && ctx.toInvokeLater.size() > 0) {
+                  System.err.println("*** Error - Invoke later jobs remain in completed context (0)");
+               }
+
                Context.clearContext();
                sc.type.PTypeUtil.setAppId(null);
 
