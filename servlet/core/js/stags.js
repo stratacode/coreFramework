@@ -25,6 +25,9 @@ var sc$domMethods = {focus:true}
 var sc_resizeObserver = null;
 var sc_resizeCheckElems = [];
 
+/* Used to identify the the sync session on the server */
+var sc_origUri = window.location.pathname;
+
 function sc_id(o) {
    if (!sc_hasProp(o, "sc$id"))
       o.sc$id = sc$nextid++;
@@ -2184,7 +2187,7 @@ syncMgr = sc_SyncManager_c = {
       syncMgr.syncScheduled = false;
    },
    writeToDestination:function(json, cmdArr, paramStr) {
-      var url = "/sync?url=" + encodeURI(window.location.pathname) + "&windowId=" + sc_windowId + paramStr;
+      var url = "/sync?url=" + encodeURI(sc_origUri) + "&windowId=" + sc_windowId + paramStr;
 
       var anyChanges = json.length !== 0;
       var isWait;

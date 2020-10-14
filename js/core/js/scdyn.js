@@ -688,7 +688,7 @@ sc_DynUtil_c.getRootTypeName = function(name, returnLastClass) {
    return !any ? null : prevName;
 }
 
-sc_DynUtil_c.getEnclosingType = function(typeObj) {
+sc_DynUtil_c.getEnclosingType = function(typeObj, instOnly) {
    if (typeObj.$outerClass == null) // need to convert undefined to null here
       return null;
    return typeObj.$outerClass;

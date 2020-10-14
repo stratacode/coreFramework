@@ -25,6 +25,8 @@ object ClientSyncDestination extends SyncDestination {
    allowCodeEval = true; // Allows the browser to evaluate code that's sent from the server
    clientDestination = true; // Objects received by this destination are registered as 'fixed' - i.e. we don't post them back on a reset
 
+   String origUri;
+
    {
       // When loaded as a local file on the client, turn off real time since there's no server to talk to
       String serverName = PTypeUtil.getServerName();
@@ -69,8 +71,11 @@ object ClientSyncDestination extends SyncDestination {
       }
       String urlParam = null;
       Window w = Window.getWindow();
-      if (w != null)
-         urlParam = "url=" + CTypeUtil.escapeURLString(w.location.pathname);
+      if (w != null && origUri == null)
+         origUri = w.location.pathname;
+
+      if (origUri != null)
+         urlParam = "url=" + origUri;
       if (useParams == null)
          useParams = urlParam == null ? null : "?" + urlParam;
       else
