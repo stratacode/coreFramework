@@ -52,6 +52,8 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
    // Processes started by the test page loader for browser instances
    List<AsyncProcessHandle> processes = new ArrayList<AsyncProcessHandle>();
 
+   Map<String,URLResult> urlResults = new TreeMap<String,URLResult>();
+
    // If true, open the chrome with --headless
    public boolean headless;
    /**
@@ -124,8 +126,9 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
             cmd.sleep(1000);
             //System.out.println("*** chrome saved: " + pageResultsFile + " size: " + FileUtil.getFileAsString(pageResultsFile).length());
          }
-         if (processRes != null)
+         if (processRes != null) {
             processes.add(processRes);
+         }
       }
       else {
          System.out.println("Opening browser with: " + url);
@@ -234,7 +237,20 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
          exc.printStackTrace();
          throw exc;
       }
-      return new URLResult(processRes);
+      URLResult res = new URLResult(processRes);
+      if (scopeContextName != null)
+         urlResults.put(scopeContextName, res);
+      return res;
+   }
+
+   public void endSession(String scopeContextName) {
+      URLResult urlResult = urlResults.get(scopeContextName);
+      if (urlResult != null) {
+         if (urlResult.processHandle != null)
+            endSession(urlResult.processHandle);
+         else
+            CurrentScopeContext.closeScopeContext(scopeContextName);
+      }
    }
 
    public void endSession(AsyncProcessHandle processRes) {
@@ -397,7 +413,14 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
             throw exc;
          }
          finally {
-            endSession(processRes.processHandle);
+            if (processRes.processHandle == null) {
+               // If we used 'open' to open a new tab, tell that window to close it's sync thread or else we'll use
+               // up all of the browser sockets and the client will hang waiting for a free one.
+               if (doSync)
+                  CurrentScopeContext.closeScopeContext(scopeContextName);
+            }
+            else
+               endSession(processRes.processHandle);
          }
          numLoaded++;
       }
@@ -411,6 +434,9 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
          FileUtil.saveStringAsFile(consoleResultsFile, consoleLog, true);
       }
 
+   }
+
+   public void closeSession(String name, String scopeContextName) {
    }
 
    public void systemExiting() {

@@ -28,6 +28,11 @@ public class WindowScopeContext extends BaseScopeContext {
 
    List<IPage> currentPages;
 
+   // The server API was used to close this session
+   boolean windowClosedByServer = false;
+
+   boolean windowRemoved = false;
+
    public WindowScopeContext(int windowId, Window window) {
       this.windowId = windowId;
       this.window = window;
@@ -90,6 +95,10 @@ public class WindowScopeContext extends BaseScopeContext {
    }
 
    public void removeScopeContext() {
+      if (windowRemoved)
+         return;
+      windowRemoved = true;
+
       // If we have navigated away from this page, restore the original href without a change event so that if we go back to it, we can
       // navigate away again. Otherwise, the href property does not change and does not get sync'd back
       if (window != null && window.location != null && !DynUtil.equalObjects(origHref, window.location.href)) {
@@ -128,5 +137,9 @@ public class WindowScopeContext extends BaseScopeContext {
       sb.append("window:");
       sb.append(windowId % Context.WindowIdSeparatorScale);
       return sb.toString();
+   }
+
+   public void closeScopeContext() {
+      windowClosedByServer = true;
    }
 }

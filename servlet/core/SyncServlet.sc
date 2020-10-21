@@ -172,6 +172,12 @@ class SyncServlet extends HttpServlet {
 
          String syncGroup = request.getParameter("syncGroup");
          WindowScopeContext windowCtx = ctx.windowCtx;
+         boolean closedByServer = false;
+         if (windowCtx.windowClosedByServer && !closeSession) {
+            if (verbosePage)
+               ctx.log("sync request made against window marked as closed: " + getDebugInfo(request, response));
+            closedByServer = true;
+         }
 
          SyncWaitListener oldListener = windowCtx.waitingListener;
          // Wake up the previous listener - if any, so there's only one thread per window that's waiting at any given time.
@@ -210,6 +216,13 @@ class SyncServlet extends HttpServlet {
                }
             }
 
+            return true;
+         }
+
+         if (closedByServer) {
+            int resultCode = 410;
+            if (!response.isCommitted())
+               response.sendError(resultCode, "Session closed by server");
             return true;
          }
 
@@ -355,13 +368,22 @@ class SyncServlet extends HttpServlet {
 
                if (Context.shuttingDown) {
                    if (verbosePage)
-                      ctx.log("sync woke - shutdown: " + (sleepStartTime == 0 ? "" : " after " + (System.currentTimeMillis() - sleepStartTime) + " millis") + " " + getDebugInfo(request, response));
+                      ctx.log("sync woke - system shutdown: " + (sleepStartTime == 0 ? "" : " after " + (System.currentTimeMillis() - sleepStartTime) + " millis") + " " + getDebugInfo(request, response));
                    // Sending the 410 - resource gone - response here to signal that we do not want the client to poll again.  If we are planning
                    // on restarting, send the 205 - reset which means send all of your data on the next request cause your session is gone
                    int resultCode = Context.restarting ? 205 : 410;
                    if (!response.isCommitted())
                       response.sendError(resultCode, "Session expired for sync - client should do a reset");
                    return true;
+               }
+               if (windowCtx.windowClosedByServer) {
+                  if (verbosePage)
+                     ctx.log("sync woke - window closed by server: " + (sleepStartTime == 0 ? "" : " after " + (System.currentTimeMillis() - sleepStartTime) + " millis") + " " + getDebugInfo(request, response));
+                  // Sending the 410 - resource gone - response here to signal that we do not want the client to poll again.
+                  int resultCode = 410;
+                  if (!response.isCommitted())
+                     response.sendError(resultCode, "Session closed by server");
+                  return true;
                }
 
                // Make sure we're still the first SyncServlet request waiting...
@@ -513,8 +535,8 @@ class SyncServlet extends HttpServlet {
 
    private String getDebugInfo(HttpServletRequest request, HttpServletResponse response) {
       try {
-         if (response.getWriter().checkError())
-            return "*** response closed***";
+         if (response.isCommitted() && response.getWriter().checkError())
+            return "*** response closed ***";
          return "";
       }
       catch (IOException exc) {
