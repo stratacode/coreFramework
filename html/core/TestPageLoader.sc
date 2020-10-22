@@ -436,9 +436,6 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
 
    }
 
-   public void closeSession(String name, String scopeContextName) {
-   }
-
    public void systemExiting() {
       for (AsyncProcessHandle process:processes) {
          //System.out.println("System exiting - ending process");
