@@ -139,7 +139,11 @@ class Context {
          }
       }
       windowCtx = getWindowScopeContext(true);
+      // The window was already assigned a window id in an previous session. Need to at least update the nextWindowId
+      // and possibly add some code so that we can just reset the window id
+      updateNextWindowId(windowId);
       windowCtx.windowId = windowId;
+
       updateWindowContext(windowCtx);
       if (verbose && session != null)
          log("cached window");
@@ -326,6 +330,21 @@ class Context {
       }
    }
 
+   private void updateNextWindowId(int windowId) {
+      HttpSession session = getSession();
+      if (session == null)
+         return;
+      ArrayList<WindowScopeContext> ctxList = (ArrayList<WindowScopeContext>) session.getAttribute("_windowContexts");
+      if (ctxList != null) {
+         synchronized (ctxList) {
+            Integer nextWindowId = (Integer) session.getAttribute("_nextWindowId");
+            if (nextWindowId != null && windowId < nextWindowId)
+               return;
+            session.setAttribute("_nextWindowId", windowId+1);
+         }
+      }
+   }
+
    public WindowScopeContext getWindowScopeContext(boolean create) {
       if (windowCtx == null && windowRequest) {
          HttpSession session = getSession();
@@ -359,6 +378,7 @@ class Context {
             windowCtx = new WindowScopeContext(windowId, Window.createNewWindow(fullURL, request.getServerName(),
                                request.getServerPort(), request.getRequestURI(), request.getPathInfo(), queryStr,
                                userAgent, pageDispatcher));
+
             windowCtx.init();
             windowCtx.lastRequestTime = System.currentTimeMillis();
             ctxList.add(windowCtx);
