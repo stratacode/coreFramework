@@ -534,7 +534,8 @@ sc_DynUtil_c.newInnerInstance = function(type, outer, constrSig, params) {
    if (!sc_DynUtil_c.isComponentType(type)) {
       return sc_DynUtil_c.createInnerInstance(type, outer, constrSig, params);
    }
-   var t = outer == null ? type : outer;
+   // Ignore the outerObj here if this is not an inner type
+   var t = outer == null || !type.$outerClass ? type : outer;
    var typeName = sc_DynUtil_c.getTypeName(type);
    var name = sc_CTypeUtil_c.getClassName(typeName);
    var newMeth = t[sc_newName(name)];
