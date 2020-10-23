@@ -860,29 +860,31 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                stCtx = new ServerTagContext(mgr);
             }
             if (pageEnt.syncTypes != null) {
-               if (ctx.curScopeCtx.syncTypeFilter == null) {
-                  ctx.curScopeCtx.syncTypeFilter = pageEnt.syncTypes;
+               ScopeContext eventCtx = ctx.curScopeCtx.getEventScopeContext();
+               if (eventCtx.syncTypeFilter == null) {
+                  eventCtx.syncTypeFilter = pageEnt.syncTypes;
                   origSyncTypes = true;
                }
-               else {
+               else if (eventCtx.syncTypeFilter != pageEnt.syncTypes) {
                   if (origSyncTypes) {
-                     ctx.curScopeCtx.syncTypeFilter = new HashSet<String>(ctx.curScopeCtx.syncTypeFilter);
+                     eventCtx.syncTypeFilter = new HashSet<String>(eventCtx.syncTypeFilter);
                      origSyncTypes = false;
                   }
-                  ctx.curScopeCtx.syncTypeFilter.addAll(pageEnt.syncTypes);
+                  eventCtx.syncTypeFilter.addAll(pageEnt.syncTypes);
                }
             }
             if (pageEnt.resetSyncTypes != null) {
-               if (ctx.curScopeCtx.resetSyncTypeFilter == null) {
-                  ctx.curScopeCtx.resetSyncTypeFilter = pageEnt.resetSyncTypes;
+               ScopeContext eventCtx = ctx.curScopeCtx.getEventScopeContext();
+               if (eventCtx.resetSyncTypeFilter == null) {
+                  eventCtx.resetSyncTypeFilter = pageEnt.resetSyncTypes;
                   origResetSyncTypes = true;
                }
-               else {
+               else if (eventCtx.resetSyncTypeFilter != pageEnt.resetSyncTypes) {
                   if (origResetSyncTypes) {
-                     ctx.curScopeCtx.resetSyncTypeFilter = new HashSet<String>(ctx.curScopeCtx.resetSyncTypeFilter);
+                     eventCtx.resetSyncTypeFilter = new HashSet<String>(eventCtx.resetSyncTypeFilter);
                      origResetSyncTypes = false;
                   }
-                  ctx.curScopeCtx.resetSyncTypeFilter.addAll(pageEnt.resetSyncTypes);
+                  eventCtx.resetSyncTypeFilter.addAll(pageEnt.resetSyncTypes);
                }
             }
          }
@@ -960,7 +962,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
 
                // If this page has specified a fixed list of sync types, we need to make sure we add to this list
                // when building up the sync tags.
-               if (stCtx.serverTagTypes == null && ctx.curScopeCtx.syncTypeFilter != null) {
+               if (stCtx.serverTagTypes == null && ctx.curScopeCtx.getEventScopeContext().syncTypeFilter != null) {
                   // Null serverTagTypes will not collect the server tag sync types. But if we are using a filter we need to collect them.
                   stCtx.serverTagTypes = new HashSet<String>();
                }
@@ -980,12 +982,13 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                // If we are filtering the page with a restricted set of syncTypes (ctx.syncTypeFilter != null), need to
                // add the serverTagIds so that they pass the filter.
                if (stCtx.serverTagTypes != null && stCtx.serverTagTypes.size() > 0) {
+                  ScopeContext eventCtx = ctx.curScopeCtx.getEventScopeContext();
                   if (origSyncTypes) {
-                     ctx.curScopeCtx.syncTypeFilter = new HashSet<String>(ctx.curScopeCtx.syncTypeFilter);
+                     eventCtx.syncTypeFilter = new HashSet<String>(eventCtx.syncTypeFilter);
                      origSyncTypes = false;
                   }
-                  ctx.curScopeCtx.syncTypeFilter.addAll(stCtx.serverTagTypes);
-                  ctx.curScopeCtx.syncTypeFilter.addAll(ServerTagSyncFilterTypes);
+                  eventCtx.syncTypeFilter.addAll(stCtx.serverTagTypes);
+                  eventCtx.syncTypeFilter.addAll(ServerTagSyncFilterTypes);
                }
             }
 
@@ -1056,7 +1059,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             if (stateless)
                sb.append("   if (typeof sc_ClientSyncManager_c != 'undefined') sc_ClientSyncManager_c.statelessServer = true;\n");
 
-            CharSequence initSync = syncMgr.getInitialSync(syncScopeId, resetSync, "js", ctx.curScopeCtx.syncTypeFilter, ctx.curScopeCtx.resetSyncTypeFilter);
+            ScopeContext eventCtx = ctx.curScopeCtx.getEventScopeContext();
+            CharSequence initSync = syncMgr.getInitialSync(syncScopeId, resetSync, "js", eventCtx.syncTypeFilter, eventCtx.resetSyncTypeFilter);
 
             if (SyncManager.trace) {
                sb.append("   if (typeof sc_SyncManager_c != 'undefined') sc_SyncManager_c.trace = true;\n");
