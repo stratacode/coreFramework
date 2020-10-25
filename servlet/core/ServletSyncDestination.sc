@@ -40,6 +40,7 @@ object ServletSyncDestination extends SyncDestination {
          if (paramStr != null) // TODO: use response headers to send and receive these parameters via the XMLHttp call.  I don't think we can send parameters with the initial page sync easily
              System.out.println("*** Warning: ignoring destination params: " + paramStr);
          int syncReqLen = syncRequestStr.length();
+         boolean syncReq = false;
          if (syncReqLen > 0) {
             ctx.write(SYNC_LAYER_START);
             ctx.write(outputLanguage);
@@ -54,14 +55,20 @@ object ServletSyncDestination extends SyncDestination {
             if (header != null)
                ctx.write(header);
             ctx.write(syncRequestStr);
+            syncReq = true;
          }
          if (codeUpdates != null && codeUpdates.length() > 0) {
-            ctx.write(":");
-            ctx.write(SYNC_LAYER_START);
-            ctx.write("js:"); // TODO: make this configurable?
-            ctx.write(String.valueOf(codeUpdates.length()));
-            ctx.write(":");
-            ctx.write(codeUpdates.toString());
+            // TODO: for some reason, when there are no changes this can be just a newline
+            String codeUpdatesStr = codeUpdates.toString().trim();
+            if (codeUpdatesStr.length() > 0) {
+               if (syncReq)
+                  ctx.write(":");
+               ctx.write(SYNC_LAYER_START);
+               ctx.write("js:"); // TODO: make this configurable?
+               ctx.write(String.valueOf(codeUpdatesStr.length()));
+               ctx.write(":");
+               ctx.write(codeUpdatesStr);
+            }
          }
          error = false;
       }
