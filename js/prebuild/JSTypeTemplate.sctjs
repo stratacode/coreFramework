@@ -6,7 +6,8 @@
       %>// JS Updates for changed Java type: <%= javaTypeName %> -----
 <% } %><% 
 if (needsConstructor) {
-   %>function <%= typeName %>(<%= constructor.argNames %>) {<%= superClassInit %><%= classInit %><%= 
+   %>function <%= typeName %>(<%= constructor.argNames %>) {
+<%= superClassInit %><%= classInit %><%=
      // Only set this.outer for the first outer class in the chain of inherited outer classes.  It will be reset to the real outer class the first time it is initialized in the instance's actual class
      // If we set it again, we are overridding it with a potentially different and incorrect value in the base class (since we can inherit from the same class at different levels of the same inner class tree).
      outerInstCount == 0 ? "" : "\n   this._outer" + outerInstCount + " = _outer;\n   if (this.outer === undefined) this.outer = _outer;\n" %><%
@@ -70,8 +71,7 @@ if (needsConstructor) {
             } %><%= paramMeth.getMethodBody(2) %>}<% methCt++; 
          }
       }
-%>
-}<%
+%>}<%
 } %>
 
 <% // If we are reusing the same type but have a new constructor, update the prototype of the constructor to point to the old type rather than define a new one. This avoids having to copy and update all of the static state

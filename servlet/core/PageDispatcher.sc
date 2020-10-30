@@ -838,7 +838,6 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       boolean stateless = false;
       boolean realTimeEnabled = true;
 
-      boolean origSyncTypes = false;
       boolean origResetSyncTypes = false;
 
       OutputCtx outCtx = new OutputCtx();
@@ -862,14 +861,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             if (pageEnt.syncTypes != null) {
                ScopeContext eventCtx = ctx.curScopeCtx.getEventScopeContext();
                if (eventCtx.syncTypeFilter == null) {
-                  eventCtx.syncTypeFilter = pageEnt.syncTypes;
-                  origSyncTypes = true;
+                  eventCtx.syncTypeFilter = new HashSet<String>(pageEnt.syncTypes);
                }
                else if (eventCtx.syncTypeFilter != pageEnt.syncTypes) {
-                  if (origSyncTypes) {
-                     eventCtx.syncTypeFilter = new HashSet<String>(eventCtx.syncTypeFilter);
-                     origSyncTypes = false;
-                  }
                   eventCtx.syncTypeFilter.addAll(pageEnt.syncTypes);
                }
             }
@@ -983,10 +977,6 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                // add the serverTagIds so that they pass the filter.
                if (stCtx.serverTagTypes != null && stCtx.serverTagTypes.size() > 0) {
                   ScopeContext eventCtx = ctx.curScopeCtx.getEventScopeContext();
-                  if (origSyncTypes) {
-                     eventCtx.syncTypeFilter = new HashSet<String>(eventCtx.syncTypeFilter);
-                     origSyncTypes = false;
-                  }
                   eventCtx.syncTypeFilter.addAll(stCtx.serverTagTypes);
                   eventCtx.syncTypeFilter.addAll(ServerTagSyncFilterTypes);
                }

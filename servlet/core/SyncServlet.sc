@@ -485,8 +485,9 @@ class SyncServlet extends HttpServlet {
 
                if (ctx.pageInsts != null) {
                   for (Object pageInst:ctx.pageInsts) {
-                     if (pageInst instanceof Element && ((Element) pageInst).refreshTagsScheduled)
+                     if (pageInst instanceof Element && ((Element) pageInst).refreshTagsScheduled) {
                         System.err.println("*** Error - completed sync with refreshTagsScheduled");
+                     }
                   }
                }
             }
