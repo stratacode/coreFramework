@@ -10,4 +10,8 @@ import sc.opencv.ImageChannelSplit;
 import sc.opencv.ImgUtil;
 
 public opencv.core extends opencv.lib, util {
+   compiledOnly = true;
+   hidden = true;
+
+   codeType = CodeType.Framework;
 }

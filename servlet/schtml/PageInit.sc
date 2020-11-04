@@ -13,6 +13,8 @@ public class PageInit extends BasePageInit implements ServletContextListener, Ht
        ServletScheduler.init();
        sc.obj.ScopeDefinition.initScopes();
        initTypes();
+       sc.lang.pattern.Pattern.initVarTypes();
+
        // For servlets, the request is chained off of the window as well as 'global'
        RequestScopeDefinition.addParentScope(WindowScopeDefinition);
        LayeredSystem sys = LayeredSystem.getCurrent();

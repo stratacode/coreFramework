@@ -1,4 +1,9 @@
 slf4j {
+   compiledOnly = true;
+   hidden = true;
+
+   codeType = CodeType.Framework;
+
    public void start() {
       LayeredSystem system = getLayeredSystem();
 

@@ -21,6 +21,10 @@ import org.opencv.imgproc.Imgproc;
 // NOTE: Last time I tried this I had problems compiling opencv and just copied the /usr/local/opt/opencv dir from the previous machine.
 
 opencv.lib {
+   compiledOnly = true;
+   hidden = true;
+
+   codeType = CodeType.Framework;
    String openCVLibDir =  "/usr/local/opt/opencv/share/OpenCV/java";
    void start() {
       classPath = sc.util.FileUtil.listFiles(openCVLibDir,".*\\.jar");

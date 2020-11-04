@@ -1,4 +1,9 @@
 jdbc.hsql {
+   compiledOnly = true;
+   hidden = true;
+
+   codeType = CodeType.Framework;
+
    public void start() {
       LayeredSystem system = getLayeredSystem();
 
