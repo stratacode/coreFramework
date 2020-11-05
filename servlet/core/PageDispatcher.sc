@@ -1066,6 +1066,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             // Propagate this option when we load up the page so the client has the same defaultLanguage that we do (if it's not the default)
             if (!SyncManager.defaultLanguage.equals("json"))
                sb.append("   sc_SyncManager_c.defaultLanguage = \"" + SyncManager.defaultLanguage + "\";\n");
+            //sb.append("   js_PageInfo_c.initMatchingPage();\n");
             if (initSync != null && (initSyncSize = initSync.length()) > 0) {
                sb.append(JSRuntimeProcessor.SyncBeginCode);
                sb.append(initSync);

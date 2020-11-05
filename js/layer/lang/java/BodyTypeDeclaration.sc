@@ -177,4 +177,12 @@ class BodyTypeDeclaration extends Definition {
       Boolean res = (Boolean) getAnnotationValue("sc.obj.CompilerSettings", "exportProperties");
       return res == null || res;
    }
+
+   /**
+    * TODO: we need this method since it's used by the URLMixinTemplate that will find this version of the type
+    * and mistake this for a remote method. Right now, it's not called on the client
+    */
+   public boolean needsSync() {
+      return false;
+   }
 }

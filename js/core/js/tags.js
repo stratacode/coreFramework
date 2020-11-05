@@ -2617,7 +2617,7 @@ function js_Page() {
    sc_addLoadMethodListener(this, js_Page_c.onPageLoad);
    sc_runLaterScheduled = true;
    this.refreshedOnce = false;
-   this.pageInfo = js_PageInfo_c.pages[this.$protoName];
+   this.pageInfo = js_PageInfo_c.pagesByType[this.$protoName];
    // Set page properties and add listeners to update the URL state
    this.updatePageFromURL(true);
    // Signal to others not to bother refreshing individually - avoids refreshing individual tags when we are going to do it at the page level anyway
@@ -3628,6 +3628,7 @@ function js_PageInfo() {
    this.pageTypeName = null;
    this.pattern = null;
    this.pageType = null;
+   this.needsSync = false;
    this.queryParamProperties = null;
    this.urlProps = []; // Array of all QueryParamProperties/URLParamProperties found in the current URL
    this.urlPropValues = {}; // PropName to value map for all urlProps of initial URL values
@@ -3638,18 +3639,21 @@ function js_PageInfo() {
 
 js_PageInfo_c = sc_newClass("sc.lang.html.PageInfo", js_PageInfo, jv_Object, null);
 
-js_PageInfo_c.pages = {};
+js_PageInfo_c.pagesByType = {};
+js_PageInfo_c.pagesList = [];
 
-js_PageInfo_c.addPage = function(pageTypeName, pattern, pageType, queryParams, urlParts, constructorProps, constructorPropSig) {
+js_PageInfo_c.addPage = function(pageTypeName, pattern, pageType, needsSync, queryParams, urlParts, constructorProps, constructorPropSig) {
    var pi = new js_PageInfo();
    pi.pageTypeName = pageTypeName;
    pi.pattern = pattern;
    pi.pageType = pageType;
+   pi.needsSync = needsSync;
    pi.queryParamProperties = queryParams;
    pi.urlParts = urlParts;
    pi.constructorProps = constructorProps;
    pi.constructorPropSig = constructorPropSig;
-   js_PageInfo_c.pages[pageTypeName] = pi;
+   js_PageInfo_c.pagesByType[pageTypeName] = pi;
+   js_PageInfo_c.pagesList.push(pi);
 }
 
 js_PageInfo_c.initURLProperties = function(className) {
@@ -3669,7 +3673,7 @@ js_PageInfo_c.findURLProp = function(propName) {
 }
 
 js_PageInfo_c.getURLProperty = function(className, propName) {
-   var page = js_PageInfo_c.pages[className];
+   var page = js_PageInfo_c.pagesByType[className];
    if (page != null) {
       page.initURLProperties(className);
       var val = page.urlPropValues[propName];
@@ -3680,6 +3684,47 @@ js_PageInfo_c.getURLProperty = function(className, propName) {
    }
    else
       sc_logError("No PageInfo object for getURLProperty: " + className + "." + propName);
+}
+
+js_PageInfo_c.initMatchingPage = function() {
+   var url = window.location.href;
+   var pageInfo = js_PageInfo_c.findPageInfoForURL(url, window.location.pathname);
+   if (pageInfo == null)
+      console.error("No PageInfo found for URL: " + url);
+   else {
+      var pageObj;
+      var sync = pageInfo.needsSync;
+      if (sync)
+         sc_SyncManager_c.beginSyncQueue();
+      // TODO: support constructor properties here
+      if (sc_DynUtil_c.isObjectType(pageInfo.pageType))
+         pageObj = sc_DynUtil_c.getStaticProperty(pageInfo.pageType,
+             sc_CTypeUtil_c.decapitalizePropertyName(sc_CTypeUtil_c.getClassName(pageInfo.pageTypeName)));
+      else
+         pageObj = sc_DynUtil_c.createInstance(pageInfo.pageType, null);
+      if (js_Element_c.verbose)
+         sc_log("Created page object: " + pageInfo.pageTypeName);
+
+      sc_DynUtil_c.addDynObject(pageInfo.pageTypeName, pageObj);
+      if (sync) {
+         sc_SyncManager_c.initChildren(pageObj);
+         sc_SyncManager_c.flushSyncQueue();
+      }
+   }
+}
+
+js_PageInfo_c.findPageInfoForURL = function(url, pathName) {
+   var nps = js_PageInfo_c.pagesList.length;
+   if (nps == 1)
+      return js_PageInfo_c.pagesList[0];
+   for (var pi = 0; pi < nps; pi++) {
+      var pageInfo = js_PageInfo_c.pagesList[pi];
+      var urlPropValues = {};
+      var urlProps = [];
+      if (pageInfo.processURLParams(pathName, this.urlParts, true, urlPropValues, urlProps) != null)
+         return pageInfo;
+   }
+   return null;
 }
 
 js_PageInfo_c.addURLProperties = function(urlPropValues, urlProps) {
@@ -3749,7 +3794,8 @@ js_PageInfo_c.processURLParams = function(url, ups, opt, newURLPropValues, allUR
             if (!matched) {
                if (!opt)
                   console.error("url: " + url + " expected to find: " + up + " but found: " + urlNext);
-               break;
+
+               return null;
             }
          }
       }
@@ -3819,6 +3865,8 @@ js_PageInfo_c.processURLParams = function(url, ups, opt, newURLPropValues, allUR
             break;
          }
          urlNext = this.processURLParams(urlNext, up.urlParts, true, newURLPropValues, allURLProps);
+         if (urlNext == null)
+            return null;
       }
    }
    return urlNext;

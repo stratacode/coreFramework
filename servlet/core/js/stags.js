@@ -2494,3 +2494,7 @@ syncMgr = sc_SyncManager_c = {
 
 sc_ClientSyncManager_c = {defaultRealTime: true, syncDelaySet:false, currentSyncDelay:-1, syncMinDelay:100, lastSentTime:-1};
 
+// Dummy function used to init page objects in the client/server version
+js_PageInfo_c = {
+   initMatchingPage: function(){}
+};

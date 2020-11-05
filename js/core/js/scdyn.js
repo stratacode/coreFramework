@@ -36,7 +36,7 @@ sc_DynUtil_c.addDynInstance = function(typeName, inst) {
 }
 
 sc_DynUtil_c.addDynInnerObject = function(typeName, inst, outer) {
-   if (!sc$liveDynamicTypes) return;
+   if (!sc$liveDynamicTypes) return; // TODO: don't we need objectType + objectName even if this is not set?
    inst.$objectName = sc_CTypeUtil_c.getClassName(typeName);
    inst.$objectType = true;
    sc_DynUtil_c.addDynInnerInstance(typeName, inst, outer);

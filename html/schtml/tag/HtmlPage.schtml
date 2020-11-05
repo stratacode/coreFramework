@@ -31,4 +31,5 @@ import sc.type.PTypeUtil;
    <body>
    </body>
    <script type="text/javascript" repeat="= getRelFileList(pageJSFiles)" src="= repeatVar"></script>
+   <script type="text/javascript">js_PageInfo_c.initMatchingPage();</script>
 </html>
