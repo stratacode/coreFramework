@@ -498,7 +498,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                   }
                }
 
-               // Skip locking only if explicitly specified - otherwise we lock based on
+               // Skip locking only if none is specified explicitly - otherwise we lock based on
                if (!lockScope.equals("none")) {
                   ScopeDefinition lockScopeDef = ScopeDefinition.getScopeByName(lockScope);
                   // Temporary scopes - like request don't have to be locked because they are only used by one thread at a time.

@@ -39,12 +39,12 @@ public servlet.core extends webApp, meta, html.core {
       sessionScope.validOnObject = true;
       sessionScope.includeScopeAnnotation = true;
       sessionScope.needsField = false;
-      sessionScope.customResolver = 
-          "      javax.servlet.http.HttpSession _session = sc.servlet.Context.getCurrentSession();\n" +
-          "      if (_session == null) return null;\n" +
-          "      <%= variableTypeName %> _<%= lowerClassName %> = (<%= variableTypeName %>) _session.getAttribute(\"<%= typeClassName %>\");\n";
-      sessionScope.customSetter = 
-          "      _session.setAttribute(\"<%= typeClassName %>\", _<%= lowerClassName %>);\n";
+      sessionScope.customResolver =
+          "      sc.obj.ScopeContext _ctx = sc.servlet.SessionScopeDefinition.getSessionScope();\n" +
+          "      if (_ctx == null) return null;\n" +
+          "      <%= variableTypeName %> _<%= lowerClassName %> = (<%= variableTypeName %>) _ctx.getValue(\"<%= typeClassName %>\");\n";
+      sessionScope.customSetter =
+          "      _ctx.setValue(\"<%= typeClassName %>\", _<%= lowerClassName %>);\n";
       registerScopeProcessor("session", sessionScope);
 
       // Like session but stored per-window, per-session 
