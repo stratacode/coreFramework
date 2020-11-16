@@ -1,0 +1,27 @@
+<%@ import sc.js.URLPath;
+    import sc.lang.pattern.Pattern; %>
+<html>
+   <%!
+      // At compile time, this property is initialized with the list of all URLs discovered in the system via the @URL annotation
+      @sc.obj.BuildInit("layeredSystem.buildInfo.URLPaths")
+      static java.util.List<URLPath> systemURLPaths;
+   %>
+<body>
+<div id="indexBody" class="appFrame">
+Default index page, replace by adding an index.schtml or index.html file to your project.
+<div id="pathDisplay" serverContent="true">
+   <p>
+      Template pages in this project without required parameters:
+      <ul>
+         <li repeat="= systemURLPaths" repeatVarName="urlPath"
+             visible=":= pattern.hasDefaultValue">
+            <%! Pattern pattern := Pattern.initURLPattern(urlPath.pageType, urlPath.url); %>
+            <a href=':= pattern.defaultValue'><%= urlPath.name %></a>
+         </li>
+      </ul>
+   </p>
+   Set the @URL annotation to define the URLs of classes and template pages.
+</div>
+</div>
+</body>
+</html>

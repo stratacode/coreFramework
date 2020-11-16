@@ -95,6 +95,7 @@ import sc.db.DBTransaction;
 @sc.servlet.PathServletFilter(path="/*")
 class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener, IPageDispatcher {
    static LinkedHashMap<String,PageEntry> pages = new LinkedHashMap<String,PageEntry>();
+   static boolean indexFound = false;
 
    static Language language = sc.lang.pattern.URLPatternLanguage.getURLPatternLanguage();
 
@@ -333,11 +334,29 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             System.out.println("PageDispatcher: adding index page for: " + (dir.length() == 0 ? "doc root" : dir));
          addPage(dir + "_index_", dir + "/", pageType, dynContentPage, doSync, isResource, priority, lockScope, queryParamProps,
                  urlParts, syncTypes, resetSyncTypes, realTime, mimeType, constructorProps, constructorSig);
+         if (pattern.equals(indexPattern))
+            indexFound = true;
       }
    }
 
    /** Must be called after the scopes have been defined, before service is run */
    public static void initPageEntries() {
+      if (!indexFound) {
+         LayeredSystem sys = LayeredSystem.getCurrent();
+         if (sys != null && sys.options.devMode) {
+            for (PageEntry pageEnt:pages.values()) {
+               if (pageEnt.keyName.equals("/devIndex.html")) {
+                  if (verbose)
+                     System.out.println("PageDispatcher: running in devMode and no default index - adding devIndex");
+                  addPage("_index_", "/", pageEnt.pageType, pageEnt.dynContentPage, pageEnt.doSync, pageEnt.resource,
+                          pageEnt.priority, pageEnt.lockScope, pageEnt.queryParamProps,
+                          pageEnt.urlParts, pageEnt.syncTypes, pageEnt.resetSyncTypes, pageEnt.realTime, pageEnt.mimeType,
+                          pageEnt.constructorProps, pageEnt.constructorSig);
+                  indexFound = true;
+               }
+            }
+         }
+      }
       for (PageEntry pageEnt:pages.values())
          pageEnt.initPageScope();
    }

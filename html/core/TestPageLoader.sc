@@ -345,7 +345,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
       for (URLPath urlPath:urlPaths) {
          boolean doSync = clientSync && urlPath.realTime;
          // Simple applications have only a single URL - the root.  Others have an index page and the application pages so we only skip when there's more than one
-         if (skipIndexPage && urlPath.name.equals("index") && urlPaths.size() > 1) {
+         if (skipIndexPage && (urlPath.name.equals("index") || urlPath.name.equals("devIndex")) && urlPaths.size() > 1) {
             indexSkipped = true;
             continue;
          }
