@@ -3888,6 +3888,16 @@ js_BaseURLParamProperty_c.setPropertyValue = function(pageInst, ev) {
          return; // if we have no value, just don't set the number
       ev = Number.parseInt(ev);
    }
+   else if (this.propType == Boolean_c) {
+      if (ev == null)
+         return;
+      if (ev == "true")
+         ev = true;
+      else if (ev == "false")
+         ev = false;
+      else
+         console.error("Invalid value for boolean param: " + this.propName)
+   }
    else if (this.propType != String_c) {
       console.error("No converter for query param property type: " + this.propName + ": " + this.propType);
       return;
