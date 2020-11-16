@@ -19,6 +19,10 @@ public class URLRefreshListener extends AbstractListener {
       if (DynUtil.equalObjects(oldValue, newValue))
          return false;
 
+      // Special case to avoid setting a previously null/false value to false explicitly
+      if (oldValue == null && (newValue instanceof Boolean && !((Boolean) newValue)))
+         return false;
+
       if (!refreshScheduled) {
          refreshScheduled = true;
          DynUtil.invokeLater(new Runnable() {
