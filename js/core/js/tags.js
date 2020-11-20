@@ -2021,6 +2021,13 @@ js_HTMLElement_c.processEvent = function(elem, event, listener) {
          else if (event.type !== "mousemove")
             console.error("unrecognized event type!");
       }
+
+      // This stopPropagation call adds an important feature - the ability to register for a click event on
+      // a child item and enclosing item where the enclosingItem event handler is not called if clicking in
+      // the child item. Same code exists for stags.js
+      if (listener.scEventName === "clickEvent")
+         event.stopPropagation();
+
       // TODO: for event properties should we delete the property here or set it to null?  flush the queue of events if somehow a queue is enabled here?
    }
    else 
@@ -3701,7 +3708,7 @@ js_PageInfo_c.initMatchingPage = function() {
          pageObj = sc_DynUtil_c.getStaticProperty(pageInfo.pageType,
              sc_CTypeUtil_c.decapitalizePropertyName(sc_CTypeUtil_c.getClassName(pageInfo.pageTypeName)));
       else
-         pageObj = sc_DynUtil_c.createInstance(pageInfo.pageType, null);
+         pageObj = sc_DynUtil_c.createInstance(pageInfo.pageType, pageInfo.constructorPropSig, pageInfo.urlPropValues);
       if (js_Element_c.verbose)
          sc_log("Created page object: " + pageInfo.pageTypeName);
 
