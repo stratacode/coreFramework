@@ -1,7 +1,8 @@
 <div><%!
       String placeholder = "Enter text...";
 
-      @sc.obj.Sync(resetState=true, initDefault=true)
+      //@sc.obj.Sync(resetState=true, initDefault=true)
+      @sc.obj.Sync(syncMode=sc.obj.SyncMode.Disabled)
       @sc.obj.HTMLSettings(returnsHTML=true)
       String content;
 
