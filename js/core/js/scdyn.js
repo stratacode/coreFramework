@@ -425,7 +425,7 @@ sc_DynUtil_c.getObjChildren = function(obj, scopeName, create) {
 
 sc_DynUtil_c.equalObjects = function(o1, o2) {
    // Need to check typeof for == because it will do a conversion and for example 0 == "" is true
-   return (o1 == o2 && typeof o1 == typeof o2) || (o1 != null && (o1.equals != null && o1.equals(o2)));
+   return (o1 == o2 && typeof o1 == typeof o2) || (o1 != null && (o1.equals != null && o2 != null && o1.equals(o2)));
 }
 
 sc_DynUtil_c.equalArrays = function(a1, a2) {
