@@ -673,7 +673,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                            inst = ModelUtil.getAndRegisterGlobalObjectInstance(pageType);
                         scopeCtx.setValue(typeName, inst);
                         // Register this instance by name but don't initialize it.
-                        SyncManager.registerSyncInst(inst, typeName, scopeDef.scopeId, false);
+                        SyncManager.registerSyncInst(inst, constrArgs == null ? null : constrArgs.toArray(), typeName, scopeDef.scopeId, false);
                         newInst = true;
                      }
                   }
@@ -1036,6 +1036,9 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          }
       }
       else {
+         // Still want to listen to the href events even in client/server mode so that we can navigate the same
+         // in code for both client and server
+         SyncManager.addSyncInst(wctx.window.location, false, false, true, "window", null);
          if (mgr != null)
             mgr.updateServerTags(stCtx);
       }
