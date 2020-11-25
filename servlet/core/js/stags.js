@@ -1685,9 +1685,15 @@ syncMgr = sc_SyncManager_c = {
             else if (name === "Location") {
                var lps = cmd[name];
                var pnames = Object.keys(lps);
-               for (var i = 0; i < pnames.length; i++) {
-                  var pname = pnames[i];
-                  window.location[pname] = lps[pname];
+               for (var pix = 0; pix < pnames.length; pix++) {
+                  var pname = pnames[pix];
+                  var pval = lps[pname];
+                  if (pname == "href") {
+                     if (pval)
+                        setTimeout(function() { window.location.href = pval; }, 5);
+                  }
+                  else
+                     window.location[pname] = pval;
                }
             }
             else if (name === "History") {
