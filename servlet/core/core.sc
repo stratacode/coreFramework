@@ -55,8 +55,10 @@ public servlet.core extends webApp, meta, html.core {
       windowScope.includeScopeAnnotation = true;
       windowScope.needsField = false;
       windowScope.customResolver = 
-          "      <%= variableTypeName %> _<%= lowerClassName %> = (<%= variableTypeName %>) sc.servlet.Context.getWindowScope(true).getValue(\"<%= typeClassName %>\");\n";
-      windowScope.customSetter = 
+          "      sc.obj.ScopeContext _ctx = sc.servlet.WindowScopeDefinition.getWindowScope();\n" +
+          "      if (_ctx == null) return null;\n" +
+          "      <%= variableTypeName %> _<%= lowerClassName %> = (<%= variableTypeName %>) _ctx.getValue(\"<%= typeClassName %>\");\n";
+      windowScope.customSetter =
           "      sc.servlet.Context.getWindowScope(true).setValue(\"<%= typeClassName %>\", _<%= lowerClassName %>);\n";
       registerScopeProcessor("window", windowScope);
 
