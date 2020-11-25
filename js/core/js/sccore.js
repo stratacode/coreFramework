@@ -209,8 +209,16 @@ function sc_arrayInstanceOf(srcObj, dstClass, ndim) {
    return srcObj != null && srcObj._class != null && srcObj._ndim == ndim && sc_isAssignableFrom(dstClass, srcObj._class.constructor);
 }
 
+function sc_arrayParamType(srcObj, dstClass, ndim) {
+   return srcObj == null || sc_arrayInstanceOf(srcObj, dstClass, ndim);
+}
+
 function sc_instanceOfChar(srcObj, type) {
    return srcObj != null && srcObj.constructor == String && srcObj.length == 1;
+}
+
+function sc_charParamType(srcObj, type) {
+   return srcObj == null || sc_instanceOfChar(srcObj, type);
 }
 
 function sc_instanceOfClass(obj, dstClass) {
