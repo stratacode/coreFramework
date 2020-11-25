@@ -9,8 +9,8 @@ import sc.type.PTypeUtil;
 // Expose each page with a URL based on their file path, e.g. fileDir/fileName.html
 @URL(dynContent=true, subTypesOnly=true)
 @sc.obj.ServerTagSettings(jsFiles="js/stags.js")
-// Set the lifecycle so we store one instance for each page (or app), for each session
-@sc.obj.Scope(name="appSession")
+// Set the lifecycle so we store one instance for each browser window
+@sc.obj.Scope(name="window")
 // Init on startup
 @MainInit(subTypesOnly=true)
 // For the JS runtime, each page by default is deployed in it's own .js file and will include the framework js/tags.js file as a dependency
