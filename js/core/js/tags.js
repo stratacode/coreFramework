@@ -2875,7 +2875,7 @@ js_Element_c.updateServerTag = function(tagObj, id, serverTag, addSync) {
 
                var props = serverTag == null || serverTag.props == null ? tagObj.eventAttNames : serverTag.props.toArray().concat(tagObj.eventAttNames);
 
-               sc_SyncManager_c.registerSyncInst(tagObj, id, true, false); // register but do not init because we do that next with a specific set of props
+               sc_SyncManager_c.registerSyncInst(tagObj, null, id, true, false); // register but do not init because we do that next with a specific set of props
 
                // Synchronize the tag instance - this will add listeners for the properties we need to listen for the tag object.
                // The tag object will then listen for the appropriate DOM events and update the tag object as necessary.  That will
@@ -2894,7 +2894,9 @@ js_Element_c.updateServerTag = function(tagObj, id, serverTag, addSync) {
    }
    else {
       if (tagObj == null) {
-         // When called from refreshServerTags, we don't want to consult the existing tag objects, or we won't find removed elements but we might receive 
+         if (id == "Location")
+            return window.location;
+         // When called from refreshServerTags, we don't want to consult the existing tag objects, or we won't find removed elements but we might receive
          // events for an object which is being removed from the DOM.  So for resolveName we are having it return oldTags to avoid those errors.
          if (!addSync) 
             tagObj = js_HtmlPage_c.getServerTagById(id);
