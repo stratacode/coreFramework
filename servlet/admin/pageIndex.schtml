@@ -59,6 +59,9 @@
                         else if (DynUtil.isAssignableFrom(Integer.class, qpp.propType) || DynUtil.isAssignableFrom(Integer.TYPE, qpp.propType)) {
                            elem = new IntVarPageURLElement();
                         }
+                        else if (DynUtil.isAssignableFrom(Boolean.class, qpp.propType)) {
+                           elem = new BooleanVarPageURLElement();
+                        }
                         else
                            throw new IllegalArgumentException("Unsupported query param type: " + qpp.propType);
                         elem.propName = qpp.propName;
@@ -107,6 +110,9 @@
             </span>
             <span abstract="true" id="IntVarPageURLElement" extends="VarPageURLElement">
                <input type="text" id="intVar" value='= getElementValue()' changeEvent="=: otherProps.put(propName, value)"/>
+            </span>
+            <span abstract="true" id="BooleanVarPageURLElement" extends="VarPageURLElement">
+               <input type="checkbox" id="booleanVar" value='= getElementValue()' changeEvent="=: otherProps.put(propName, checked)"/>
             </span>
 
             <div>
