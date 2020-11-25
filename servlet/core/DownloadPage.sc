@@ -68,10 +68,23 @@ abstract class DownloadPage extends BasePage {
       if (mimeType == null) {
          ctx.sendError(404, "File extension: " + fileType + " not supported");
       }
-      res.setContentType(mimeType);
 
       String filePath = FileUtil.concat(downloadPath, path);
       File file = new File(filePath);
+
+      long prevLastModTime = req.getDateHeader("If-Modified-Since");
+      long fileModTime = file.lastModified();
+
+      if (prevLastModTime != -1 && prevLastModTime <= fileModTime) {
+         ctx.requestComplete = true;
+         res.setStatus(HttpServletResponse.SC_NOT_MODIFIED);
+         return null;
+      }
+
+      res.setContentType(mimeType);
+
+      res.addHeader("Content-Length", Long.toString(file.length()));
+      res.addDateHeader("Last-Modified", fileModTime);
 
       try (FileInputStream fis = new FileInputStream(file); OutputStream out = res.getOutputStream()) {
          byte[] buffer = new byte[32*1024];
