@@ -44,7 +44,8 @@ object ClientSyncDestination extends SyncDestination {
     */
    //long sequenceNumber = 0;
 
-   public void writeToDestination(String layerDef, String syncGroup, IResponseListener listener, String paramStr, CharSequence codeUpdates) {
+   public void writeToDestination(String layerDef, String syncGroup, IResponseListener listener, String paramStr,
+                                  CharSequence codeUpdates) {
       String useParams = getIdParams(paramStr, syncGroup);
 
       if (useParams == null)
@@ -57,6 +58,8 @@ object ClientSyncDestination extends SyncDestination {
       // connected to the server.
       if (waitTime != -1 && layerDef.length() == 0 && connected)
          useParams += "&waitTime=" + waitTime;
+      if (needsInitSync)
+         useParams += "&init=true";
       if (SyncManager.trace) {
          System.out.println("Sync: POST /sync" + useParams);
       }
@@ -167,7 +170,7 @@ object ClientSyncDestination extends SyncDestination {
 
    /** After we've received the response from one sync, unless we've already scheduled another, set up a job to resync if we are doing realtime */
    public void postCompleteSync() {
-      if (pollTime != -1 && numSendsInProgress == 0 && numWaitsInProgress == 0 && connected) {
+      if (pollTime != -1 && numSendsInProgress == 0 && numWaitsInProgress == 0 && connected && !needsClearSync) {
          PTypeUtil.addScheduledJob(new Runnable() {
             public void run() {
                if (numSendsInProgress == 0 && numWaitsInProgress == 0) {

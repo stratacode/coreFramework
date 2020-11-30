@@ -45,6 +45,10 @@ object ServletSyncDestination extends SyncDestination {
             ctx.write(SYNC_LAYER_START);
             ctx.write(outputLanguage);
             ctx.write(":");
+            // Send the 'clearSync' flag to the client to indicate this session has been expired on the server
+            // It will clear the sync state and will not poll back again for another sync
+            ctx.write(ctx.needsInvalidate ? "1" : "0");
+            ctx.write(":");
             String header = null;
             if (outputLanguage.equals("js")) {
                header = "\n\n//@ sourceURL=scSync.js\n";

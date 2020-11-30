@@ -840,14 +840,16 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
    public StringBuilder getInitialSync(List<Object> insts, Context ctx, String uri, List<PageEntry> pageEnts, StringBuilder traceBuffer) {
       try {
          PerfMon.start("getInitialSync");
-         return getOutputFromPages(insts, ctx, uri, pageEnts, true, true, false, traceBuffer);
+         return getOutputFromPages(insts, ctx, uri, pageEnts, true, true, false, null, traceBuffer);
       }
       finally {
          PerfMon.end("getInitialSync");
       }
    }
 
-   public StringBuilder getOutputFromPages(List<Object> insts, Context ctx, String uri, List<PageEntry> pageEnts, boolean isPageView, boolean needsInitialSync, boolean resetSync, StringBuilder traceBuffer) {
+   public StringBuilder getOutputFromPages(List<Object> insts, Context ctx, String uri, List<PageEntry> pageEnts,
+                     boolean isPageView, boolean needsInitialSync, boolean resetSync, StringBuilder reInitSync,
+                     StringBuilder traceBuffer) {
       // If this is really a page, render it.
       StringBuilder sb = null, headSB = null, bodySB = null;
 
@@ -1066,36 +1068,43 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          sb.append("   var sc_windowId = " + ctx.getWindowId() + ";\n");
          if (doSync) {
             SyncManager syncMgr = SyncManager.getSyncManager("jsHttp");
-            if (!syncMgr.syncDestination.realTime || !realTimeEnabled)
-               sb.append("   if (typeof sc_ClientSyncManager_c != 'undefined') sc_ClientSyncManager_c.defaultRealTime = false;\n");
-            if (stateless)
-               sb.append("   if (typeof sc_ClientSyncManager_c != 'undefined') sc_ClientSyncManager_c.statelessServer = true;\n");
-
             ScopeContext eventCtx = ctx.curScopeCtx.getEventScopeContext();
-            CharSequence initSync = syncMgr.getInitialSync(syncScopeId, resetSync, "js", eventCtx.syncTypeFilter, eventCtx.resetSyncTypeFilter);
 
-            if (SyncManager.trace) {
-               sb.append("   if (typeof sc_SyncManager_c != 'undefined') sc_SyncManager_c.trace = true;\n");
-               if (initSync !=null && initSync.length() > 0)
-                  ctx.log("initial sync:\n" + (initSync == null ? "" :initSync));
+            if (reInitSync != null) {
+               CharSequence initSync = syncMgr.getInitialSync(syncScopeId, resetSync, "json", eventCtx.syncTypeFilter, eventCtx.resetSyncTypeFilter);
+               reInitSync.append(initSync);
             }
-            if (SyncManager.verbose) {
-               sb.append("   if (typeof sc_SyncManager_c != 'undefined') sc_SyncManager_c.verbose = true;\n");
+            else {
+               if (!syncMgr.syncDestination.realTime || !realTimeEnabled)
+                  sb.append("   if (typeof sc_ClientSyncManager_c != 'undefined') sc_ClientSyncManager_c.defaultRealTime = false;\n");
+               if (stateless)
+                  sb.append("   if (typeof sc_ClientSyncManager_c != 'undefined') sc_ClientSyncManager_c.statelessServer = true;\n");
+
+               CharSequence initSync = syncMgr.getInitialSync(syncScopeId, resetSync, "js", eventCtx.syncTypeFilter, eventCtx.resetSyncTypeFilter);
+
+               if (SyncManager.trace) {
+                  sb.append("   if (typeof sc_SyncManager_c != 'undefined') sc_SyncManager_c.trace = true;\n");
+                  if (initSync !=null && initSync.length() > 0)
+                     ctx.log("initial sync:\n" + (initSync == null ? "" :initSync));
+               }
+               if (SyncManager.verbose) {
+                  sb.append("   if (typeof sc_SyncManager_c != 'undefined') sc_SyncManager_c.verbose = true;\n");
+               }
+               if (SyncManager.traceAll) {
+                  sb.append("   if (typeof sc_SyncManager_c != 'undefined') sc_SyncManager_c.traceAll = true;\n");
+               }
+               // Propagate this option when we load up the page so the client has the same defaultLanguage that we do (if it's not the default)
+               if (!SyncManager.defaultLanguage.equals("json"))
+                  sb.append("   sc_SyncManager_c.defaultLanguage = \"" + SyncManager.defaultLanguage + "\";\n");
+               //sb.append("   js_PageInfo_c.initMatchingPage();\n");
+               if (initSync != null && (initSyncSize = initSync.length()) > 0) {
+                  sb.append(JSRuntimeProcessor.SyncBeginCode);
+                  sb.append(initSync);
+                  sb.append(JSRuntimeProcessor.SyncEndCode);
+               }
+               else
+                  sb.append(JSRuntimeProcessor.NoSyncCode); // Always do an sc_refresh call at the end of the request so we can start a 'sync' call
             }
-            if (SyncManager.traceAll) {
-               sb.append("   if (typeof sc_SyncManager_c != 'undefined') sc_SyncManager_c.traceAll = true;\n");
-            }
-            // Propagate this option when we load up the page so the client has the same defaultLanguage that we do (if it's not the default)
-            if (!SyncManager.defaultLanguage.equals("json"))
-               sb.append("   sc_SyncManager_c.defaultLanguage = \"" + SyncManager.defaultLanguage + "\";\n");
-            //sb.append("   js_PageInfo_c.initMatchingPage();\n");
-            if (initSync != null && (initSyncSize = initSync.length()) > 0) {
-               sb.append(JSRuntimeProcessor.SyncBeginCode);
-               sb.append(initSync);
-               sb.append(JSRuntimeProcessor.SyncEndCode);
-            }
-            else
-               sb.append(JSRuntimeProcessor.NoSyncCode); // Always do an sc_refresh call at the end of the request so we can start a 'sync' call
          }
          if (trace || Element.trace) {
             sb.append("   js_Element_c.trace = true;\n");
@@ -1452,7 +1461,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
    }
 
    public StringBuilder getPageOutput(Context ctx, String url, List<PageDispatcher.PageEntry> pageEnts, Map<String,Object> urlProps, CurrentScopeContext curScopeCtx,
-                                      boolean initSync, boolean resetSync, LayeredSystem sys, StringBuilder traceBuffer) {
+                                      boolean initSync, boolean resetSync, StringBuilder reInitSync,
+                                      LayeredSystem sys, StringBuilder traceBuffer) {
       StringBuilder pageOutput = null;
       try {
          List<Object> insts = pageDispatcher.initPageObjects(ctx, url, pageEnts, urlProps, ctx.session, curScopeCtx, false, initSync, resetSync, sys);
@@ -1479,7 +1489,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             // e.g. sc_DynUtil_c.updateHTML("idName", escaped HTML string).  We can build that by walking down the object tree, calling the is-valid, outputStart and body methods manually as needed?
 
             PerfMon.start("getOutputFromPages");
-            pageOutput = pageDispatcher.getOutputFromPages(insts, ctx, url, pageEnts, false, initSync, resetSync, traceBuffer);
+            pageOutput = pageDispatcher.getOutputFromPages(insts, ctx, url, pageEnts, false, initSync, resetSync, reInitSync, traceBuffer);
             PerfMon.end("getOutputFromPages");
          }
       }

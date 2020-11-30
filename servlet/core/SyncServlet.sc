@@ -62,7 +62,9 @@ class SyncServlet extends HttpServlet {
        */
       String reset = request.getParameter("reset");
       String closeStr = request.getParameter("close");
+      String initStr = request.getParameter("init");
       boolean closeSession = closeStr != null && closeStr.equals("true");
+      boolean reInit = initStr != null && initStr.equals("true");
 
       HttpSession session = request.getSession(false);
       String url = request.getParameter("url");
@@ -74,7 +76,7 @@ class SyncServlet extends HttpServlet {
       String detailStr = "";
 
       // If we are not resetting already and this session has not rendered this page, we are in a reset situation - tell the client to send all of the data it has
-      if (reset == null && (session == null || !PageDispatcher.syncInitialized(session, url))) {
+      if (reset == null && !reInit && (session == null || !PageDispatcher.syncInitialized(session, url))) {
          if (SyncManager.trace)
             Context.logForRequest(request, "sync request received with no sync session in place - sending reset-content response");
          // Send a 205 error - reset content when there's no session for the client to sync again.  Either the session
@@ -238,15 +240,23 @@ class SyncServlet extends HttpServlet {
 
          StringBuilder pageOutput;
          boolean isReset = reset != null;
+         StringBuilder reInitSync = null;
          if (url != null) {
+            if (reInit)
+               reInitSync = new StringBuilder();
 
             // The applySyncLayer call may have updated the pageEnts applicable for this URL based on changes made to the code as part of the refresh system call.
             // If so, the old ones will be removed and the new ones returned here so this will just update them.
             pageEnts = pageDispatcher.validatePageEntries(pageEnts, url, queryParams, urlProps);
 
-            // Setting initial = isReset here and resetSync = false. - when we are resetting it's the initial sync though we toss this page output.  It just sets up the page to be like the client's state when it's first page was shipped out.
+            // Setting initial = isReset || reInitSync here and resetSync = false. -
+            // when we are resetting it's the initial sync though we toss this page output, but when it's a reInitSync
+            // we return the new init sync output since the initial layer in the client was cleared.
+            // In other cases, this call ensures the page is like the client's before we start looking at the sync state
+            // to send back.
             // TODO: setting traceBuffer = null here since we never see this output but are there any cases where it might help to debug things?
-            pageOutput = pageDispatcher.getPageOutput(ctx, url, pageEnts, urlProps, curScopeCtx, isReset, false, sys, null);
+            pageOutput = pageDispatcher.getPageOutput(ctx, url, pageEnts, urlProps, curScopeCtx,
+                                                      isReset || reInit, false, reInitSync, sys, null);
             if (pageOutput == null)
                return true; // Request was redirected, response closed
          }
@@ -260,7 +270,7 @@ class SyncServlet extends HttpServlet {
 
             // Also render the page after we do the reset so that we lazily init any objects that need synchronizing in this output
             // This time we render with initial = false and resetSync = true - so we do not record any changed made during this page rendering.  We're just resyncing the state of the application to be where the client is already.
-            pageOutput = pageDispatcher.getPageOutput(ctx, url, pageEnts, urlProps, curScopeCtx, false, false, sys, traceBuffer);
+            pageOutput = pageDispatcher.getPageOutput(ctx, url, pageEnts, urlProps, curScopeCtx, false, false, null, sys, traceBuffer);
             if (pageOutput == null)
                return true;
          }
@@ -304,11 +314,19 @@ class SyncServlet extends HttpServlet {
                      updateDetailStr = "*code updates: " + codeUpdates.length();
                }
             }
+            SyncResult syncRes;
 
-            // Now collect up all changes and write them as the response layer.
-            SyncResult syncRes = mgr.sendSync(syncGroup, pageEnt.pageScope.scopeId, false, false, codeUpdates,
-                                              ctx.curScopeCtx.getEventScopeContext().syncTypeFilter,
-                                              ctx.curScopeCtx.getEventScopeContext().resetSyncTypeFilter);
+            if (reInitSync != null) {
+               // We got the string builder of just the init sync content that's normally included in the page and need
+               // to send it to the client here
+               syncRes = mgr.sendReInitSync(reInitSync.toString(), syncGroup, pageEnt.pageScope.scopeId, false, codeUpdates);
+            }
+            else {
+               // Now collect up all changes and write them as the response layer.
+               syncRes = mgr.sendSync(syncGroup, pageEnt.pageScope.scopeId, false, false, codeUpdates,
+                                                 ctx.curScopeCtx.getEventScopeContext().syncTypeFilter,
+                                                 ctx.curScopeCtx.getEventScopeContext().resetSyncTypeFilter);
+            }
 
             // If there is nothing to send back to the client now, we have a waitTime supplied, and we do not have to send back the session cookie we can wait for changes for "real time" response to the client
             if ((codeUpdates == null || codeUpdates.length() == 0) && waitTime != -1 && !syncRes.anyChanges && syncRes.errorMessage == null && !newSession) {

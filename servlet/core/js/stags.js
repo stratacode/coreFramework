@@ -1321,6 +1321,10 @@ sc_SyncListener_c.response = function(responseText) {
    this.syncResponse();
    var syncLayerStart = "sync:";
    syncMgr.connected = true; // Success from server means we are connected
+   if (syncMgr.needsInitSync) {
+      syncMgr.needsInitSync = false;
+      sc_log("Applying sync init response after session reset");
+   }
    var nextText = responseText;
    // A string of the form sync:json:len:data:sync:js:len:data
    // Supporting more than one format - e.g. json and js when there are code updates to be applied
@@ -1330,25 +1334,41 @@ sc_SyncListener_c.response = function(responseText) {
          var endLangIx = nextText.indexOf(':', syncLayerStart.length);
          if (endLangIx !== -1) {
             var lang = nextText.substring(syncLayerStart.length, endLangIx);
-            var lenStart = endLangIx + 1;
-            if (nextText.length > lenStart) {
-               var endLenIx = nextText.indexOf(':', lenStart);
-               if (endLenIx !== -1) {
-                  var lenStr = nextText.substring(lenStart, endLenIx);
-                  var syncLen = parseInt(lenStr);
-                  if (isNaN(syncLen)) {
-                     sc_logError("Invalid length in sync response: " + e);
+            var flagsStart = endLangIx + 1;
+            if (nextText.length > flagsStart) {
+               var endFlagsIx = nextText.indexOf(':', flagsStart);
+               if (endFlagsIx !== -1) {
+                  var flagsStr = nextText.substring(flagsStart, endFlagsIx);
+                  var flags = parseInt(flagsStr);
+                  if (isNaN(flags)) {
+                     sc_logError("Invalid flags in sync response");
                      break;
                   }
-                  var layerDefStart = endLenIx + 1;
-                  processDef = nextText.substring(layerDefStart, layerDefStart + syncLen);
-                  nextText = nextText.substring(layerDefStart + syncLen + 1);
-                  if (lang === "json")
-                     syncMgr.applySyncLayer("json", processDef, this.syncSequence, this.isWait ? "wait": "send");
-                  else if (lang === "js")
-                     eval(processDef);
-                  else
-                     sc_logError("Unrecognized language in sync response: " + lang);
+                  if ((flags & 1) != 0) {
+                     syncMgr.needsClearSync = true;
+                     syncMgr.needsInitSync = true;
+                  }
+                  var lenStart = endFlagsIx + 1;
+                  if (nextText.length > lenStart) {
+                     var endLenIx = nextText.indexOf(':', lenStart);
+                     if (endLenIx !== -1) {
+                        var lenStr = nextText.substring(lenStart, endLenIx);
+                        var syncLen = parseInt(lenStr);
+                        if (isNaN(syncLen)) {
+                           sc_logError("Invalid length in sync response");
+                           break;
+                        }
+                        var layerDefStart = endLenIx + 1;
+                        processDef = nextText.substring(layerDefStart, layerDefStart + syncLen);
+                        nextText = nextText.substring(layerDefStart + syncLen + 1);
+                        if (lang === "json")
+                           syncMgr.applySyncLayer("json", processDef, this.syncSequence, this.isWait ? "wait": "send");
+                        else if (lang === "js")
+                           eval(processDef);
+                        else
+                           sc_logError("Unrecognized language in sync response: " + lang);
+                     }
+                  }
                }
             }
          }
@@ -1359,6 +1379,11 @@ sc_SyncListener_c.response = function(responseText) {
       }
    }
    syncMgr.postCompleteSync();
+
+   if (syncMgr.needsClearSync) {
+      syncMgr.needsClearSync = false;
+      syncMgr.resetCmds = [];
+   }
 };
 
 sc_SyncListener_c.error = function(code, text) {
@@ -1519,6 +1544,8 @@ syncMgr = sc_SyncManager_c = {
    windowSyncProps: null,
    documentSyncProps: null,
    queuedMethods: null,
+   needsInitSync: false,
+   needsClearSync: false,
    resetCmds:[],
    applySyncLayer: function(lang,json,syncSequence,detail) {
       if (sc_SyncManager_c.trace) {
@@ -2215,6 +2242,9 @@ syncMgr = sc_SyncManager_c = {
          syncMgr.numSendsInProgress++;
          isWait = false;
       }
+      if (syncMgr.needsInitSync) {
+         url += "&init=true";
+      }
       if (isWait) {
          if (sc_SyncManager_c.trace)
             sc_log("Sending sync wait request: " + (syncMgr.waitTime === -1 ? "(no wait)" : "wait: " + syncMgr.waitTime));
@@ -2237,7 +2267,7 @@ syncMgr = sc_SyncManager_c = {
    },
    postCompleteSync:function() {
       if (syncMgr.syncDestination.realTime && syncMgr.pollTime !== -1 && syncMgr.pendingSends.length == 0 &&
-          syncMgr.connected && !syncMgr.autoSyncScheduled && !syncMgr.syncScheduled) {
+          syncMgr.connected && !syncMgr.autoSyncScheduled && !syncMgr.syncScheduled && !syncMgr.needsClearSync) {
          sc_log("Post complete sync: scheduling autoSync with: " + syncMgr.pendingSends.length + " pending requests");
          syncMgr.autoSyncScheduled = true;
          setTimeout(syncMgr.autoSync, syncMgr.pollTime);
