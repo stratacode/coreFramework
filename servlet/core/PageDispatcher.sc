@@ -194,7 +194,6 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             return baseURL;
          StringBuilder sb = new StringBuilder();
          sb.append(baseURL);
-         sb.append('?');
          boolean first = true;
          for (QueryParamProperty prop:queryParamProps) {
             String propName = prop.propName;
@@ -202,8 +201,12 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             if (propVal == null && inst != null)
                propVal = DynUtil.getProperty(inst, propName);
             if (propVal != null) {
+               if (propVal instanceof Boolean && !((Boolean) propVal))
+                  continue;
                if (!first)
                   sb.append('&');
+               else
+                  sb.append('?');
                sb.append(prop.paramName);
                sb.append('=');
                sb.append(propVal.toString());
@@ -1032,6 +1035,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             // and trying to change it here would lead to an infinite loop when setting href back onto itself
             SyncManager.addSyncInst(wctx.window.location, false, false, true, "window", null);
             SyncManager.addSyncInst(wctx.window.document, false, false, true, "window", null);
+            SyncManager.addSyncInst(wctx.window.screen, false, false, true, "window", null);
          }
          else {
             mgr.updateServerTags(stCtx);
@@ -1265,8 +1269,20 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                   }
                   if (scopeContextName != null) {
                      CurrentScopeContext currentCtx = CurrentScopeContext.getCurrentScopeContext();
-                     CurrentScopeContext.register(scopeContextName, currentCtx);
+                     CurrentScopeContext old = CurrentScopeContext.register(scopeContextName, currentCtx);
+
+                     if (old != null && old != currentCtx) {
+                        WindowScopeContext oldWinCtx = (WindowScopeContext) old.getScopeContextByName("window");
+                        if (oldWinCtx != null) {
+                           System.out.println("--- Moved scopeContextName " + scopeContextName + " from: " +
+                                               oldWinCtx.window.origURL + " to: " + uri);
+                           // Clear this out so that we don't clear out the global CurrentScopeContext name when this window closes
+                           // it is now getting registered with the new WindowScopeContext.
+                           oldWinCtx.setValue("scopeContextName", null);
+                        }
+                     }
                      ctx.windowCtx.setValue("scopeContextName", scopeContextName);
+                     ctx.windowCtx.window.scopeContextName = scopeContextName;
                   }
                }
             }
@@ -1574,11 +1590,11 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
    }
 
    public RemoteResult invokeRemote(Object obj, Object type, String methName, Object retType, String paramSig, Object...args) {
-      Context ctx = Context.getCurrentContext();
-      if (ctx == null)
-         throw new IllegalArgumentException("Not in a request context to call remote method");
       ScopeDefinition scopeDef = WindowScopeDefinition;
       ScopeContext scopeCtx = scopeDef.getScopeContext(true);
+      if (scopeCtx == null) {
+         throw new IllegalArgumentException("Not in a request context to call remote method");
+      }
       return SyncManager.invokeRemoteDest(scopeDef, scopeCtx, null, null, obj, type, methName, retType, paramSig, args);
    }
 

@@ -142,4 +142,13 @@ public class WindowScopeContext extends BaseScopeContext {
    public void closeScopeContext() {
       windowClosedByServer = true;
    }
+
+   public Object getValue(String name) {
+      Object res = super.getValue(name);
+      if (res != null)
+         return res;
+      if (name != null && name.equals("window"))
+         return window;
+      return null;
+   }
 }

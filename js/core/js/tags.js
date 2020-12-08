@@ -48,6 +48,7 @@ function js_HTMLElement() {
 var js_Element = js_HTMLElement;
 
 js_indexPattern = "/index.html";
+
 js_Element_c = js_HTMLElement_c = sc_newClass("sc.lang.html.HTMLElement", js_HTMLElement, jv_Object, [sc_IChildInit, sc_IStoppable, sc_INamedChildren, sc_IObjChildren]);
 
 // This is part of the SemanticNode class on the server and so the component code gen uses it even for client code
@@ -69,6 +70,7 @@ js_Element_c.pendingType = js_Element_c.pendingEvent = null;
 js_Element_c.isPageElement = function() { return false; }
 
 var sc_resizeObserver = null;
+var js_scopeContextName = null;
 
 /*
 js_Element_c.getURLPaths = function() {
@@ -205,6 +207,7 @@ js_Element_c.escBody = function(input) {
 }
 
 js_Element_c.getRelURL = function(srcRelPath, urlPath) {
+   urlPath = sc_updateLinkURL(urlPath);
    var pref = js_Element_c.getRelPrefix(srcRelPath);
    return pref + (pref.endsWith("/") ? "" : "/") + urlPath;
 }
@@ -3520,6 +3523,21 @@ js_Document_c.getActiveElement = function() {
    return this.activeElement;
 };
 
+function js_Screen() {
+   js_Screen_c.screenWrapper = this;
+   this.width = window.screen.width;
+   this.height = window.screen.height;
+}
+
+js_Screen_c = sc_newClass("sc.lang.html.Screen", js_Screen, null, null);
+
+js_Screen_c.getScreen = function() {
+   if (js_Screen_c.screenWrapper === undefined) {
+      js_Screen_c.screenWrapper = new js_Screen();
+   }
+   return js_Screen_c.screenWrapper;
+};
+
 function errorCountChanged() {
    sc_Bind_c.sendChangedEvent(js_Window_c.getWindow(), "errorCount");
 }
@@ -3556,18 +3574,27 @@ js_History_c.getObjectId = function ()  {
    return "sc.lang.html.History";
 };
 
+function sc_updateLinkURL(href) {
+   if (js_scopeContextName != null && href.indexOf("scopeContextName") == -1) {
+      href = sc_URLPath_c.addQueryParam(href, "scopeContextName", js_scopeContextName);
+   }
+}
+
 function js_Window() {
    js_Window_c.windowWrapper = this; // avoid recursive infinite loop
    this.document = document;
+   this.screen = window.screen;
    this.location = window.location;
    this.location.getPathname = getThisPathname;
    this.location.setHref = function(href) {
+      href = sc_updateLinkURL(href);
       window.location.href = href;
    }
    this.location.getHref = function() {
       return window.location.href;
    }
    this.documentTag = js_Document_c.getDocument();
+   this.screenTag = js_Screen_c.getScreen();
    window.sc_errorCountListener = errorCountChanged;
 }
 
@@ -3762,6 +3789,10 @@ js_PageInfo_c.addURLProperties = function(urlPropValues, urlProps) {
                      urlPropValues[qp.propName] = ev;
                      found[qp.propName] = true;
                   }
+               }
+               // Store the current scopeContextName - used only for test scripting
+               if (sc_PTypeUtil_c.testMode && en == "scopeContextName") {
+                  js_scopeContextName = ev;
                }
             }
          }
@@ -4138,6 +4169,126 @@ function sc_URLPath(u, n, k, p, rt, ts) {
 }
 
 sc_URLPath_c = sc_newClass("sc.js.URLPath", sc_URLPath, jv_Object, [sc_IObjectId]);
+
+//
+// Note: these next few methods are converted from the Java class URLPath so make sure to keep those two in sync.
+//
+
+// TODO: do we need to encode string values into UTF8 here or maybe it should be done downstream?
+sc_URLPath_c.addQueryParam = function(url, param, value) {
+   var veqStr = sc_URLPath_c.getValueEqualsString(value);
+   if (veqStr == null)
+      return url;
+   var sep;
+   if (url.contains("?"))
+      sep = '&';
+   else
+      sep = '?';
+   return url + sep + param + veqStr;
+}
+
+// TODO: add more data types? should we do List<Type>
+sc_URLPath_c.getValueEqualsString = function(value) {
+   if (value === true || value === false) {
+      if (bval)
+         return "";
+      else
+         return null;
+   }
+   if (sc_instanceOf(value, String) || sc_instanceOf(value, Number) || sc_instanceOfChar(value))
+      return "=" + value;
+   else {
+      sc_error("Unsupported query param type");
+      return null;
+   }
+}
+
+sc_URLPath_c.setQueryParam = function(url, param, value) {
+   var qix = url.indexOf("?");
+   if (qix != -1) {
+      var nameIx = url.indexOf(param, qix+1);
+      if (nameIx == -1)
+         return value == null ? url : sc_URLPath_c.addQueryParam(url, param, value);
+
+      var newValueEqualsStr = sc_URLPath_c.getValueEqualsString(value);
+      if (newValueEqualsStr == null)
+         return sc_URLPath_c.removeQueryParam(url, param);
+
+      // Replace the value
+      var nameEnd = nameIx + param.length();
+      var valEndIx = findValEndInQueryString(url, nameEnd);
+      return url.substring(0, nameEnd) + newValueEqualsStr + url.substring(valEndIx);
+   }
+   else if (value != null)
+      return addQueryParam(url, param, value);
+   return url;
+}
+
+sc_URLPath_c.removeQueryParam = function(url, param) {
+   var qix = url.indexOf("?");
+   if (qix != -1) {
+      var nameIx = url.indexOf(param, qix+1);
+      if (nameIx == -1)
+         return url;
+      var nameEnd = nameIx + param.length();
+      var valEndIx = findValEndInQueryString(url, nameEnd);
+      var start = url.substring(0, nameIx);
+      var rem = url.substring(valEndIx);
+      if (rem.length() > 0) {
+         if (start.endsWith("?") || start.endsWith("&")) {
+            if (rem.startsWith("&"))
+               rem = rem.substring(1);
+            return start + rem;
+         }
+         return start + "?" + rem;
+      }
+      else if (start.endsWith("&") || start.endsWith("?"))
+         start = start.substring(0, start.length()-1);
+      return start;
+   }
+   return url;
+}
+
+sc_URLPath_c.findNameInQueryString = function(url, qix, param) {
+   var nameIx = url.indexOf(param, qix+1);
+   if (nameIx == -1)
+      return -1;
+   var before = url.charAt(nameIx-1);
+   if (before != '?' && before != '&')
+      return -1;
+   var plen = param.length();
+   var afterIx = nameIx + plen;
+   var after = afterIx == url.length() ? '&' : url.charAt(afterIx);
+   if (after == '=' || after == '&') {
+      return nameIx;
+   }
+   return -1;
+}
+
+sc_URLPath_c.findValEndInQueryString = function(url, nameEnd) {
+   var sepIx = url.indexOf("&", nameEnd);
+   if (sepIx == -1) {
+      return url.length();
+   }
+   return sepIx;
+}
+
+/** Returns Boolean.TRUE for present with no value, otherwise a String */
+sc_URLPath_c.getQueryParam = function(url, param) {
+   var qix = url.indexOf("?");
+   if (qix != -1) {
+      var nameIx = sc_URLPath_c.findNameInQueryString(url, qix, param);
+      if (nameIx == -1)
+         return null;
+
+      var nameEnd = nameIx + param.length();
+      var valEndIx = sc_URLPath_c.findValEndInQueryString(url, nameEnd);
+      if (valEndIx == nameEnd) // Just paramName& so we return a boolean of true for that situation
+         return true;
+      return url.substring(nameEnd+1, valEndIx);
+   }
+   return null;
+}
 
 Event.prototype.hashCode = jv_Object_c.hashCode;
 Event.prototype.equals = jv_Object_c.equals;

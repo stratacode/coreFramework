@@ -2038,6 +2038,9 @@ syncMgr = sc_SyncManager_c = {
       else if (id === "document") {
          syncMgr.initDocumentSync(serverTag.props);
       }
+      else if (id === "screen") {
+         syncMgr.initScreenSync(serverTag.props);
+      }
       else {
          if (tagObj != null) {
             if (js_Element_c.verbose)
@@ -2477,9 +2480,17 @@ syncMgr = sc_SyncManager_c = {
    windowWrap:{
       getId:function() { return "window"; }
    },
+   screenWrap:{
+      getId:function() { return "screen"; }
+   },
    sendWindowSizeEvents:function(wp) {
       for (var i = 0; i < wp.length; i++) {
          sc_Bind_c.sendChange(syncMgr.windowWrap, wp[i] , window[wp[i]]);
+      }
+   },
+   sendScreenSizeEvents:function(sp) {
+      for (var i = 0; i < sp.length; i++) {
+         sc_Bind_c.sendChange(syncMgr.screenWrap, sp[i] , window.screen[sp[i]]);
       }
    },
    initDocumentSync:function(props) {
@@ -2506,6 +2517,12 @@ syncMgr = sc_SyncManager_c = {
                syncMgr.sendWindowSizeEvents(syncMgr.windowSyncProps);
             });
          }
+      }
+   },
+   initScreenSync:function(props) {
+      var np = sc_updatePlist("screenSyncProps", props);
+      if (np.length) {
+         syncMgr.sendScreenSizeEvents(np);
       }
    },
    clearResetState:function(objName) {

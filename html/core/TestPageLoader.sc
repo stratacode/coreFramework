@@ -142,25 +142,25 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
       return processRes;
    }
 
-   public URLResult loadPage(String name, String scopeContextName) {
+   public URLResult loadPage(String name, String scopeContextName, String url) {
       boolean found = false;
       AsyncProcessHandle res = null;
-      URLPath urlPath = findUrlPath(name);
+      URLPath urlPath = findURLPath(name);
       if (urlPath != null)
-         return loadURL(urlPath, scopeContextName);
+         return loadURLPath(urlPath, scopeContextName, url);
       else
          throw new IllegalArgumentException("TestPageLoader.loadPage - " + name + " not found");
    }
 
-   public CurrentScopeContext loadPageAndWait(String pageName, String scopeContextName) {
-       loadPage(pageName, scopeContextName);
+   public CurrentScopeContext loadPageAndWait(String pageName, String scopeContextName, String url) {
+       loadPage(pageName, scopeContextName, url);
        CurrentScopeContext ctx = cmd.waitForReady(scopeContextName, waitForPageTime);
        if (ctx == null)
           throw new AssertionError("TestPageLoader.loadPageAndWait(" + pageName + ", " + scopeContextName + ") - timed out waiting for connect");
        return ctx;
    }
 
-   public URLPath findUrlPath(String name) {
+   public URLPath findURLPath(String name) {
       boolean found = false;
       for (URLPath urlPath:urlPaths) {
          if (urlPath.name.equals(name)) {
@@ -171,12 +171,12 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
    }
 
    public void savePage(String name, String pageContents) {
-      URLPath urlPath = findUrlPath(name);
+      URLPath urlPath = findURLPath(name);
       if (urlPath != null) {
          Integer ix = savePageIndex.get(name);
          if (ix == null)
             ix = 1;
-         saveURL(urlPath, getPageResultsFile(urlPath, "." + ix), pageContents);
+         saveTestURL(urlPath.name, getPageResultsFile(urlPath, "." + ix), pageContents);
          savePageIndex.put(name, ix+1);
       }
       else
@@ -194,20 +194,28 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
       }
    }
 
-   public URLResult loadURL(URLPath urlPath, String scopeContextName) {
+   public URLResult loadURLPath(URLPath urlPath, String scopeContextName, String url) {
       String pageResultsFile = getPageResultsFile(urlPath, "");
-      System.out.println("loadURL: " + urlPath.name + " at: " + urlPath.url);
 
       // Returns file:// or http:// depending on whether the server is enabled.  Also finds the files in the first buildDir where it exists
-      String url = sys.getURLForPath(urlPath);
       if (url == null)
+         url = sys.getURLForPath(urlPath);
+      if (url == null) {
+         System.out.println("loadURL: No URL for path: " + urlPath);
          return null;
+      }
 
+      System.out.println("loadURL: " + urlPath.name + " at: " + url);
+
+      return loadTestURL(url, urlPath.name, scopeContextName, pageResultsFile, urlPath.keyName, urlPath.realTime);
+   }
+
+   public URLResult loadTestURL(String url, String urlName, String scopeContextName, String pageResultsFile, String appId, boolean realTime) {
       if (scopeContextName != null) {
          url = URLPath.addQueryParam(url, "scopeContextName", scopeContextName);
       }
 
-      AsyncProcessHandle processRes = openBrowser(url, pageResultsFile, clientSync && urlPath.realTime);
+      AsyncProcessHandle processRes = openBrowser(url, pageResultsFile, clientSync && realTime);
 
       try {
          if (!sys.serverEnabled || scopeContextName == null) {
@@ -216,24 +224,24 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
             System.out.println("- Done waiting for client to connect");
          }
 
-         if (clientSync && urlPath.realTime) {
-            PTypeUtil.setAppId(urlPath.keyName);
+         if (clientSync && realTime) {
+            PTypeUtil.setAppId(appId);
 
             if (scopeContextName != null) {
                if (sc.obj.CurrentScopeContext.waitForReady(scopeContextName, waitForPageTime) == null) {
                   endSession(processRes);
                   processRes = null;
-                  throw new IllegalArgumentException("Timeout opening url: " + url + " after: " + waitForPageTime + " millis - no client request for scope context: " + scopeContextName); 
+                  throw new IllegalArgumentException("Timeout opening url: " + url + " after: " + waitForPageTime + " millis - no client request for scope context: " + scopeContextName);
                }
             }
-            // for the initial page load, we just use the innerHTML which seems accurate and represents the rendered content from the initial page load
-            saveURL(urlPath, pageResultsFile, getClientBodyHTML(scopeContextName));
+
+            saveTestURL(urlName, pageResultsFile, getClientBodyHTML(scopeContextName));
          }
       }
       catch (RuntimeException exc) {
          endSession(processRes);
          processRes = null;
-         System.err.println("*** Exception from loadURL: " + urlPath.url + ": " + exc);
+         System.err.println("*** Exception from loadURL: " + url + ": " + exc);
          exc.printStackTrace();
          throw exc;
       }
@@ -276,14 +284,14 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
       return (String) DynUtil.evalRemoteScript(scopeContext, "sc_getConsoleLog();");
    }
 
-   void saveURL(URLPath urlPath, String pageResultsFile, String pageContents) {
-      System.out.println("Getting DOM: " + urlPath.name);
+   void saveTestURL(String urlName, String pageResultsFile, String pageContents) {
+      System.out.println("Getting DOM: " + urlName);
       if (pageContents == null)
-         System.err.println("*** No page contents for: " + urlPath + " to store in file: " + pageResultsFile);
+         System.err.println("*** No page contents for: " + urlName + " to store in file: " + pageResultsFile);
       else {
          // Set the app-id so we restrict the contexts we search to just this application - theoretically, we could iterate over the sessions here too to target a specific browser instance to make it more robust
          FileUtil.saveStringAsFile(pageResultsFile, pageContents, true);
-         System.out.println("- DOM results: " + urlPath.name + 
+         System.out.println("- DOM results: " + urlName +
                             (sys.options.testVerifyMode ? "" : " length: " + pageContents.length() + " path: " + pageResultsFile));
       }
    }
@@ -379,7 +387,7 @@ public class TestPageLoader implements sc.obj.ISystemExitListener {
          // 'scope context' (essentially the id of the browser window so we can target the savePage and
          // saveClientConsole methods at the right window).
          String scopeContextName = doSync ? urlPath.keyName : null;
-         URLResult processRes = loadURL(urlPath, scopeContextName);
+         URLResult processRes = loadURLPath(urlPath, scopeContextName, null);
          if (processRes == null) {
             System.out.println("Skipping test for incomplete url: " + urlPath);
             continue;

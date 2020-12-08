@@ -147,7 +147,7 @@ html.core extends sys.std {  // Extending sys.std because we override the standa
             system.addRunCommand(sc.type.PTypeUtil.getPlatformOpenCommand(),  webURL);
 
          // Use the -ts <script-name> option to specify a test script - if not specified, we default to testScript.scr
-         if (system.options.testScriptName == null)
+         if (system.options.runTests && system.options.testScriptName == null)
             system.options.testScriptName = "testScript.scr";
 
          // Add a shell script to use with the -t option and another to
