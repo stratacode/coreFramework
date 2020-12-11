@@ -2898,7 +2898,7 @@ js_Element_c.updateServerTag = function(tagObj, id, serverTag, addSync) {
    else {
       if (tagObj == null) {
          if (id == "Location")
-            return window.location;
+            return js_Window_c.getWindow().location;
          // When called from refreshServerTags, we don't want to consult the existing tag objects, or we won't find removed elements but we might receive
          // events for an object which is being removed from the DOM.  So for resolveName we are having it return oldTags to avoid those errors.
          if (!addSync) 
@@ -3578,6 +3578,7 @@ function sc_updateLinkURL(href) {
    if (js_scopeContextName != null && href.indexOf("scopeContextName") == -1) {
       href = sc_URLPath_c.addQueryParam(href, "scopeContextName", js_scopeContextName);
    }
+   return href;
 }
 
 function js_Window() {
