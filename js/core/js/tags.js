@@ -2253,6 +2253,15 @@ js_Input_c.getChecked = function() {
    return this.checked; 
 }
 
+// Called from test scripts to simulate an input tag change
+js_Input_c.changeValue = function(v) {
+   var evt = new InputEvent("change");
+   evt.currentTarget = evt.target = this;
+   this.setValue(v);
+   this.changeEvent = evt;
+   sc_Bind_c.sendEvent(sc_IListener_c.VALUE_CHANGED, this, "changeEvent", evt);
+}
+
 function js_Button() {
    js_Input.call(this);
 }

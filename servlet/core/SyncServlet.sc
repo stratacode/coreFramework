@@ -228,7 +228,11 @@ class SyncServlet extends HttpServlet {
             return true;
          }
 
-         if (reset == null) {
+         boolean syncApplied = false;
+         // When applying a reset or the first request after a session was expired, need to init the page first
+         // before applying
+         if (reset == null && !newSession) {
+            syncApplied = true;
             // Reads the POST data as a layer, applies that layer to the current context, and execs any jobs spawned
             // by the layer.
             applySyncLayer(ctx, request, receiveLanguage, pageEnt, session, url, syncGroup, false);
@@ -261,9 +265,9 @@ class SyncServlet extends HttpServlet {
                return true; // Request was redirected, response closed
          }
 
-         // For the reset=true case, we need to first render the pages from the default initial state, then apply
-         // the reset sync from the client.
-         if (reset != null) {
+         // For the reset=true case or first request after a new session, we need to first render the pages from the
+         // default initial state, then apply the reset sync from the client.
+         if (!syncApplied) {
             applySyncLayer(ctx, request, receiveLanguage, pageEnt, session, url, syncGroup, true);
 
             pageEnts = pageDispatcher.validatePageEntries(pageEnts, url, queryParams, urlProps);

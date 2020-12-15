@@ -1006,6 +1006,14 @@ js_Input_c.getChecked = function() {
    return this.checked;
 }
 
+js_Input_c.changeValue = function(v) {
+   var evt = new Event("change");
+   this.setValue(v);
+   this.changeEvent = evt;
+   evt.currentTag = this;
+   sc_Bind_c.sendChange(this, "changeEvent", evt);
+}
+
 function js_Select() {
    js_HTMLElement.call(this);
    this.optionDataSource = null;
