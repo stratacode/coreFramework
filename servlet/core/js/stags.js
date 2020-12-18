@@ -217,13 +217,12 @@ function sc_updatePlist(plist, props) {
 }
 
 function sc_refresh() { // Called at the end of loading a page - in case autoSync is turned on, kick off the first autoSync
-   sc_log("sc_refresh() called");
    if (!sc_ClientSyncManager_c.defaultRealTime) {
-      sc_log("real time disabled");
+      sc_log("Real time disabled");
       syncMgr.syncDestination.realTime = false;
    }
    else
-      sc_log("real time enabled");
+      sc_log("Real time enabled");
    syncMgr.postCompleteSync();
 }
 
@@ -236,7 +235,7 @@ function sc_logError(str) {
 }
 
 function sc_rlog(str) {
-   if (sc_PTypeUtil_c && sc_PTypeUtil_c.testMode) {
+   if (typeof sc_testMode !== "undefined" && sc_testMode) {
       var log = window.sc_consoleLog;
       if (log === undefined)
          window.sc_consoleLog = log = [str];
@@ -454,8 +453,6 @@ js_HTMLElement_c.eventAttNames = [];
 // The set of attributes when their value goes to null or "" the attribute name itself is removed
 js_HTMLElement_c.removeOnEmpty = {};
 
-js_HTMLElement_c.trace = true;
-
 // Specifies the standard DOM events - each event can specify a set of alias properties.  A 'callback' function is lazily added to each domEvent entry the first time we need to listen for that DOM event on an object
 js_HTMLElement_c.domEvents = {clickEvent:{}, dblClickEvent:{}, mouseDownEvent:{}, mouseMoveEvent:{}, mouseDownMoveUp:{},
                               mouseOverEvent:{aliases:["hovered"], computed:true}, mouseOutEvent:{aliases:["hovered"], computed:true}, 
@@ -537,7 +534,7 @@ js_HTMLElement_c.processEvent = function(elem, event, listener) {
       if (listener.scEventName === "changeEvent")
          scObj.preChangeHandler(event);
 
-      if (js_Element_c.trace && listener.scEventName != "mouseMoveEvent")
+      if (sc_elementTrace && listener.scEventName != "mouseMoveEvent")
          sc_log("tag event: " + listener.propName + ": " + listener.scEventName + " = " + eventValue);
       sc_Bind_c.sendChange(scObj, listener.propName, eventValue);
       if (ops) {
@@ -1324,7 +1321,6 @@ sc_SyncListener_c.syncResponse = function() {
 
 
 sc_SyncListener_c.response = function(responseText) {
-   sc_log("in response handler");
    this.responseHandled = true;
    this.syncResponse();
    var syncLayerStart = "sync:";
@@ -1563,6 +1559,8 @@ syncMgr = sc_SyncManager_c = {
          sc_logError("unable to apply non-json sync layer");
          return;
       }
+      if (json.length == 0)
+         return;
       var so = JSON.parse(json);
       var sl = so.sync;
       if (!sl) {
@@ -1870,7 +1868,7 @@ syncMgr = sc_SyncManager_c = {
                if (addToReset) {
                   cmd.$name = name;
                   cmd.$curPkg = curPkg;
-                  if (js_Element_c.trace)
+                  if (sc_elementTrace)
                      sc_log("Reset cmd[" + rcmds.length + "]: " + JSON.stringify(cmd, null, 3));
                   rcmds.push(cmd);
                }
@@ -2131,7 +2129,6 @@ syncMgr = sc_SyncManager_c = {
       var jsArr = [];
 
       sc_ClientSyncManager_c.lastSentTime = new Date().getTime();
-      sc_log("Updating lastSentTime=" + sc_ClientSyncManager_c.lastSentTime);
 
       for (var i = 0; i < changes.length; i++) {
          var change = changes[i];
@@ -2255,6 +2252,8 @@ syncMgr = sc_SyncManager_c = {
       }
       if (syncMgr.needsInitSync) {
          url += "&init=true";
+         if (js_scopeContextName)
+            url += "&scopeContextName=" + js_scopeContextName;
       }
       if (isWait) {
          if (sc_SyncManager_c.trace)
@@ -2269,24 +2268,28 @@ syncMgr = sc_SyncManager_c = {
    },
    autoSync:function() {
       if (syncMgr.pendingSends.length == 0) {
-         sc_log("autoSync - writing to destination");
+         if (sc_SyncManager_c.trace)
+            sc_log("Empty autoSync");
          syncMgr.writeToDestination("", [], "");
       }
       else
-         sc_log("autoSync - not writing to destination - " + syncMgr.pendingSends.length + " pending requests - numSends: " + syncMgr.numSendsInProgress + " numWaits:" + syncMgr.numWaitsInProgress);
+         sc_log("Skipping autoSync with: " + syncMgr.pendingSends.length + " pending requests - numInProgress: " + syncMgr.numSendsInProgress + " numWaits:" + syncMgr.numWaitsInProgress);
       syncMgr.autoSyncScheduled = false;
    },
    postCompleteSync:function() {
       if (syncMgr.syncDestination.realTime && syncMgr.pollTime !== -1 && syncMgr.pendingSends.length == 0 &&
-          syncMgr.connected && !syncMgr.autoSyncScheduled && !syncMgr.syncScheduled && !syncMgr.needsClearSync) {
-         sc_log("Post complete sync: scheduling autoSync with: " + syncMgr.pendingSends.length + " pending requests");
+          syncMgr.connected && !syncMgr.autoSyncScheduled && !syncMgr.syncScheduled &&
+          ((typeof sc_testMode !== "undefined" && sc_testMode) || !syncMgr.needsClearSync)) {
+         if (sc_SyncManager_c.trace)
+            sc_log("Post complete sync: scheduling autoSync with: " + syncMgr.pendingSends.length + " pending requests");
          syncMgr.autoSyncScheduled = true;
          setTimeout(syncMgr.autoSync, syncMgr.pollTime);
       }
       else if (!syncMgr.syncDestination.realTime) {
-         sc_log("Post complete sync: realTime disabled");
+         if (sc_SyncManager_c.trace)
+            sc_log("Post complete sync: realTime disabled");
       }
-      else {
+      else if (sc_SyncManager_c.trace) {
          if (syncMgr.autoSyncScheduled)
             sc_log("Post complete sync - auto sync already scheduled");
          else
@@ -2559,3 +2562,10 @@ sc_ClientSyncManager_c = {defaultRealTime: true, syncDelaySet:false, currentSync
 js_PageInfo_c = {
    initMatchingPage: function(){}
 };
+
+var queryStr = window.location.search;
+if (queryStr && queryStr.length > 0) {
+   js_scopeContextName = new URLSearchParams(queryStr).get("scopeContextName");
+}
+else
+   js_scopeContextName = null;

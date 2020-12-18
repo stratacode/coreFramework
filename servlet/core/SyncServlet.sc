@@ -279,6 +279,14 @@ class SyncServlet extends HttpServlet {
                return true;
          }
 
+         if (reInit) {
+            // If the previous session was invalidated from a test script, the client will pass back the scopeContextName param
+            // so that we can reassociate the new session with the test script
+            if (sys != null && sys.options.testMode) {
+               PageDispatcher.updateScopeContext(sys, pageEnt, ctx, request, url);
+            }
+         }
+
          SyncManager mgr = SyncManager.getSyncManager("jsHttp");
 
          int waitTime = -1;
@@ -320,6 +328,8 @@ class SyncServlet extends HttpServlet {
             }
             SyncResult syncRes;
 
+            ctx.addResponseCookies();
+
             if (reInitSync != null) {
                // We got the string builder of just the init sync content that's normally included in the page and need
                // to send it to the client here
@@ -333,7 +343,8 @@ class SyncServlet extends HttpServlet {
             }
 
             // If there is nothing to send back to the client now, we have a waitTime supplied, and we do not have to send back the session cookie we can wait for changes for "real time" response to the client
-            if ((codeUpdates == null || codeUpdates.length() == 0) && waitTime != -1 && !syncRes.anyChanges && syncRes.errorMessage == null && !newSession) {
+            if ((codeUpdates == null || codeUpdates.length() == 0) && waitTime != -1 && !syncRes.anyChanges &&
+                syncRes.errorMessage == null && !newSession && !ctx.cookiesChanged) {
                windowCtx.waitingListener = listener;
                windowCtx.addChangeListener(listener);
 
@@ -387,6 +398,8 @@ class SyncServlet extends HttpServlet {
                finally {
                   windowCtx.removeChangeListener(listener);
                }
+
+               ctx.addResponseCookies();
 
                // Now we've woken up and are ready to look for events
 

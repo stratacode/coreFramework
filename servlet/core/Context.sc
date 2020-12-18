@@ -14,6 +14,7 @@ import sc.util.PerfMon;
 import sc.type.PTypeUtil;
 import sc.lang.html.Window;
 import sc.lang.html.IPageDispatcher;
+import sc.lang.html.WebCookie;
 
 import java.util.Enumeration;
 import java.util.TreeMap;
@@ -67,6 +68,8 @@ class Context {
    static boolean restarting = false;
 
    IPageDispatcher pageDispatcher;
+
+   boolean cookiesChanged = false;
 
    static boolean verbose = false;
    static boolean trace = false;
@@ -195,9 +198,32 @@ class Context {
          // TODO: populate this with data from the request/response - url and compute a size from the device meta-data
          // You might want to render different content based on the device size for example so that would be nice to have here.
          // Of course the location for rendering links the same between client and server
-         Window.setWindow(ctx.windowCtx.getWindow());
+         Window window = ctx.windowCtx.getWindow();
+         Window.setWindow(window);
+         ctx.addResponseCookies();
       }
       return ctx;
+   }
+
+   void addResponseCookies() {
+      Window window = windowCtx.getWindow();
+      List<WebCookie> webCookies = window.cookiesToSet;
+      if (window.sessionInvalid)
+         markSessionInvalid();
+      if (window != null && webCookies != null && !response.isCommitted()) {
+         window.cookiesToSet = null;
+         for (int i = 0; i < webCookies.size(); i++) {
+            WebCookie webCookie = webCookies.get(i);
+            Cookie cookie = new Cookie(webCookie.name, webCookie.value);
+            if (webCookie.path != null)
+               cookie.setPath(webCookie.path);
+            if (webCookie.domain != null)
+               cookie.setDomain(webCookie.domain);
+            cookie.setMaxAge(webCookie.maxAgeSecs);
+            response.addCookie(cookie);
+            cookiesChanged = true;
+         }
+      }
    }
 
    static void clearContext() {

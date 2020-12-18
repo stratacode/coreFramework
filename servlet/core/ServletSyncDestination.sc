@@ -41,7 +41,7 @@ object ServletSyncDestination extends SyncDestination {
              System.out.println("*** Warning: ignoring destination params: " + paramStr);
          int syncReqLen = syncRequestStr.length();
          boolean syncReq = false;
-         if (syncReqLen > 0) {
+         if (syncReqLen > 0 || ctx.needsInvalidate) {
             ctx.write(SYNC_LAYER_START);
             ctx.write(outputLanguage);
             ctx.write(":");

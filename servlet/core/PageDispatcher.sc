@@ -1111,7 +1111,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             }
          }
          if (trace || Element.trace) {
-            sb.append("   js_Element_c.trace = true;\n");
+            sb.append("   sc_elementTrace = true;\n");
          }
          if (Element.verbose) {
             sb.append("   js_Element_c.verbose = true;\n");
@@ -1255,35 +1255,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                if (verbose)
                   ctx.log("page complete: " + traceBuffer);
 
-               // We don't want to register a command context for the '.css' page - i.e. pageEnt.resource = true
-               if (sys != null && isDynPage && (pageEnt.doSync || pageEnt.hasServerTags || (testMode && !pageEnt.resource))) {
-                  // In test mode only we accept the scopeContextName parameter, so we can attach to a specific request's scope context from the test script
-                  String scopeContextName = !sys.options.testMode ? null : request.getParameter("scopeContextName");
-                  // If the command line interpreter is enabled, use a scopeContextName so the command line is sync'd up to CurrentScopeContext
-                  // of the first real page. It's not designed to use the same ScopeContextName for different pages since they do not
-                  // have the same scopes.
-                  if (scopeContextName == null && sys.commandLineEnabled()) {
-                     CurrentScopeContext defaultCtx = CurrentScopeContext.get("defaultCmdContext");
-                     if (defaultCtx == null)
-                        scopeContextName = "defaultCmdContext";
-                  }
-                  if (scopeContextName != null) {
-                     CurrentScopeContext currentCtx = CurrentScopeContext.getCurrentScopeContext();
-                     CurrentScopeContext old = CurrentScopeContext.register(scopeContextName, currentCtx);
-
-                     if (old != null && old != currentCtx) {
-                        WindowScopeContext oldWinCtx = (WindowScopeContext) old.getScopeContextByName("window");
-                        if (oldWinCtx != null) {
-                           System.out.println("--- Moved scopeContextName " + scopeContextName + " from: " +
-                                               oldWinCtx.window.origURL + " to: " + uri);
-                           // Clear this out so that we don't clear out the global CurrentScopeContext name when this window closes
-                           // it is now getting registered with the new WindowScopeContext.
-                           oldWinCtx.setValue("scopeContextName", null);
-                        }
-                     }
-                     ctx.windowCtx.setValue("scopeContextName", scopeContextName);
-                     ctx.windowCtx.window.scopeContextName = scopeContextName;
-                  }
+               if (sys != null && isDynPage) {
+                  updateScopeContext(sys, pageEnt, ctx, request, uri);
                }
             }
             finally {
@@ -1334,6 +1307,39 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                System.err.println("*** Transaction exists after request!");
                tx.rollback();
             }
+         }
+      }
+   }
+
+   public static void updateScopeContext(LayeredSystem sys, PageEntry pageEnt, Context ctx, HttpServletRequest request, String uri) {
+      // We don't want to register a command context for the '.css' page - i.e. pageEnt.resource = true
+      if (sys != null && (pageEnt.doSync || pageEnt.hasServerTags || (testMode && !pageEnt.resource))) {
+      // In test mode only we accept the scopeContextName parameter, so we can attach to a specific request's scope context from the test script
+         String scopeContextName = !sys.options.testMode ? null : request.getParameter("scopeContextName");
+         // If the command line interpreter is enabled, use a scopeContextName so the command line is sync'd up to CurrentScopeContext
+         // of the first real page. It's not designed to use the same ScopeContextName for different pages since they do not
+         // have the same scopes.
+         if (scopeContextName == null && sys.commandLineEnabled()) {
+            CurrentScopeContext defaultCtx = CurrentScopeContext.get("defaultCmdContext");
+            if (defaultCtx == null)
+               scopeContextName = "defaultCmdContext";
+         }
+         if (scopeContextName != null) {
+            CurrentScopeContext currentCtx = CurrentScopeContext.getCurrentScopeContext();
+            CurrentScopeContext old = CurrentScopeContext.register(scopeContextName, currentCtx);
+
+            if (old != null && old != currentCtx) {
+               WindowScopeContext oldWinCtx = (WindowScopeContext) old.getScopeContextByName("window");
+               if (oldWinCtx != null) {
+                  System.out.println("--- Moved scopeContextName " + scopeContextName + " from: " +
+                                      oldWinCtx.window.origURL + " to: " + uri);
+                  // Clear this out so that we don't clear out the global CurrentScopeContext name when this window closes
+                  // it is now getting registered with the new WindowScopeContext.
+                  oldWinCtx.setValue("scopeContextName", null);
+               }
+            }
+            ctx.windowCtx.setValue("scopeContextName", scopeContextName);
+            ctx.windowCtx.window.scopeContextName = scopeContextName;
          }
       }
    }

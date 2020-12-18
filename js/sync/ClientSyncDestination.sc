@@ -58,8 +58,12 @@ object ClientSyncDestination extends SyncDestination {
       // connected to the server.
       if (waitTime != -1 && layerDef.length() == 0 && connected)
          useParams += "&waitTime=" + waitTime;
-      if (needsInitSync)
+      if (needsInitSync) {
+         initSyncPending = true;
          useParams += "&init=true";
+         if (PTypeUtil.testMode && ClientSyncManager.scopeContextName != null)
+            useParams += "&scopeContextName=" + ClientSyncManager.scopeContextName;
+      }
       if (SyncManager.trace) {
          System.out.println("Sync: POST /sync" + useParams);
       }
@@ -170,7 +174,9 @@ object ClientSyncDestination extends SyncDestination {
 
    /** After we've received the response from one sync, unless we've already scheduled another, set up a job to resync if we are doing realtime */
    public void postCompleteSync() {
-      if (pollTime != -1 && numSendsInProgress == 0 && numWaitsInProgress == 0 && connected && !needsClearSync) {
+      if (pollTime != -1 && numSendsInProgress == 0 && numWaitsInProgress == 0 && connected &&
+          // We don't sync again after a logout unless we are in test mode where we need to sync to pick up the next script command
+          (PTypeUtil.testMode || !needsClearSync)) {
          PTypeUtil.addScheduledJob(new Runnable() {
             public void run() {
                if (numSendsInProgress == 0 && numWaitsInProgress == 0) {

@@ -17,6 +17,7 @@ class ClientSyncManager extends SyncManager {
 
    static int currentSyncDelay = -1;    // Set from the syncDelay attribute on text tags. If set to 0
    static boolean syncDelaySet = false;
+   static String scopeContextName;
 
    long lastSentTime = -1;
 

@@ -60,7 +60,7 @@ js_Element_c.stop = function() {
 js_Element_c.tagsToRefresh = [];
 js_Element_c.anyRefreshScheduled = false;
 js_Element_c.globalRefreshScheduled = false;
-js_Element_c.trace = false;
+js_Element_c.trace = sc_elementTrace;
 js_Element_c.verbose = false;
 js_Element_c.verboseRepeat = false;
 js_Element_c.refreshBindings = false;
@@ -70,7 +70,6 @@ js_Element_c.pendingType = js_Element_c.pendingEvent = null;
 js_Element_c.isPageElement = function() { return false; }
 
 var sc_resizeObserver = null;
-var js_scopeContextName = null;
 
 /*
 js_Element_c.getURLPaths = function() {
@@ -3584,8 +3583,8 @@ js_History_c.getObjectId = function ()  {
 };
 
 function sc_updateLinkURL(href) {
-   if (js_scopeContextName != null && href.indexOf("scopeContextName") == -1) {
-      href = sc_URLPath_c.addQueryParam(href, "scopeContextName", js_scopeContextName);
+   if (href.indexOf("scopeContextName") == -1 && typeof sc_ClientSyncManager_c !== "undefined" && sc_ClientSyncManager_c.scopeContextName != null) {
+      href = sc_URLPath_c.addQueryParam(href, "scopeContextName", sc_ClientSyncManager_c.scopeContextName);
    }
    return href;
 }
@@ -3780,7 +3779,7 @@ js_PageInfo_c.addURLProperties = function(urlPropValues, urlProps) {
       this.processURLParams(window.location.pathname, ups, false, urlPropValues, urlProps);
    }
    var qps = this.queryParamProperties;
-   if (qps != null) {
+   if (qps != null || url.indexOf("scopeContextName") != -1) {
       var qix = url.indexOf('?');
       var found = {};
       if (qix != -1 && qix < url.length - 1) {
@@ -3792,28 +3791,33 @@ js_PageInfo_c.addURLProperties = function(urlPropValues, urlProps) {
             if (eix != -1 && eix < qent.length) {
                var en = qent.substring(0, eix);
                var ev = decodeURIComponent(qent.substring(eix+1));
-               for (var j = 0; j < qps.size(); j++) {
-                  var qp = qps.get(j);
-                  if (en.equals(qp.paramName)) {
-                     urlProps.push(qp);
-                     urlPropValues[qp.propName] = ev;
-                     found[qp.propName] = true;
+               if (qps != null) {
+                  for (var j = 0; j < qps.size(); j++) {
+                     var qp = qps.get(j);
+                     if (en.equals(qp.paramName)) {
+                        urlProps.push(qp);
+                        urlPropValues[qp.propName] = ev;
+                        found[qp.propName] = true;
+                     }
                   }
                }
                // Store the current scopeContextName - used only for test scripting
                if (sc_PTypeUtil_c.testMode && en == "scopeContextName") {
-                  js_scopeContextName = ev;
+                  if (typeof sc_ClientSyncManager_c !== "undefined")
+                     sc_clInit(sc_ClientSyncManager_c).scopeContextName = ev;
                }
             }
          }
       }
       // Make sure any properties not in the URL get reset to null - this is required for resetting values
       // like when implementing the back button.
-      for (var j = 0; j < qps.size(); j++) {
-         var qp = qps.get(j);
-         if (!found[qp.propName]) {
-            urlProps.push(qp);
-            urlPropValues[qp.propName] = null;
+      if (qps != null) {
+         for (var j = 0; j < qps.size(); j++) {
+            var qp = qps.get(j);
+            if (!found[qp.propName]) {
+               urlProps.push(qp);
+               urlPropValues[qp.propName] = null;
+            }
          }
       }
    }
