@@ -1242,6 +1242,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                DBTransaction tx = DBTransaction.getCurrent();
                if (tx != null) {
                   tx.commit();
+                  tx.close();
                }
 
                if (ctx != null && ctx.requestComplete) {

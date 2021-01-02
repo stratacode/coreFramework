@@ -204,8 +204,10 @@ class SyncServlet extends HttpServlet {
 
             try {
                DBTransaction tx = DBTransaction.getCurrent();
-               if (tx != null)
+               if (tx != null) {
                   tx.commit();
+                  tx.close();
+               }
             }
             finally {
                // TODO: we could potentially remove the window context here but I think it's good to keep it around for cached back button support. I think the window
@@ -238,8 +240,10 @@ class SyncServlet extends HttpServlet {
             applySyncLayer(ctx, request, receiveLanguage, pageEnt, session, url, syncGroup, false);
 
             DBTransaction tx = DBTransaction.getCurrent();
-            if (tx != null)
+            if (tx != null) {
                tx.commit();
+               tx.close();
+            }
          }
 
          StringBuilder pageOutput;
@@ -378,8 +382,10 @@ class SyncServlet extends HttpServlet {
                         }
 
                         DBTransaction tx = DBTransaction.getCurrent();
-                        if (tx != null)
+                        if (tx != null) {
                            tx.commit();
+                           tx.close();
+                        }
 
                         // Here's where we wait for some event on the listener or a timeout of waitTime
                         try {
@@ -502,8 +508,10 @@ class SyncServlet extends HttpServlet {
                ctx.execLaterJobs();
 
                DBTransaction tx = DBTransaction.getCurrent();
-               if (tx != null)
+               if (tx != null) {
                   tx.commit();
+                  tx.close();
+               }
 
                ctx.execLaterJobs();
 
