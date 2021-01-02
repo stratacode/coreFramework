@@ -9,10 +9,12 @@ import javax.servlet.ServletResponse;
 import javax.servlet.ServletException;
 import java.io.IOException;
 import sc.lang.html.IPage;
+import sc.lang.html.UserAgentInfo;
 
 import sc.servlet.Context;
 import sc.servlet.UploadPage;
 import sc.servlet.DownloadPage;
+
 
 public servlet.core extends webApp, meta, html.core {
    compiledOnly = true;

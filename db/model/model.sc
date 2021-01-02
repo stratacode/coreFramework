@@ -1,6 +1,8 @@
 import sc.db.DBTypeSettings;
 import sc.db.DBTypeDescriptor;
+import sc.db.SchemaSQL;
 import sc.db.DBPropertyDescriptor;
+import sc.db.IdSettings;
 import sc.db.FindBy;
 import sc.db.DBTypeSettings;
 import sc.db.DBPropertySettings;

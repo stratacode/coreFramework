@@ -77,6 +77,12 @@ sys.std {
       globalScope.includeScopeAnnotation = true;
       globalScope.needsField = true;
       globalScope.needsSyncAccessHook = true;
+      globalScope.customResolver =
+          "      sc.obj.ScopeContext _ctx = sc.obj.GlobalScopeDefinition.getGlobalScope();\n" +
+          "      if (_ctx == null) return null;\n" +
+          "      <%= variableTypeName %> _<%= lowerClassName %> = (<%= variableTypeName %>) _ctx.getValue(\"<%= typeClassName %>\");\n";
+      globalScope.customSetter =
+          "      _ctx.setValue(\"<%= typeClassName %>\", _<%= lowerClassName %>);\n";
       registerScopeProcessor("global", globalScope);
 
       // Registers a standard scope which is "per-application", where the application is defined by the appId value in the environment.

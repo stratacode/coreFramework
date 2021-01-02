@@ -101,10 +101,15 @@ public class WindowScopeContext extends BaseScopeContext {
 
       // If we have navigated away from this page, restore the original href without a change event so that if we go back to it, we can
       // navigate away again. Otherwise, the href property does not change and does not get sync'd back
-      if (window != null && window.location != null && !DynUtil.equalObjects(origHref, window.location.href)) {
-         SyncContext syncCtx = (SyncContext) getValue(SyncManager.SC_SYNC_CONTEXT_SCOPE_KEY);
-         if (syncCtx != null)
-            syncCtx.removePreviousValue(window.location, "href");
+      if (window != null) {
+         // Call the closeListeners
+         window.windowClosed();
+
+         if (window.location != null && !DynUtil.equalObjects(origHref, window.location.href)) {
+            SyncContext syncCtx = (SyncContext) getValue(SyncManager.SC_SYNC_CONTEXT_SCOPE_KEY);
+            if (syncCtx != null)
+               syncCtx.removePreviousValue(window.location, "href");
+         }
       }
 
       String scopeContextName = (String) getValue("scopeContextName");

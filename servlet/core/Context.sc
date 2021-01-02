@@ -727,4 +727,19 @@ class Context {
       return builder.toString();
    }
 
+   public String getRemoteIp() {
+      // Substitute in the test remoteIp if in test mode
+      if (PTypeUtil.testMode) {
+         if (windowCtx != null && windowCtx.window.testRemoteIp != null)
+            return windowCtx.window.testRemoteIp;
+      }
+      if (request != null) {
+         String remoteIp = request.getHeader("X-Forwarded-For");
+         if (remoteIp != null)
+            return remoteIp;
+         return request.getRemoteAddr();
+      }
+      return null;
+   }
+
 }
