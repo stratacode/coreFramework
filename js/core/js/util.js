@@ -114,3 +114,34 @@ sc_TextUtil_c.twoDigit = function(val) {
       return "0" + val;
    return val.toString();
 }
+
+sc_TextUtil_c.formatDuration = function(val) {
+   var sb = new jv_StringBuilder();
+   var numDays = millis / dayMillis;
+   millis = millis - numDays * dayMillis;
+   var numHours = millis / hourMillis;
+   millis = millis - numHours * hourMillis;
+   var numMinutes = millis / (1000 * 60);
+   millis = millis - numMinutes * 1000 * 60;
+   var numSecs = millis / 1000;
+   millis = millis - numSecs * 1000;
+   var first = true;
+   if (numDays > 0) {
+      sb.append(numDays + "d");
+      first = false;
+   }
+   if (numHours > 0 || !first) {
+      sb.append(numHours + "h");
+      first = false;
+   }
+   if (numMinutes > 0 || !first) {
+      sb.append(twoDigit(numMinutes) + "m");
+   }
+   if (numSecs > 0 || !first) {
+      sb.append(twoDigit(numSecs));
+      if (millis > 0) {
+         sb.append("." + millis);
+      }
+   }
+   return sb.toString();
+}

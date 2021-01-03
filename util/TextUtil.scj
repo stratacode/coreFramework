@@ -144,8 +144,13 @@ public class TextUtil {
       }
 
       if (!handled) {
-         sb.append(date.getYear() + 1900);
-         sb.append("-");
+         int dateYear = date.getYear();
+         int nowYear = now.getYear();
+
+         if (nowYear != dateYear) {
+            sb.append(date.getYear() + 1900);
+            sb.append("-");
+         }
          sb.append(twoDigit(date.getMonth()+1));
          sb.append("-");
          sb.append(date.getDate());
@@ -165,4 +170,36 @@ public class TextUtil {
       return String.valueOf(val);
    }
 
+   public static String formatDuration(int millisInt) {
+      StringBuilder sb = new StringBuilder();
+      long millis = (long) millisInt;
+      long numDays = millis / dayMillis;
+      millis = millis - numDays * dayMillis;
+      long numHours = millis / hourMillis;
+      millis = millis - numHours * hourMillis;
+      long numMinutes = millis / (1000 * 60);
+      millis = millis - numMinutes * 1000 * 60;
+      long numSecs = millis / 1000;
+      millis = millis - numSecs * 1000;
+      boolean first = true;
+      if (numDays > 0) {
+         sb.append(numDays + "d");
+         first = false;
+      }
+      if (numHours > 0 || !first) {
+         sb.append(numHours + "h");
+         first = false;
+      }
+      if (numMinutes > 0 || !first) {
+         sb.append(twoDigit((int) numMinutes) + "m");
+      }
+      if (numSecs > 0 || !first) {
+         sb.append(twoDigit((int) numSecs));
+         if (millis > 0) {
+            sb.append("." + millis);
+         }
+         sb.append("s");
+      }
+      return sb.toString();
+   }
 }
