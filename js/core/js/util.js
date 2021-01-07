@@ -98,7 +98,7 @@ sc_TextUtil_c.formatUserDate = function(date, includeTime) {
       sb.append("-");
       sb.append(sc_TextUtil_c.twoDigit(date.getMonth()+1));
       sb.append("-");
-      sb.append(date.getDate());
+      sb.append(sc_TextUtil_c.twoDigit(date.getDate()));
    }
    if (includeTime) {
       sb.append(" ");

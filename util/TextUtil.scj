@@ -153,7 +153,7 @@ public class TextUtil {
          }
          sb.append(twoDigit(date.getMonth()+1));
          sb.append("-");
-         sb.append(date.getDate());
+         sb.append(twoDigit(date.getDate()));
       }
       if (includeTime) {
          sb.append(" ");
