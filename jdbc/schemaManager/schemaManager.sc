@@ -27,26 +27,21 @@ public jdbc.schemaManager extends jdbc.pgsql, sys.std {
          String checkFileName = FileUtil.concat(LayerUtil.getDeployedDBSchemasDir(layeredSystem), ds.dbName + ".check");
          if (!new File(checkFileName).canRead()) {
             System.out.println("First time accessing database: " + ds.dbName + " for build layer: " + layeredSystem.buildLayer + " - try to connect to DB");
-            String res = FileUtil.exec(null, true, "psql", "-h", ds.serverName, "-p", String.valueOf(ds.port), "-U", ds.userName, "-c", "select 1;"); // Can we connect to the db server
+            String res = FileUtil.exec(null, true, "psql", "-h", ds.serverName, "-p", String.valueOf(ds.port), "-U", ds.userName, ds.dbName, "-c", "select 1;"); // Can we connect to the db server
             if (res != null) {
-               System.out.println("Connected to DB - trying to access database: " + ds.dbName);
-               res = FileUtil.exec(null, true, "psql", "-h", ds.serverName, "-p", String.valueOf(ds.port), "-U", ds.userName, ds.dbName, "-c", "select 1;");
-               if (res == null) {
-                  System.err.println("*** No database: " + ds.dbName + " found - will try to create it:");
-                  res = FileUtil.exec(null, true, "psql","-U", ds.userName, "-c", "create database " + ds.dbName + ";");
-                  if (res == null) {
-                     System.err.println("*** Failed to create database: " + ds.dbName);
-                  }
-                  else {
-                     System.out.println("Create database: " + ds.dbName + " successfully");
-                     FileUtil.saveStringAsFile(checkFileName, new java.util.Date().toString(), true);
-                  }
-               }
-               else
-                  FileUtil.saveStringAsFile(checkFileName, new java.util.Date().toString(), true);
+               FileUtil.saveStringAsFile(checkFileName, new java.util.Date().toString(), true);
             }
-            else
-               System.err.println("*** Unable to connect to database server: " + ds.serverName + ":" + ds.port + " userName: " + ds.userName);
+            else {
+               System.err.println("*** Not able to connect to database: " + ds.dbName + " with user: " + ds.userName + " found - will try to create it:");
+               res = FileUtil.exec(null, true, "psql","-U", ds.userName, "-c", "create database " + ds.dbName + ";");
+               if (res == null) {
+                  System.err.println("*** Failed to create database: " + ds.dbName);
+               }
+               else {
+                  System.out.println("Created database: " + ds.dbName + " successfully");
+                  FileUtil.saveStringAsFile(checkFileName, new java.util.Date().toString(), true);
+               }
+            }
          }
       }
    }
