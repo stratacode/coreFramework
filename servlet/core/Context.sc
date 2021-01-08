@@ -404,7 +404,7 @@ class Context {
             windowCtx = new WindowScopeContext(windowId, Window.createNewWindow(fullURL, request.getServerName(),
                                request.getServerPort(), request.getRequestURI(), request.getPathInfo(), queryStr,
                                userAgent, pageDispatcher));
-
+            windowCtx.window.windowId = windowId;
             windowCtx.init();
             windowCtx.lastRequestTime = System.currentTimeMillis();
             ctxList.add(windowCtx);

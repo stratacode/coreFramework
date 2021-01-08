@@ -14,6 +14,7 @@ import sc.lang.html.UserAgentInfo;
 import sc.servlet.Context;
 import sc.servlet.UploadPage;
 import sc.servlet.DownloadPage;
+import sc.servlet.JSONPage;
 
 
 public servlet.core extends webApp, meta, html.core {
