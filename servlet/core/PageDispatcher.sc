@@ -936,16 +936,20 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
             if (isPageView && page != null && pageEnt.dynContentPage) {
                page.pageVisitCount++;
 
-            // Using isPageView for the accessBindings and validateCache flag in the OutputCtx for outputing the body.
-            // If we are accessing a tagObject defined in a parent scope like appSession, from a child scope like window
-            // and the page has cached it's output we want to avoid a complete refresh, but still access all bindings
-            // in this context. This will run accessHook to notify the sync system, perform authentication checks, and add this
-            // CurrentScopeContext to any bindings so we know to notify this context. The accessBindings
-            // call does all of that and more - it will check any bindings for us so using that for now as it's a close
-            // enough fit and should only hide problems we would otherwise have to debug (not sure if that's good or bad)
-            // This will force us to call outputBody on all tag objects and incrementally updated the innerHTML and startTagTxt
-            // properties of children that have changed.  It will also make necessary "accessSyncInst" calls in resolving
-            // child objects of the page.
+               // Actions triggered when changing the pageVisitCount might affect cookies and queue up jobs
+               ctx.execLaterJobs();
+               ctx.addResponseCookies();
+
+               // Using isPageView for the accessBindings and validateCache flag in the OutputCtx for outputing the body.
+               // If we are accessing a tagObject defined in a parent scope like appSession, from a child scope like window
+               // and the page has cached it's output we want to avoid a complete refresh, but still access all bindings
+               // in this context. This will run accessHook to notify the sync system, perform authentication checks, and add this
+               // CurrentScopeContext to any bindings so we know to notify this context. The accessBindings
+               // call does all of that and more - it will check any bindings for us so using that for now as it's a close
+               // enough fit and should only hide problems we would otherwise have to debug (not sure if that's good or bad)
+               // This will force us to call outputBody on all tag objects and incrementally updated the innerHTML and startTagTxt
+               // properties of children that have changed.  It will also make necessary "accessSyncInst" calls in resolving
+               // child objects of the page.
                if (page.pageCached) {
                   //PerfMon.enabled = true;
                   //PerfMon.clear();
