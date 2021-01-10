@@ -22,6 +22,12 @@ import java.util.Map;
 
 import sc.util.JSON;
 
+/**
+ * Base class for typical JSON apis that include an HTTP POST with JSON content and return a JSON response.
+ * The subclass defines the input and result types. The JSON util library deserializes the received JSON object
+ * into the input class, calls the processInput method to retrieve the result object, then serializes that
+ * back to JSON for the response.
+ */
 abstract class JSONPage extends BasePage {
    Object inputType;
    Object resultType;
