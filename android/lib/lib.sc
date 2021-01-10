@@ -141,9 +141,9 @@ android.lib extends util {
          // it's possible to do this self-install.  So instead we take out the -u option and force the user to deal with it.
          // It looks like android list --extended provides the set of filters that are valid.  Not the --all ones so that limits which packages you can
          // install from the command line.  Hopefully they'll fix it.   For now we'll prompt you...
-         //String res = FileUtil.exec("yes\n", true, androidCmd, "update", "sdk", "-u", "-s", "-t", "tools,platform-tools,android-19,build-tools-19.0.3");
+         //String res = FileUtil.exec("yes\n", null, true, androidCmd, "update", "sdk", "-u", "-s", "-t", "tools,platform-tools,android-19,build-tools-19.0.3");
          System.out.println("Please choose the latest Platform Tools, Build Tools, SDK Platform API Level 19 and the System image armeabi-v7s then install packages, then close the window to continue");
-         String res = FileUtil.exec(null, false, androidCmd, "update", "sdk", "-s", "-t", "tools,platform-tools");
+         String res = FileUtil.exec(null, null, false, androidCmd, "update", "sdk", "-s", "-t", "tools,platform-tools");
 
          if (!(platformFile.isDirectory())) {
             disabled = true;
@@ -170,7 +170,7 @@ android.lib extends util {
 
       // Don't worry about the emulator unless we are running an application
       if (activated) {
-         String listAvdResult = FileUtil.exec(null, false, androidCmd, "list", "avd");
+         String listAvdResult = FileUtil.exec(null, null, false, androidCmd, "list", "avd");
          int avdIx = listAvdResult == null ? -1 : listAvdResult.indexOf(":");
          if (avdIx == -1)
             throw new IllegalArgumentException("*** Can't list android devices");
@@ -183,7 +183,7 @@ android.lib extends util {
          if (nameIndex == -1) {
             System.out.println("Creaing new android emulator device (avd): SCTest:");
             // newline here as the input string answers "no" to the creating device profile question
-            String createDeviceResult = FileUtil.exec("\n", true, androidCmd, "create", "avd", "--name", "SCTest", 
+            String createDeviceResult = FileUtil.exec("\n", null, true, androidCmd, "create", "avd", "--name", "SCTest",
                                                               "--target", platformTarget, "--abi", "default/armeabi-v7a");
             if (createDeviceResult == null)
                System.err.println("*** Failed to create android test device: SCTest");
@@ -197,7 +197,7 @@ android.lib extends util {
          }
 
          System.out.println("List running emulators");
-         String listDevicesResult = FileUtil.exec(null, true, adbCommand, "devices");
+         String listDevicesResult = FileUtil.exec(null, null, true, adbCommand, "devices");
          if (listDevicesResult == null)
             System.err.println("*** Failed to run the adb list devices command");
          else {
