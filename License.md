@@ -1,4 +1,4 @@
-#StrataCode license agreement
+# StrataCode license agreement
 
 Jeffrey Vroom, an individual software developer ("we") grants you (the "licensee") the right to use the StrataCode source code under the terms of this license agreement.
 
