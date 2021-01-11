@@ -27,9 +27,8 @@ public jdbc.schemaManager extends jdbc.pgsql, sys.std {
          String checkFileName = FileUtil.concat(LayerUtil.getDeployedDBSchemasDir(layeredSystem), ds.dbName + ".check");
          if (!new File(checkFileName).canRead()) {
             System.out.println("First time accessing database: " + ds.dbName + " for build layer: " + layeredSystem.buildLayer + " - try to connect to DB");
-            Map<String,String> envMap = new TreeMap<String,String>();
-            envMap.put("PGPASSWORD");
-            envMap.put(ds.password);
+            java.util.Map<String,String> env = new java.util.TreeMap<String,String>();
+            env.put("PGPASSWORD", ds.password);
             String res = FileUtil.exec(null, env, true, "psql", "-h", ds.serverName, "-p", String.valueOf(ds.port), "-U", ds.userName, ds.dbName, "-c", "select 1;"); // Can we connect to the db server
             if (res != null) {
                FileUtil.saveStringAsFile(checkFileName, new java.util.Date().toString(), true);
