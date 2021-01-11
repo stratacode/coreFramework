@@ -49,8 +49,14 @@ object CServer extends Server {
             if (arg.equals("-vh")) {
                sc.lang.html.Element.verbose = true;
             }
+            if (arg.equals("-vha")) {
+               sc.lang.html.Element.trace = true;
+            }
             else if (arg.equals("-vs"))
-               sc.sync.SyncManager.verbose = true;
+               sc.sync.SyncManager.trace = true;
+            if (arg.equals("-vdb")) {
+               sc.db.DBUtil.verbose = true;
+            }
          }
       }
 
