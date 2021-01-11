@@ -33,6 +33,8 @@ public class WindowScopeContext extends BaseScopeContext {
 
    boolean windowRemoved = false;
 
+   boolean sessionExpired = false;;
+
    public WindowScopeContext(int windowId, Window window) {
       this.windowId = windowId;
       this.window = window;
@@ -103,7 +105,7 @@ public class WindowScopeContext extends BaseScopeContext {
       // navigate away again. Otherwise, the href property does not change and does not get sync'd back
       if (window != null) {
          // Call the closeListeners
-         window.windowClosed();
+         window.windowClosed(sessionExpired);
 
          if (window.location != null && !DynUtil.equalObjects(origHref, window.location.href)) {
             SyncContext syncCtx = (SyncContext) getValue(SyncManager.SC_SYNC_CONTEXT_SCOPE_KEY);

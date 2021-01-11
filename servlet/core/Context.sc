@@ -314,6 +314,7 @@ class Context {
       ArrayList<WindowScopeContext> ctxList = (ArrayList<WindowScopeContext>) session.getAttribute("_windowContexts");
       if (ctxList != null) {
          for (WindowScopeContext winScope:ctxList) {
+            winScope.sessionExpired = true;
             winScope.scopeDestroyed(null);
             winScope.removeScopeContext();
          }
