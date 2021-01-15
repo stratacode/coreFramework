@@ -20,4 +20,10 @@ public db.model {
    compiledOnly = true;
    codeType = sc.layer.CodeType.Framework;
    hidden = true;
+
+   object ddlFileProcessor extends LayerFileProcessor {
+      prependLayerPackage = false;
+      useSrcDir = false;
+      extensions = {"ddl"};
+   }
 }
