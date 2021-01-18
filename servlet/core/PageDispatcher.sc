@@ -1279,6 +1279,11 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          }
          return pageEnts != null && pageEnts.size() > 0 && isDynPage;
       }
+      catch (sc.sync.RuntimeIOException ioex) {
+         if (verbose)
+            System.out.println("*** IO exception: " + ioex + " writing to response");
+         throw new IOException("Sync write error - response closed");
+      }
       catch (RuntimeException exc) {
          DBTransaction tx = DBTransaction.getCurrent();
          if (tx != null) {

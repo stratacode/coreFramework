@@ -401,7 +401,7 @@ class Context {
             windowId = sessionPart + nextWindowId;
             String queryStr = request.getQueryString();
             String fullURL = queryParams == null ? requestURL : requestURL + "?" + queryStr;
-            String userAgent = request.getHeader("User-Agent");
+            String userAgent = getUserAgent();
             windowCtx = new WindowScopeContext(windowId, Window.createNewWindow(fullURL, request.getServerName(),
                                request.getServerPort(), request.getRequestURI(), request.getPathInfo(), queryStr,
                                userAgent, pageDispatcher));
@@ -743,4 +743,15 @@ class Context {
       return null;
    }
 
+   public String getUserAgent() {
+      // Substitute in the test user-agent if in test mode
+      if (PTypeUtil.testMode) {
+         if (Window.globalTestUserAgent != null)
+            return Window.globalTestUserAgent;
+      }
+      if (request != null) {
+         return request.getHeader("User-agent");
+      }
+      return null;
+   }
 }
