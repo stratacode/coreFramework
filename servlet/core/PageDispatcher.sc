@@ -751,6 +751,10 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
 
                //pageElem.validateTags();
 
+               // Since we were last on this page, a refreshTags was scheduled but not executed because the page's context was not set
+               if (pageElem.refreshTagsNeeded)
+                  pageElem.refreshTags(false);
+
                //pageElem.refreshTags(false);
 
                // Run any 'doLater' jobs triggered by the page rendering process or refreshBinding process.  In particular, we might have invalidated server tags
