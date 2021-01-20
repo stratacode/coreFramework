@@ -35,6 +35,7 @@ class Context {
    HttpServletResponse response;
    HttpSession session;
    String mimeType;
+   String referrer;
    boolean mimeTypeSet = false;
    boolean requestComplete;
    boolean windowRequest = true; // When processing a session invalidate event, we are not from a window
@@ -754,4 +755,15 @@ class Context {
       }
       return null;
    }
+
+   public void setReferrer(String rf) {
+      this.referrer = rf;
+   }
+
+   public String getReferrer() {
+      if (referrer == null && request != null)
+         referrer = request.getHeader("Referer");
+      return referrer;
+   }
 }
+
