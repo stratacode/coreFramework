@@ -387,7 +387,9 @@ class SyncServlet extends HttpServlet {
                            tx.close();
                         }
 
+                        //-----
                         // Here's where we wait for some event on the listener or a timeout of waitTime
+                        //-----
                         try {
                            listener.waiting = true;
                            listener.wait(waitTime);
@@ -450,6 +452,24 @@ class SyncServlet extends HttpServlet {
                   DynUtil.execLaterJobs();
 
                   locksAcquired = true;
+
+                  if (ctx.pageInsts != null) {
+                     boolean refreshNeeded = false;
+                     // Check if we were woken up because a binding tried to refresh the page from another one. If so
+                     // we need to call refreshTags which is gone in getPageOutput, just like the call we made originally
+                     for (Object pageInst:ctx.pageInsts) {
+                        if (pageInst instanceof Element && ((Element) pageInst).refreshTagsNeeded) {
+                           refreshNeeded = true;
+                           break;
+                        }
+                     }
+                     if (refreshNeeded) {
+                        pageOutput = pageDispatcher.getPageOutput(ctx, url, pageEnts, urlProps, curScopeCtx, false, false, null, sys, traceBuffer);
+                        if (pageOutput == null)
+                           return true;
+                        repeatSync = true;
+                     }
+                  }
 
                   // checking again now that we have the locks
                   if (windowCtx.waitingListener == listener && !listener.replaced) {
