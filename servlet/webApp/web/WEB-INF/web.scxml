@@ -4,6 +4,7 @@
 
 <%! 
    public String displayName = "Servlets on StrataCode";
+   public int sessionTimeout = 15;
 
    public StringBuilder outputServletTags() { 
       StringBuilder out = new StringBuilder();
@@ -88,7 +89,7 @@
 <web-app>
   <display-name><%= displayName %></display-name>
   <session-config>
-     <session-timeout>15</session-timeout>
+     <session-timeout><%= sessionTimeout %></session-timeout>
   </session-config>
 
   <%= outputServletFilterTags() %>
