@@ -2151,7 +2151,7 @@ syncMgr = sc_SyncManager_c = {
                   evName = "FocusEvent";
                   idProps = ["relatedTarget"];
                }
-               else if (v.constructor === SubmitEvent) {
+               else if (typeof SubmitEvent !== "undefined" && v.constructor === SubmitEvent) {
                   evName = "SubmitEvent";
                   idProps = ["target"];
                }
