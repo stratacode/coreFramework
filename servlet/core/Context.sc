@@ -145,7 +145,7 @@ class Context {
       windowCtx = getWindowScopeContext(true);
       // The window was already assigned a window id in an previous session. Need to at least update the nextWindowId
       // and possibly add some code so that we can just reset the window id
-      updateNextWindowId(windowId);
+      updateNextWindowId(windowCtx, windowId);
       windowCtx.windowId = windowId;
 
       updateWindowContext(windowCtx);
@@ -358,7 +358,7 @@ class Context {
       }
    }
 
-   private void updateNextWindowId(int windowId) {
+   private void updateNextWindowId(WindowScopeContext wctx, int windowId) {
       HttpSession session = getSession();
       if (session == null)
          return;
@@ -369,6 +369,7 @@ class Context {
             if (nextWindowId != null && windowId < nextWindowId)
                return;
             session.setAttribute("_nextWindowId", windowId+1);
+            ctxList.add(wctx);
          }
       }
    }
@@ -392,6 +393,8 @@ class Context {
                }
             }
          }
+         int numCtxs;
+         boolean removed = false;
          synchronized (ctxList) {
             Integer nextWindowId = (Integer) session.getAttribute("_nextWindowId");
             if (nextWindowId == null)
@@ -418,15 +421,25 @@ class Context {
             }
 
             // First we look for the first non-waiting window to remove. Then we just stop the waiter and remove it anyway.
-            if (!enforceMaxWindows(ctxList, false))
-               enforceMaxWindows(ctxList, true);
+            if (!enforceMaxWindows(ctxList, false, windowCtx))
+               removed = enforceMaxWindows(ctxList, true, windowCtx);
+            else
+                removed = true;
+
+            numCtxs = ctxList.size();
          }
+         if (numCtxs > WindowScopeDefinition.maxWindowsPerSession)
+            log("Warning: more active windows in session than configured limit: " + numCtxs);
+         if (verbose && removed)
+            log("Removed a window scope - " + numCtxs + " of " + WindowScopeDefinition.maxWindowsPerSession);
          PTypeUtil.setWindowId(windowId);
       }
       return windowCtx;
    }
 
    final static int WindowIdSeparatorScale = 100;
+
+   final static int MinIdleWindowTime = 5*60*1000;
 
    // Include some integer based on the session id in the windowId to make it resilient to restarts.
    // Although windowId only has to be unique within a given session and is not used for authentication access - that's
@@ -444,35 +457,51 @@ class Context {
       return sessionPart;
    }
 
-   private boolean enforceMaxWindows(ArrayList<WindowScopeContext> ctxList, boolean stopWaitingWindows) {
+   private boolean enforceMaxWindows(ArrayList<WindowScopeContext> ctxList, boolean stopWaitingWindows, WindowScopeContext thisCtx) {
       int numCtxs = ctxList.size();
       WindowScopeContext toRem = null;
       int toRemIx = -1;
+      long now = -1;
       if (numCtxs > WindowScopeDefinition.maxWindowsPerSession) {
          // Look through the window scope contexts and find the least recently used one that does not have a sync request waiting
          for (int i = 0; i < numCtxs; i++) {
             WindowScopeContext wsc = ctxList.get(i);
             SyncWaitListener syncListener = wsc.waitingListener;
+            if (wsc == thisCtx)
+               continue; // Don't remove the one that's currently running
+            // Don't remove one that's attached to a named scope from the script as it might need to wait on it
+            if (wsc.getValue("scopeContextName") != null)
+               continue;
             if (stopWaitingWindows || syncListener == null || !syncListener.waiting) {
                if (toRem == null || (wsc.lastRequestTime == -1 || (toRem.lastRequestTime > wsc.lastRequestTime))) {
+                  if (now == -1)
+                     now = System.currentTimeMillis();
                   toRem = wsc;
                   toRemIx = i;
-                  if (toRem.lastRequestTime == -1)
-                     break;
                }
             }
          }
       }
       if (toRem != null) {
+         if (verbose) {
+            if (toRem.waitingListener != null)
+               log("Removing window scope: " + toRem + " with listener: " + toRem.waitingListener);
+            else
+               log("Removing window scope: " + toRem + " no current listener");
+         }
          toRem.scopeDestroyed(null);
-         if (verbose)
-            log("removing window scope: " + windowId + " for: " + toRem.getTraceId() + " - exceeded max windows per session: " + numCtxs);
          ctxList.remove(toRemIx);
 
          SyncWaitListener syncListener = toRem.waitingListener;
          if (syncListener != null && syncListener.waiting) {
-            syncListener.closed = true;
-            syncListener.notify();
+            synchronized (syncListener) {
+               if (!syncListener.closed) {
+                  syncListener.closed = true;
+                  if (syncListener.waiting) {
+                     syncListener.notify();
+                  }
+               }
+            }
          }
          return true;
       }

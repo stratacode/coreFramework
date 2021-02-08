@@ -1,5 +1,6 @@
 import sc.obj.ScopeDefinition;
 import sc.obj.BaseScopeContext;
+import sc.obj.ScopeContext;
 
 import sc.lang.html.Window;
 
@@ -157,5 +158,19 @@ public class WindowScopeContext extends BaseScopeContext {
       if (name != null && name.equals("window"))
          return window;
       return null;
+   }
+   public void scopeDestroyed(ScopeContext fromParent) {
+      super.scopeDestroyed(fromParent);
+      if (window != null) {
+         DynUtil.dispose(window);
+         if (window.document != null)
+            DynUtil.dispose(window.document);
+         if (window.location != null)
+            DynUtil.dispose(window.location);
+         if (window.screen != null)
+            DynUtil.dispose(window.screen);
+         if (window.history != null)
+            DynUtil.dispose(window.history);
+      }
    }
 }

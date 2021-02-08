@@ -421,13 +421,14 @@ class SyncServlet extends HttpServlet {
                       response.sendError(resultCode, "Session expired for sync - client should do a reset");
                    return true;
                }
-               if (windowCtx.windowClosedByServer) {
+               if (windowCtx.windowClosedByServer || listener.closed) {
+                  String closeReason = listener.closed ? "listener" : "server";
                   if (verbosePage)
-                     ctx.log("sync woke - window closed by server: " + (sleepStartTime == 0 ? "" : " after " + (System.currentTimeMillis() - sleepStartTime) + " millis") + " " + getDebugInfo(request, response));
+                     ctx.log("sync woke - window closed by " + closeReason + ": " + (sleepStartTime == 0 ? "" : " after " + (System.currentTimeMillis() - sleepStartTime) + " millis") + " " + getDebugInfo(request, response));
                   // Sending the 410 - resource gone - response here to signal that we do not want the client to poll again.
                   int resultCode = 410;
                   if (!response.isCommitted())
-                     response.sendError(resultCode, "Session closed by server");
+                     response.sendError(resultCode, "Session closed by " + closeReason);
                   return true;
                }
 
