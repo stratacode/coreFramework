@@ -1,8 +1,10 @@
 import sc.layer.ITestProcessor;
+import sc.layer.LayeredSystem;
 import sc.dyn.RDynUtil;
 import sc.dyn.DynUtil;
 import org.junit.runner.notification.RunListener;
 import org.junit.runner.notification.Failure;
+
 
 public class JUnitTestProcessor extends RunListener implements ITestProcessor {
    boolean typesInited = false;
@@ -20,6 +22,10 @@ public class JUnitTestProcessor extends RunListener implements ITestProcessor {
          }
          typesInited = true;
       }
+
+      LayeredSystem sys = LayeredSystem.getCurrent();
+      if (sys != null) 
+         sys.runtimeInitialized();
    }
 
    public boolean executeTest(Object cl) {

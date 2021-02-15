@@ -13,7 +13,7 @@ jdbc.pgsql extends db.model {
 
    void start() {
       String jarName = "postgresql-" + pgsqlJDBCVersion + ".jar";
-      RepositoryPackage pkg = addRepositoryPackage("pgsqlJDBC", jarName, "url", "https://jdbc.postgresql.org/download/" + jarName, false);
+      RepositoryPackage pkg = addRepositoryPackage("pgsqlJDBC", jarName, "url", "https://jdbc.postgresql.org/download/" + jarName, false, true);
       if (pkg.installedRoot != null && !disabled) {
          classPath = pkg.classPath;
       }

@@ -14,7 +14,7 @@ opengl.lib {
    }
 
    void start() {
-      sc.repos.RepositoryPackage pkg = addRepositoryPackage("javaOpenGL", "url", "http://www.stratacode.com/packages/opengl.zip", true);
+      sc.repos.RepositoryPackage pkg = addRepositoryPackage("javaOpenGL", "url", "http://www.stratacode.com/packages/opengl.zip", true, false);
       if (!disabled) {
          String openGLDir = sc.util.FileUtil.concat(pkg.installedRoot, "lib");
          classPath = sc.util.FileUtil.listFiles(openGLDir,".*\\.jar");

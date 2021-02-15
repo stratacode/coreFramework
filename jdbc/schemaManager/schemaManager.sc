@@ -35,7 +35,9 @@ public jdbc.schemaManager extends jdbc.pgsql, sys.std {
             }
             else {
                System.err.println("*** Not able to connect to database: " + ds.dbName + " with user: " + ds.userName + " found - will try to create it:");
-               res = FileUtil.exec(null, env, true, "psql","-U", ds.userName, "-c", "create database " + ds.dbName + ";");
+               // This requires that the user have a database with ds.userName by default or it fails whereas createdb works
+               //res = FileUtil.exec(null, env, true, "psql","-U", ds.userName, "-c", "create database " + ds.dbName + ";");
+               res = FileUtil.exec(null, env, true, "createdb","-U", ds.userName, ds.dbName);
                if (res == null) {
                   System.err.println("*** Failed to create database: " + ds.dbName);
                }

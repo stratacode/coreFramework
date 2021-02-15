@@ -556,7 +556,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
 
             if (!windowAdded && ctx != null) {
                scopeNames.add("window");
-               scopeCtxs.add(ctx.getWindowScopeContext(true));
+               scopeCtxs.add(ctx.getWindowScopeContext(true, -1));
                // presumably we've already locked at the session, app, global, etc level so no need to lock the lower-level window
             }
          }
@@ -882,7 +882,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          // but not creating a new HashSet for 2 and more
          if (pageEnt.dynContentPage) {
             if (wctx == null) {
-               wctx = ctx.getWindowScopeContext(true);
+               wctx = ctx.getWindowScopeContext(true, -1);
                mgr = (ServerTagManager) wctx.getValue("sc.js.PageServerTagManager");
                stCtx = new ServerTagContext(mgr);
             }

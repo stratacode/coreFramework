@@ -134,6 +134,10 @@ class SyncServlet extends HttpServlet {
 
       boolean enableLog = SyncManager.trace || PageDispatcher.trace;
 
+      //if (enableLog) {
+      //   request.getServletContext().log(Context.getTimeString() + " - sync request start: " + request.getRequestURI());
+      //}
+
       Context ctx = null;
       try {
          TreeMap<String,String> queryParams = Context.initQueryParams(request);
@@ -354,6 +358,8 @@ class SyncServlet extends HttpServlet {
 
                String scopeContextName = (String) windowCtx.getValue("scopeContextName");
 
+               //ctx.log("sync listening for windowCtx: " + windowCtx.window.windowId + " for scopeContextName: " + scopeContextName);
+
                if (locksAcquired) {
                   curScopeCtx.releaseLocks();
                   locksAcquired = false;
@@ -387,6 +393,8 @@ class SyncServlet extends HttpServlet {
                            tx.close();
                         }
 
+                        //ctx.log("About to wait for request: " + request.getRequestURI());
+
                         //-----
                         // Here's where we wait for some event on the listener or a timeout of waitTime
                         //-----
@@ -400,6 +408,8 @@ class SyncServlet extends HttpServlet {
                         finally {
                            listener.waiting = false;
                         }
+
+                        //ctx.log("Waking up sync for request: " + request.getRequestURI());
                      }
                   }
                }

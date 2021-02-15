@@ -34,6 +34,9 @@ js.prebuild {
       jsTypeTemplateLang.needsOutputMethod = true;
       jsTypeTemplateLang.needsJavascript = false;
 
+      jsTypeTemplateLang.templateModifiers = new sc.lang.SemanticNodeList();
+      jsTypeTemplateLang.templateModifiers.add("public");
+
       jsTypeTemplateLang.defaultExtendsType = "sc.lang.js.JSTypeTemplateBase";
       registerLanguage(jsTypeTemplateLang, "sctjs");
    }
