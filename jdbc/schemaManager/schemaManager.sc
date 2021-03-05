@@ -26,26 +26,31 @@ public jdbc.schemaManager extends jdbc.pgsql, sys.std {
       for (DBDataSource ds:layeredSystem.activeDataSources) {
          String checkFileName = FileUtil.concat(LayerUtil.getDeployedDBSchemasDir(layeredSystem), ds.dbName + ".check");
          if (!new File(checkFileName).canRead()) {
-            System.out.println("First time accessing database: " + ds.dbName + " for build layer: " + layeredSystem.buildLayer + " - try to connect to DB");
-            java.util.Map<String,String> env = new java.util.TreeMap<String,String>();
-            env.put("PGPASSWORD", ds.password);
-            String res = FileUtil.exec(null, env, true, "psql", "-h", ds.serverName, "-p", String.valueOf(ds.port), "-U", ds.userName, ds.dbName, "-c", "select 1;"); // Can we connect to the db server
-            if (res != null) {
-               FileUtil.saveStringAsFile(checkFileName, new java.util.Date().toString(), true);
-            }
-            else {
-               System.err.println("*** Not able to connect to database: " + ds.dbName + " with user: " + ds.userName + " found - will try to create it:");
-               // This requires that the user have a database with ds.userName by default or it fails whereas createdb works
-               //res = FileUtil.exec(null, env, true, "psql","-U", ds.userName, "-c", "create database " + ds.dbName + ";");
-               res = FileUtil.exec(null, env, true, "createdb","-U", ds.userName, ds.dbName);
-               if (res == null) {
-                  System.err.println("*** Failed to create database: " + ds.dbName);
+            do {
+               System.out.println("Performing check for database: " + ds.dbName + " for build layer: " + layeredSystem.buildLayer);
+               java.util.Map<String,String> env = new java.util.TreeMap<String,String>();
+               env.put("PGPASSWORD", ds.password);
+               String res = FileUtil.exec(null, env, true, "psql", "-h", ds.serverName, "-p", String.valueOf(ds.port), "-U", ds.userName, ds.dbName, "-c", "select 1;"); // Can we connect to the db server
+               if (res != null) {
+                  System.out.println("Database found: " + ds.dbName);
+                  FileUtil.saveStringAsFile(checkFileName, new java.util.Date().toString(), true);
+                  break;
                }
                else {
-                  System.out.println("Created database: " + ds.dbName + " successfully");
-                  FileUtil.saveStringAsFile(checkFileName, new java.util.Date().toString(), true);
+                  System.err.println("Connection to database: " + ds.dbName + " failed for user: " + ds.userName);
+                  System.out.println("To create the database user run: ");
+                  System.out.println(" createuser -U postgres -P " + ds.userName);
+                  System.out.println("    (First enter sudo password, then password for " + ds.userName + ", then for postgres admin account) ");
+                  System.out.println("Then create the database, owned by scserver that will create and update the schema: ");
+                  System.out.println(" createdb -U postgres -O " + ds.userName + " " + ds.dbName);
+                  if (layeredSystem.cmd != null) {
+                     String input = layeredSystem.cmd.readLine("Ready to test again? (y/n): ");
+                     if (!input.equalsIgnoreCase("y") && !input.equalsIgnoreCase("yes")) {
+                        break;
+                     }
+                  }
                }
-            }
+            } while (true);
          }
       }
    }
