@@ -1,0 +1,4 @@
+<%! web {
+   sessionTimeout = 1; 
+} %>
+<%= super.output() %>
