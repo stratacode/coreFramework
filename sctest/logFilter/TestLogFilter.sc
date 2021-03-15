@@ -35,7 +35,9 @@ public class TestLogFilter {
                                 "{whiteSpace}{digits}-{digits}-{digits}{whiteSpace}{digits}:{digits}:{digits}.{digits}{whiteSpace}java{escapedString}",
                                 "{whiteSpace}{digits}{whiteSpace}AppKit{escapedString}",
                                 "{whiteSpace}{digits}{whiteSpace}libnative{escapedString}",
-                                "{whiteSpace}{digits}{whiteSpace}???{escapedString}"
+                                "{whiteSpace}{digits}{whiteSpace}???{escapedString}",
+                                "WARNING: Illegal reflective access by{escapedString}",
+                                "{digits}{whiteSpace}warning"
                                     };
 
    // List of globally applied patterns which are filtered. The output line will look like the input line except that

@@ -21,7 +21,7 @@ class SyncWaitListener implements IScopeChangeListener, ICodeUpdateListener {
    }
 
    synchronized void scopeChanged() {
-      this.notify();
+      this.notifyAll();
    }
 
    public String toString() {
@@ -30,6 +30,6 @@ class SyncWaitListener implements IScopeChangeListener, ICodeUpdateListener {
 
    // So we get codeUpdates
    public synchronized void codeUpdated() {
-      this.notify();
+      this.notifyAll();
    }
 }

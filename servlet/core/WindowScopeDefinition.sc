@@ -9,7 +9,7 @@ object WindowScopeDefinition extends ScopeDefinition {
    supportsChangeEvents = true;
 
    /**
-     * Each time the user goes to a new page in  your site, they create a new windowContext.
+     * Each time the user goes to a new page in the site, they create a new windowContext.
      * It's good that we maintain the page history, and we need to keep alive windows where
      * there's still an outstanding sync - maybe the user created a new tab. But it's nice to
      * limit the number of these for each browser session because if a user is clicking on a
@@ -31,7 +31,7 @@ object WindowScopeDefinition extends ScopeDefinition {
 
    public ScopeContext getScopeContext(boolean create) {
       Context ctx = Context.getCurrentContext();
-      return ctx == null ? super.getScopeContext(create) : ctx.getWindowScopeContext(create);
+      return ctx == null ? super.getScopeContext(create) : ctx.getWindowScopeContext(create, -1);
    }
 
    public ScopeDefinition getScopeDefinition() {

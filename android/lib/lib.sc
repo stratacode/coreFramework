@@ -109,7 +109,7 @@ android.lib extends util {
       String platformDir;
       if (sdkDir == null) {
          String suffix = getPlatformSuffix();
-         sc.repos.RepositoryPackage pkg = addRepositoryPackage("androidSDK", "url", "http://dl.google.com/android/android-sdk_r23.0.2-" + suffix + ".zip", true);
+         sc.repos.RepositoryPackage pkg = addRepositoryPackage("androidSDK", "url", "http://dl.google.com/android/android-sdk_r23.0.2-" + suffix + ".zip", true, false);
          sdkDir = FileUtil.concat(pkg.installedRoot, "android-sdk-" + suffix);
 
          if (!(new java.io.File(sdkDir).isDirectory())) {

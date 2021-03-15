@@ -27,18 +27,27 @@ object SessionScopeDefinition extends ScopeDefinition {
       if (session == null)
          return super.getScopeContext(create);
       SessionScopeContext ctx;
-      ctx = (SessionScopeContext) session.getAttribute("_sessionScopeContext");
-      if (ctx == null && create) {
-         synchronized (session) {
-            ctx = (SessionScopeContext) session.getAttribute("_sessionScopeContext");
-            if (ctx == null) {
-               ctx = new SessionScopeContext(session);
-               if (ScopeDefinition.verbose)
-                   System.out.println("Creating session context: " + session.getId());
-               session.setAttribute("_sessionScopeContext", ctx);
-               ctx.init();
+
+      try {
+         ctx = (SessionScopeContext) session.getAttribute("_sessionScopeContext");
+         if (ctx == null && create) {
+            synchronized (session) {
+               ctx = (SessionScopeContext) session.getAttribute("_sessionScopeContext");
+               if (ctx == null) {
+                  ctx = new SessionScopeContext(session);
+                  if (ScopeDefinition.verbose)
+                      System.out.println("Creating session context: " + session.getId());
+                  session.setAttribute("_sessionScopeContext", ctx);
+                  ctx.init();
+               }
             }
          }
+      }
+      catch (IllegalStateException exc) {
+         System.err.println("*** Attempt to access session scope with expired session" + exc + " create: " + create);
+         if (create)
+            throw exc; // Unable to create it in this situation
+         return null; // It's already been destroyed so just return null
       }
       return ctx;
    }
