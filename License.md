@@ -1,19 +1,7 @@
-# StrataCode evaluation license agreement
+Copyright 2021 Jeffrey Vroom
 
-Jeffrey Vroom, an individual software developer ("we") grants you (the "licensee") the right to use the StrataCode source code under the terms of this license agreement.
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
-It pertains to source code or compiled jar files downloaded from www.stratacode.com and source code accessed in the stratacode github repository.
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-This is an evaluation license for experimental software that grants the licensee the rights to evaluate the software for a period of one year from the date of download. 
-
-You must obtain a different license for commercial use, or to redistribute the licensed source, or compiled jar files.
-
-By downloading the software, you agree to not decompile, reverse engineer, or process compiled class files except in using them as they are intended with the published java runtime standards.
-
-We do not indemnify this work against patent infringement claims from others.
-
-Downloading the software implies agreement with the terms of this license. 
-
-There is no cost to you for downloading the software.
-
-Software is provide 'as is' with no express or implied warranty and we assume no liability for damages caused through the use of this software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
