@@ -1300,8 +1300,13 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
       finally {
          try {
             if (ctx != null) {
-               ctx.execLaterJobs();
-               Context.clearContext();
+               try {
+                  ctx.execLaterJobs();
+               }
+               finally {
+                  Context.clearContext();
+                  ctx = null;
+               }
             }
          }
          catch (RuntimeException exc) {
@@ -1321,6 +1326,8 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                System.err.println("*** Transaction exists after request!");
                tx.rollback();
             }
+            if (ctx != null)
+               System.err.println("*** Context exists after request!");
          }
       }
    }

@@ -1,4 +1,6 @@
 import org.eclipse.jetty.webapp.Configuration;
+import sc.obj.ScopeDefinition;
+import sc.sync.SyncManager;
 
 object CServer extends Server {
    object httpConnector extends ServerConnector {
@@ -49,13 +51,31 @@ object CServer extends Server {
             if (arg.equals("-vh")) {
                sc.lang.html.Element.verbose = true;
             }
-            if (arg.equals("-vha")) {
+            else if (arg.equals("-vha")) {
                sc.lang.html.Element.trace = true;
             }
             else if (arg.equals("-vs"))
                sc.sync.SyncManager.trace = true;
-            if (arg.equals("-vdb")) {
+            else if (arg.equals("-vsa")) {
+               SyncManager.trace = true;
+               SyncManager.traceAll = true;
+               SyncManager.verbose = true;
+               ScopeDefinition.trace = true;
+               ScopeDefinition.verbose = true;
+               ScopeDefinition.trace = true;
+            }
+            else if (arg.equals("-vdb")) {
                sc.db.DBUtil.verbose = true;
+            }
+            else if (arg.equals("-vlck")) {
+               ScopeDefinition.traceLocks = true;
+            }
+            else if (arg.equals("-vsv")) {
+               SyncManager.verbose = true;
+               ScopeDefinition.verbose = true;
+            }
+            else if (arg.equals("-vp")) {
+               sc.util.PerfMon.enabled = true;
             }
          }
       }
