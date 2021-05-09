@@ -27,6 +27,7 @@ public class TestLogFilter {
    public String[] globalExcludePatterns = {
                                 // chrome error messages - weird errors show up in headless chrome so ignoring - turns out this is probably only needed for the chrome std-out log which hasn't been that helpful so far
                                 "\\[{digits}/{digits}.{digits}:ERROR:{escapedString}",
+                                "\\[{digits}/{digits}.{digits}:WARNING:{escapedString}",
                                 // scc build stamps for when you run -v
                                 "{whiteSpace}scc version: v{digits}.{digits}.{digits}[-{identifier}][_{identifier}].b{digits}{whiteSpace}@{whiteSpace}{escapedString}",
                                 "{whiteSpace}/Applications/Google Chrome.app/Contents/Versions/{digits}.{digits}.{digits}.{digits}/Google Chrome Framework.framework/Versions/Current/Libraries/libswiftshader_libGLESv2.dylib: stat\\(\\) failed with errno=1{whiteSpace}",

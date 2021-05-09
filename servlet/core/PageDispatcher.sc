@@ -807,6 +807,7 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
          boolean newPageInst = page.pageDispatcher == null;
 
          page.pageDispatcher = this;
+         page.pageEntry = pageEnt;
 
          if (curScopeCtx != null) {
             WindowScopeContext winCtx = (WindowScopeContext) curScopeCtx.getScopeContextByName("window");
@@ -840,6 +841,17 @@ class PageDispatcher extends HttpServlet implements Filter, ITypeChangeListener,
                   Bind.addListener(page, urlPropName, listener, sc.bind.IListener.VALUE_VALIDATED);
                }
             }
+         }
+      }
+   }
+
+   public void destroyPage(IPage page, IPageEntry pe) {
+      PageEntry pageEnt = (PageEntry) pe;
+      List<String> urlPropNames = pageEnt.allURLProps;
+      if (urlPropNames != null) {
+         for (int i = 0; i < urlPropNames.size(); i++) {
+            String urlPropName = urlPropNames.get(i);
+            Bind.removeListenerOfType(page, sc.type.TypeUtil.resolveObjectPropertyMapping(page, urlPropName), URLRefreshListener.class, sc.bind.IListener.VALUE_VALIDATED);
          }
       }
    }
