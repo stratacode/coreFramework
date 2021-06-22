@@ -1285,7 +1285,7 @@ js_Document_c.getId = function() {
    return "document";
 };
 
-js_HTMLElement_c.tagNameToType = {input:js_Input, form:js_Form, select:js_Select, option:js_Option};
+js_HTMLElement_c.tagNameToType = {input:js_Input, textarea:js_Input, form:js_Form, select:js_Select, option:js_Option};
 js_ServerTag_c = {
    equals: function(s1,s2) {
       return s1 === s2 || (s1 != null && s2 != null && s1.id === s2.id); // TODO: check if props have changed
@@ -2453,7 +2453,7 @@ syncMgr = sc_SyncManager_c = {
          newAtts[attName] = true;
          newAttsArr.push(attName);
       }
-      var isInput = tagName === "input";
+      var isInput = tagName === "input" || tagName === "textarea";
       for (var i = 0; i < newAttsArr.length; i++) {
          var newAttName = newAttsArr[i];
          var oldVal = isInput && newAttName === "value" ? elem.value : elem.getAttribute(newAttName);
