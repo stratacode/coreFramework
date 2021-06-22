@@ -25,7 +25,7 @@ import sc.servlet.Context;
 import java.util.Map;
 
 abstract class DownloadPage extends BasePage {
-
+   /** The root directory for resolving downloads in the default getFilePath(String urlPath) impl */
    String downloadPath;
    String startUrl = "";
 
@@ -36,7 +36,7 @@ abstract class DownloadPage extends BasePage {
    public StringBuilder output(OutputCtx octx) {
       Context ctx = Context.getCurrentContext();
 
-      if (downloadDir == null) {
+      if (downloadDir == null && downloadPath != null) {
          File f = new File(downloadPath);
          if (!f.isDirectory())
             ctx.error("No download directory: " + downloadPath);
@@ -53,6 +53,7 @@ abstract class DownloadPage extends BasePage {
       String path = req.getRequestURI();
       if (startUrl != null) {
          if (!path.startsWith(startUrl)) {
+            ctx.error("DownloadPage mismatching startUrl of: " + startUrl + "  does not match request url:" + path);
             ctx.sendError(404, "File not found");
             return null;
          }
@@ -67,9 +68,15 @@ abstract class DownloadPage extends BasePage {
       String mimeType = mimeTypes.get(fileType);
       if (mimeType == null) {
          ctx.sendError(404, "File extension: " + fileType + " not supported");
+         return null;
       }
 
-      String filePath = FileUtil.concat(downloadPath, path);
+      String filePath = getFilePath(path);
+      if (filePath == null) {
+         ctx.sendError(404, "File path: " + path + " not handled");
+         return null;
+      }
+
       File file = new File(filePath);
 
       long prevLastModTime = req.getDateHeader("If-Modified-Since");
@@ -103,5 +110,9 @@ abstract class DownloadPage extends BasePage {
       }
       ctx.requestComplete = true;
       return null;
+   }
+
+   String getFilePath(String urlPath) {
+      return FileUtil.concat(downloadPath, urlPath);
    }
 }
