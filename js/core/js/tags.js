@@ -2261,6 +2261,18 @@ js_Input_c.changeValue = function(v) {
    sc_Bind_c.sendEvent(sc_IListener_c.VALUE_CHANGED, this, "changeEvent", evt);
 }
 
+function js_Textarea() {
+   js_HTMLElement.apply(this, arguments);
+   this.value = null;
+   this.tagName = this.type = "textarea";
+   this.liveEdit = "on";
+   this.liveEditDelay = 0;
+}
+js_Textarea_c = sc_newClass("sc.lang.html.Textarea", js_Textarea, js_Input, null);
+
+js_Textarea_c.refreshAttNames = js_HTMLElement_c.refreshAttNames.concat(["value"]);
+js_Textarea_c.eventAttNames = js_HTMLElement_c.eventAttNames.concat(["value", "changeEvent"]);
+
 function js_Button() {
    js_Input.call(this);
 }
