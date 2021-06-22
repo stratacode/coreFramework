@@ -1,0 +1,42 @@
+<html>
+
+<body>
+   <h1>Java to Javascript Converter</h1>
+
+   <div id="intro">
+      Welcome to the free online Java to JS converter.
+      <br/>
+      Java code is converted into readable Javascript code
+      using the StrataCode Java to JS converter. Main limitations:
+      <ul>
+         <li>Java 1.8 syntax with a subset of Java 1.6 utility libraries, some implemented by hand in
+          javasys.js and some converted from the Apache utils with minor edits in jvsys.js.
+         <li>All Number types in Java represented as the one JS number type.
+      </ul>
+   </div>
+
+   <div id="mainForm">
+       Enter Java Code for one class<br/>
+       <textarea id="inputTextarea" rows="40" cols="80" changeEvent="=: inputSrcText = value"
+                 value="=: inputSrcText = value"/>
+       <!-- <input id="inputTextarea" changeEvent="=: inputSrcText = value"/> -->
+
+       <br/>
+       <input id="doCvtButton" value="Convert to JS" type="button" clickEvent="=: doConvert(0)"/>
+
+      <br/>
+      <div id="errorsView"><%= inputErrors %></div>
+
+      <br/>
+      JS dependencies:
+      <div id="jsFilesView" repeat=":= jsFiles" repeatVarName="jsFile">
+         <a href=":= jsFilePrefix + jsFile"><%= jsFile %></a>
+      </div>
+      <p/>
+      JS code for this class:<br/>
+      <pre id="resultView"><%= resultSrcText %></pre>
+   </div>
+
+</body>
+
+</html>
