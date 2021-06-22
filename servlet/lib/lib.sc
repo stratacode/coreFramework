@@ -13,7 +13,7 @@ servlet.lib {
       // Exclude this layer from these runtimes. 
       excludeRuntimes("js", "gwt", "android");
 
-      addProcess(sc.layer.ProcessDefinition.create("Server", "java", true));
+      addProcess(ProcessDefinition.create(layeredSystem, "Server", "java", true));
    }
 
    // override start() to run code once all layers have been initialized

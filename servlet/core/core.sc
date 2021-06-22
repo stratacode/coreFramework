@@ -25,7 +25,7 @@ public servlet.core extends webApp, meta, html.core {
 
    public void init() {
       // Split this layer and it's sublayers out into a new process using the default 'java' runtime
-      addProcess(sc.layer.ProcessDefinition.create("Server", "java", true));
+      addProcess(ProcessDefinition.create(layeredSystem, "Server", "java", true));
 
       if (activated) {
          // Turns on URL access to the layered system - only for the active layer

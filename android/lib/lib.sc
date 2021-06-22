@@ -29,7 +29,7 @@ android.lib extends util {
    needsIndexRefresh = true; // We add files to the "gen" directory in the pre-build commands.  This tells the layer to flush the cache after each phase
 
    public void init() {
-      createDefaultRuntime("android", false);
+      layeredSystem.createDefaultRuntime("android", false);
 
       // Do not load these android classes into the dynamic runtime, just like javascript
       sc.layer.DefaultRuntimeProcessor rtproc = (sc.layer.DefaultRuntimeProcessor) definedRuntime;

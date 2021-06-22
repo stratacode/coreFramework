@@ -16,7 +16,7 @@ js.lib {
       // of that LayeredSystem.
       LayeredSystem sys = getLayeredSystem();
       sc.lang.js.JSRuntimeProcessor runtimeProc = (sc.lang.js.JSRuntimeProcessor)
-                                   LayeredSystem.getRuntime("js");
+                                   sys.getRuntime("js");
       if (runtimeProc == null) {
          runtimeProc = new sc.lang.js.JSRuntimeProcessor();
          runtimeProc.addSyncProcessName("Server");
