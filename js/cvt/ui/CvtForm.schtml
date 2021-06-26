@@ -7,35 +7,78 @@
       Welcome to the free online Java to JS converter.
       <br/>
       Java code is converted into readable Javascript code
-      using the StrataCode Java to JS converter. Main limitations:
+      using the StrataCode Java to JS converter.
+      <p/>
+      Supports:
       <ul>
          <li>Java 1.8 syntax with a subset of Java 1.6 utility libraries, some implemented by hand in
           javasys.js and some converted from the Apache utils with minor edits in jvsys.js.
          <li>All Number types in Java represented as the one JS number type.
       </ul>
+      <div class="note">
+         This online form only supports class-at-a-time conversion for standalone classes using a subset of Java utils.
+         To convert a complete project, <a href="https://www.stratacode.com/download">download</a>
+         the free + open source 'scc' command and follow
+         <a href="https://www.stratacode.com/doc/javaToJS.html">these instructions</a>.
+      </div>
    </div>
+   <p/>
 
    <div id="mainForm">
-       Enter Java Code for one class<br/>
-       <textarea id="inputTextarea" rows="40" cols="80" changeEvent="=: inputSrcText = value"
-                 value="=: inputSrcText = value"/>
-       <!-- <input id="inputTextarea" changeEvent="=: inputSrcText = value"/> -->
+       <div id="sourceSideBySide">
+          <div>
+          Enter Java Code for one class<br/>
+          <textarea id="inputTextarea" rows="40" cols="80" changeEvent="=: inputSrcText = value"
+                    value="=: inputSrcText = value"/>
+          </div>
+          <div>
+          Result Javascript:<br/>
+          <textarea id="resultTextArea" rows="40" cols="80"><%= resultSrcText %></textarea>
+          </div>
+      </div>
 
        <br/>
-       <input id="doCvtButton" value="Convert to JS" type="button" clickEvent="=: doConvert(0)"/>
+       <div id="licenseAgreement">
+          This software is provided free for limited use based on the resources available on a small, private VPS.
+          <br/>
+          Conversion is provided 'as is' with no express or implied warranty and we assume no liability for damages caused through the use of this software.
+       </div>
+       <br/>
+       <input id="doCvtButton" value="Convert Java to JS" type="button" clickEvent="=: doConvert(0)"/>
 
       <br/>
-      <div id="errorsView"><%= inputErrors %></div>
+      <div id="errorsView" visible=":= inputErrors != null && inputErrors.length() > 0">
+         Errors from input file:
+         <pre id="errorMessagesView"><%= inputErrors %></pre>
 
-      <br/>
-      JS dependencies:
-      <div id="jsFilesView" repeat=":= jsFiles" repeatVarName="jsFile">
-         <a href=":= jsFilePrefix + jsFile"><%= jsFile %></a>
+         Warning: any unresolved type references are left untranslated in the generated code
       </div>
-      <p/>
-      JS code for this class:<br/>
-      <pre id="resultView"><%= resultSrcText %></pre>
+
+      <br/>
+      <div id="depsView" visible=":= jsFiles != null && jsFiles.size() > 0">
+         Generated JS requires these dependencies:
+         <div id="jsFilesView" repeat=":= jsFiles" repeatVarName="jsFile">
+            <a href=":= jsFilePrefix + jsFile"><%= jsFile %></a>
+         </div>
+      </div>
    </div>
+
+   <style type="text/css">
+      #sourceSideBySide {
+         display: flex;
+         flex-direction: row;
+      }
+      #licenseAgreement {
+         font-size: 80%;
+      }
+      #errorsView {
+         font-color: #cc1212;
+      }
+      .note {
+         font-style: italic;
+         font-size: 90%;
+      }
+   </style>
 
 </body>
 

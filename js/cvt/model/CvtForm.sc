@@ -12,6 +12,7 @@ import sc.lang.js.JSRuntimeProcessor.JSFileBodyCache;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
 import sc.parser.IParseNode;
@@ -39,11 +40,16 @@ object CvtForm {
       CvtManager.CvtImpl cvtImpl = mgr.convertImpls[cvtIx];
       if (inputSrcText == null || inputSrcText.length() == 0) {
          inputErrors = "No input source code";
+         resultSrcText = null;
+         jsFiles = null;
+         return;
       }
       Object parseRes = cvtImpl.fromLang.getInputLanguage().parseString(inputSrcText);
       if (parseRes instanceof ParseError) {
          ParseError parseError = (ParseError) parseRes;
          inputErrors = "Parse error: " + parseError.errorStringWithLineNumbers(inputSrcText);
+         resultSrcText = null;
+         jsFiles = null;
          return;
       }
 
@@ -51,6 +57,8 @@ object CvtForm {
 
       if (!(semNode instanceof JavaModel)) {
          inputErrors = "Input language: " + cvtImpl.fromLang.getInputLanguage() + " returned invalid type: " + parseRes;
+         resultSrcText = null;
+         jsFiles = null;
          return;
       }
 
@@ -102,6 +110,8 @@ object CvtForm {
          if (inputModel.hasErrors()) {
             inputErrors = inputModel.getErrorMessagesAsString();
          }
+         else
+            inputErrors = "";
 
          if (cvtSys.runtimeProcessor != null)
             cvtSys.runtimeProcessor.postStart(cvtSys, cvtLayer);
@@ -123,9 +133,8 @@ object CvtForm {
          else
             resultSrcText = FileUtil.getFileAsString(xformFiles.get(numXformFiles-1).absFileName);
 
-         jsFiles = cvtSys.getCompiledFiles("js", inputModel.getModelTypeName());
-
-         inputErrors = "";
+         jsFiles = new ArrayList<String>(cvtSys.getCompiledFiles("js", inputModel.getModelTypeName()));
+         jsFiles.remove(jsFile); // we display this text in resultSrcText so no need for the dependent file
       }
       finally {
          if (cvtSys.runtimeProcessor != null)
