@@ -12,8 +12,7 @@
          <li>Java 1.8 syntax, many Java 1.6 utils:
          <a href="https://github.com/stratacode/coreFramework/tree/master/js/sys/java/lang" target="scdoctab">java.lang</a>, and
          <a href="https://github.com/stratacode/coreFramework/tree/master/js/sys/java/util" target="scdoctab">java.util</a>
-         Use a separate module (jvsys.js), or include just classes used.
-         Some <a href="https://github.com/stratacode/coreFramework/tree/master/js/core/js/javasys.js" target="scdoctab">system native</a> classes.
+         Either use a separate module that includes all of the supported java classes, or include only the java classes used in the generated code.
          <li>All Number types in Java represented as the one JS number type.
       </ul>
       <div id="licenseAgreement" visible=":= showTerms">
@@ -24,7 +23,7 @@
          <br/>
          Uploaded code is held on the server in a session tied to a cookie in your browser until the session expires (after 15 minutes of inactivity).
          We assume no liability for source code accidentally exposed to 3rd parties due to bugs in the software.
-         If you have sensitive code, we recommend that you download scc and do the conversion on your own system.
+         If you have sensitive code to convert, we recommend that you download scc and do the conversion on your own system.
          <br/>
          <input type="button" value="Accept" clickEvent="=: acceptedTerms()"/>
       </div>
