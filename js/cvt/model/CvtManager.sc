@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import sc.layer.LayeredSystem;
+import sc.layer.LayerUtil;
 import sc.layer.Options;
 import sc.layer.SystemContext;
 
@@ -58,7 +59,8 @@ object CvtManager {
       int ix = 0;
       LayeredSystem currentSys = LayeredSystem.getCurrent();
       try {
-         currentSys.acquireDynLock(false);
+         if (currentSys != null)
+            currentSys.acquireDynLock(false);
          for (CvtImpl cvtImpl:convertImpls) {
             Options options = new Options();
             if (cvtImpl.sys != null) {
@@ -66,13 +68,22 @@ object CvtManager {
                continue;
             }
             options.installLayers = false;
-            options.scInstallDir = currentSys.options.scInstallDir;
-            options.mainDir = currentSys.options.mainDir;
+            String layerPath;
+            if (currentSys == null) {
+               options.scInstallDir = "/usr/local/scc";
+               options.mainDir = "/usr/local/scMain";
+               layerPath = LayerUtil.getLayerPathFromMainDir(options.mainDir);
+            }
+            else {
+               options.scInstallDir = currentSys.options.scInstallDir;
+               options.mainDir = currentSys.options.mainDir;
+               layerPath = currentSys.layerPath;
+            }
             // Need the keep the parse nodes around after transform for memory
             options.clearParseNodes = false;
             List cvtLayerList = Arrays.asList(cvtImpl.convertLayerList);
             // Create a new system using the same layer path
-            LayeredSystem sys = new LayeredSystem(cvtLayerList, null, currentSys.layerPath, options, null, null, false, null, new SystemContext());
+            LayeredSystem sys = new LayeredSystem(cvtLayerList, null, layerPath, options, null, null, false, null, new SystemContext());
             cvtImpl.sys = sys;
 
             if (!sys.buildSystem(null, false, true)) {
@@ -84,17 +95,22 @@ object CvtManager {
                }
                sys.buildCompleted(true);
             }
-            if (sys.anyErrors)
-               currentSys.error("Build system for layer list: " + cvtLayerList + " failed");
+            LayeredSystem errorSys = currentSys != null ? currentSys : sys;
+            if (sys.anyErrors) {
+               errorSys.error("Build system for layer list: " + cvtLayerList + " failed");
+            }
             else
-               currentSys.info("Build system for layer list: " + cvtLayerList + " successful");
+               errorSys.info("Build system for layer list: " + cvtLayerList + " successful");
 
             cvtImpl.jsPrefix = cvtLibURL + sys.buildLayer.layerName.replace('.', '_') + "/";
          }
       }
       finally {
-         LayeredSystem.setCurrent(currentSys);
-         currentSys.releaseDynLock(false);
+         if (currentSys != null) {
+            LayeredSystem.setCurrent(currentSys);
+            currentSys.releaseDynLock(false);
+
+         }
       }
    }
 

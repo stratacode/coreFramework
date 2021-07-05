@@ -98,8 +98,8 @@
                    clickEvent="=: doClear()"/>
          </div>
       </div>
-      <p/>
       <div id="stepThreeView" visible=":= uploadVisible">
+         <p/>
          <div class="sectionTitle">Select options and convert</div>
          <div id="cvtButtonsView" class="indentView">
             Use module for generated java utils <input type="checkbox" checked=":=: useModules"/>
