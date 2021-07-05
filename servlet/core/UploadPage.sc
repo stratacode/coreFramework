@@ -30,6 +30,8 @@ abstract class UploadPage extends BasePage {
 
    Path uploadDir = null;
 
+   boolean allowMultiple = true;
+
    public UploadResult processUpload(Map<String,String> uploadedFiles, Map<String,String> formFields) {
       return new UploadResult("success", null);
    }
@@ -67,6 +69,8 @@ abstract class UploadPage extends BasePage {
 
       // TODO: make sure user is logged in and add site or some top-level directory to separate the images being uploaded
 
+      Map<String,Integer> partIndexes = allowMultiple ? new HashMap<String,Integer>() : null;
+
       try {
          for (Part part: req.getParts()) {
             String partName = part.getName();
@@ -76,12 +80,22 @@ abstract class UploadPage extends BasePage {
             String useFileName = fileName == null ? null : URLUtil.cleanFileName(fileName);
 
             if (!StringUtil.isEmpty(useFileName)) {
-                Path outputFile = uploadDir.resolve(fileName);
+               if (allowMultiple) {
+                  Integer idx = partIndexes.get(partName);
+                  if (idx == null)
+                     idx = 0;
+                  partIndexes.put(partName, idx+1);
+                  partName = partName + idx;
+               }
+
+               Path outputFile = uploadDir.resolve(fileName);
                 try (InputStream inputStream = part.getInputStream();
                      OutputStream outputStream = Files.newOutputStream(outputFile, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
                    if (FileUtil.copyStream(inputStream, outputStream)) {
-                      uploadedFiles.put(partName, fileName);
+                      String oldVal = uploadedFiles.put(partName, fileName);
                       ctx.log("Uploaded file: " + outputFile + " for: " + partName);
+                      if (oldVal != null)
+                         ctx.error("Unexpected multi-valued form field: " + partName);
                    }
                    else
                       ctx.error("Failed to copy stream to: " + outputFile);
@@ -91,8 +105,10 @@ abstract class UploadPage extends BasePage {
                try (InputStream inputStream = part.getInputStream(); ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
                   if (FileUtil.copyStream(inputStream, bos)) {
                      String value = new String(bos.toByteArray());
-                     formFields.put(partName, value);
+                     String oldValue = formFields.put(partName, value);
                      ctx.log("upload form field: " + partName + " : " + value);
+                     if (oldValue != null)
+                        ctx.error("Unexpected multi-valued form field: " + partName);
                   }
                }
             }

@@ -1,85 +1,196 @@
-<html>
-
-<body>
-   <h1>Java to Javascript Converter</h1>
-
+<div>
+   <h2>Java to Javascript converter</h2>
    <div id="intro">
       Welcome to the free online Java to JS converter.
       <br/>
-      Java code is converted into readable Javascript code
-      using the StrataCode Java to JS converter.
+      Java code is converted into readable Javascript code using StrataCode, an
+      <a href="https://github.com/stratacode" target="scdoctab">open source</a> side project by
+      <a href="https://www.stratacode.com/contact.html" target="scdoctab">Jeff Vroom</a>.
       <p/>
-      Supports:
+      <div class="sectionTitle">Features</div>
       <ul>
-         <li>Java 1.8 syntax with a subset of Java 1.6 utility libraries, some implemented by hand in
-          javasys.js and some converted from the Apache utils with minor edits in jvsys.js.
+         <li>Java 1.8 syntax, many Java 1.6 utils:
+         <a href="https://github.com/stratacode/coreFramework/tree/master/js/sys/java/lang" target="scdoctab">java.lang</a>, and
+         <a href="https://github.com/stratacode/coreFramework/tree/master/js/sys/java/util" target="scdoctab">java.util</a>
+         Use a separate module (jvsys.js), or include just classes used.
+         Some <a href="https://github.com/stratacode/coreFramework/tree/master/js/core/js/javasys.js" target="scdoctab">system native</a> classes.
          <li>All Number types in Java represented as the one JS number type.
       </ul>
-      <div class="note">
-         This online form only supports class-at-a-time conversion for standalone classes using a subset of Java utils.
-         To convert a complete project, <a href="https://www.stratacode.com/download">download</a>
-         the free + open source 'scc' command and follow
-         <a href="https://www.stratacode.com/doc/javaToJS.html">these instructions</a>.
+      <div id="licenseAgreement" visible=":= showTerms">
+         <div class="sectionTitle">Terms of use</div>
+         This form is provided free for limited use based on the resources available on a small, private VPS.
+         <br/>
+         Conversion is provided 'as is' with no express or implied warranty and we assume no liability for damages caused through the use of this software.
+         <br/>
+         Uploaded code is held on the server in a session tied to a cookie in your browser until the session expires (after 15 minutes of inactivity).
+         We assume no liability for source code accidentally exposed to 3rd parties due to bugs in the software.
+         If you have sensitive code, we recommend that you download scc and do the conversion on your own system.
+         <br/>
+         <input type="button" value="Accept" clickEvent="=: acceptedTerms()"/>
       </div>
    </div>
    <p/>
 
    <div id="mainForm">
-       <div id="sourceSideBySide">
-          <div>
-          Enter Java Code for one class<br/>
-          <textarea id="inputTextarea" rows="40" cols="80" changeEvent="=: inputSrcText = value"
-                    value="=: inputSrcText = value"/>
-          </div>
-          <div>
-          Result Javascript:<br/>
-          <textarea id="resultTextArea" rows="40" cols="80"><%= resultSrcText %></textarea>
-          </div>
-      </div>
-
-       <br/>
-       <div id="licenseAgreement">
-          This software is provided free for limited use based on the resources available on a small, private VPS.
-          <br/>
-          Conversion is provided 'as is' with no express or implied warranty and we assume no liability for damages caused through the use of this software.
-       </div>
-       <br/>
-       <input id="doCvtButton" value="Convert Java to JS" type="button" clickEvent="=: doConvert(0)"/>
-
-      <br/>
-      <div id="errorsView" visible=":= inputErrors != null && inputErrors.length() > 0">
-         Errors from input file:
-         <pre id="errorMessagesView"><%= inputErrors %></pre>
-
-         Warning: any unresolved type references are left untranslated in the generated code
-      </div>
-
-      <br/>
-      <div id="depsView" visible=":= jsFiles != null && jsFiles.size() > 0">
-         Generated JS requires these dependencies:
-         <div id="jsFilesView" repeat=":= jsFiles" repeatVarName="jsFile">
-            <a href=":= jsFilePrefix + jsFile"><%= jsFile %></a>
+      <div class="sectionTitle">Using the converter</div>
+      <ul>
+         <li>To convert multiple classes, upload all files and press <b>Convert</b>.</li>
+         <li>To convert a single independent class, paste in Java code or upload the file and press <b>Convert</b>.</li>
+         <li>Run on your own system, customize the JS, add code-processing, and improve control over customizations
+             with the free, and open source StrataCode build tool
+            <a href="https://www.stratacode.com/download" target="scdoctab">(scc)</a>. Follow the
+            <a href="https://www.stratacode.com/doc/javaToJS.html" target="scdoctab">getting started</a> for Java to JS projects.</li>
+      </ul>
+      <div id="uploadContainerView" visible=":= uploadVisible">
+         <div class="sectionTitle">Upload or enter source code</div>
+         <div id="stepOneView" class="indentView">
+            <div id="uploadView" class="cvtViewView">
+               <form id="uploadCodeForm" method="post" enctype="multipart/form-data">
+                  <label for="doUploadButton">Upload java files</label>
+                  <input id="doUploadButton" type="file" name="uploadFiles"
+                         accept=".java, .scj, .sc, .schtml, .sct"
+                         multiple
+                         changeEvent='=: uploadCodeForm.submitFormData("/codeUpload")'/>
+               </form>
+               <div visible=":= uploadCodeForm.submitInProgress" class="statusMessage">
+                  Uploading...
+               </div>
+            </div>
+            <div id="sourceCodeView">
+               <div id="inputSrcView">
+                  <div class="centerView">- or -</div>
+                  Enter Java Code, one class at a time<br/>
+                  <textarea id="inputTextarea" rows="12" cols="80" changeEvent="=: inputSrcText = value"
+                             value="=: inputSrcText = value"/><br/>
+                  <input id="doUploadButton" value="Upload text" type="button" clickEvent="=: doUpload()"/>
+               </div>
+            </div>
          </div>
+      </div>
+      <p/>
+      <div id="stepTwoView">
+         <div class="sectionTitle">Upload status</div>
+         <div id="errorsView" class="indentView"
+              visible=":= cvtUploadModel.inputErrors != null && cvtUploadModel.inputErrors.length() > 0">
+            Errors from Java code:
+            <pre id="errorMessagesView" class="errorsScrollView"><%= cvtUploadModel.inputErrors %></pre>
+
+            Warning: unresolved type references are untranslated in the generated code
+            <p/>
+         </div>
+         <div id="classStatusView" class="indentView">
+            <div id="uploadedView" visible=":= cvtUploadModel.uploadedModels != null && cvtUploadModel.uploadedModels.size() > 0">
+               <div class="statusMessage">Uploaded classes:</div>
+               <div id="uploadedClassesView">
+                  <ul id="uploadedClassName" repeat=":= cvtUploadModel.uploadedModels" repeatVarName="uploadedModel">
+                     <li><%= uploadedModel.getModelTypeName() %></li>
+                  </ul>
+               </div>
+               <div id="alt" class="statusMessage">
+                  <div visible=":= inputSrcText != null && inputSrcText.length() > 0">
+                     Source text ready to convert
+                     <div id="alt">No classes uploaded or text entered</div>
+                  </div>
+               </div>
+            </div>
+            <input id="clearButton" value="Clear" type="button"
+                   visible=":= (cvtUploadModel.uploadedModels != null && cvtUploadModel.uploadedModels.size() > 0) ||
+                               (cvtUploadModel.inputErrors != null && cvtUploadModel.inputErrors.length() > 0)"
+                   clickEvent="=: doClear()"/>
+         </div>
+      </div>
+      <p/>
+      <div id="stepThreeView" visible=":= uploadVisible">
+         <div class="sectionTitle">Select options and convert</div>
+         <div id="cvtButtonsView" class="indentView">
+            Use module for generated java utils <input type="checkbox" checked=":=: useModules"/>
+            <p/>
+            <input id="doCvtButton" value="Convert" type="button"
+                   disabled=":= (inputSrcText == null || inputSrcText.length() == 0) && (cvtUploadModel.uploadedModels == null || cvtUploadModel.uploadedModels.size() == 0)"
+                   clickEvent="=: doConvert()"/>
+         </div>
+      </div>
+      <br/>
+      <div id="resultsViewContainer"
+           visible=":= resultSrcText != null && resultSrcText.length() > 0 && !uploadVisible">
+         <div id="resultJSView">
+            Result Javascript:<br/>
+            <textarea id="resultTextArea" rows="24" cols="80"><%= resultSrcText %></textarea>
+         </div>
+         <div id="depsView" visible=":= jsFiles != null && jsFiles.size() > 0">
+            Generated code uses these modules:
+            <div id="jsFilesView" repeat=":= jsFiles" repeatVarName="jsFile">
+               <a href=":= jsFilePrefix + jsFile" target="scdoctab"><%= jsFile %></a>
+            </div>
+         </div>
+         <p/>
+         <div id="resetClearButtons">
+            <input id="uploadMoreButton" type="button" visible=":= !uploadVisible"
+                   value="Add files, change options" clickEvent='=: doUploadReset()'/>
+         </div>
+         <p/>
+         Notes on dependencies:
+         <ul>
+            <li>sccore.js required for inheritance referenced from the configurable
+               <a href="https://github.com/stratacode/coreFramework/blob/master/js/prebuild/JSTypeTemplate.sctjs" target="scdoctab">
+                  JSTypeTemplate
+               </a>
+            </li>
+            <li>javasys.js required for native Java classes.</li>
+            <li>Generated code does not use use modern JS features like class and extends but with some effort this
+             could be changed by customizing the JSTypeTemplate.</li>
+            <li>StrataCode provides an awesome <a href="https://www.stratacode.com/articles/javaToJavascript.html" target="scdoctab">web framework</a>
+         </ul>
+         Download these files and host use a script tag to load them before the generated JS code.
+      </div>
+      <p/>
+      <div id="contactView">
+         <div class="sectionTitle">Contact</div>
+         <div id="issuesView" class="indentView">
+            <a href="https://github.com/stratacode/issues/issues" target="scdoctab">Report a bug</a> or feature request
+            or <a href="https://www.stratacode.com/contact.html" target="scdoctab">contact Jeff</a> by email for help or feedback.
+            <br>
+         </div>
+      </div>
+      <p/>
+      <div id="FuturesView">
+         <div class="sectionTitle">Futures</div>
+         <ul>
+            <li>GWT converter for migration to JS source
+            <li>A version of the converter that supports class/extends for more code readability
+         </ul>
       </div>
    </div>
 
    <style type="text/css">
-      #sourceSideBySide {
-         display: flex;
-         flex-direction: row;
+      .indentView {
+         padding-left: 20px;
+      }
+      .centerView {
+         width: 500px;
+         text-align: center;
+      }
+      .sectionTitle {
+         font-size: 120%;
+         margin-bottom: 5px;
+         margin-top: 10px;
       }
       #licenseAgreement {
-         font-size: 80%;
-      }
-      #errorsView {
-         font-color: #cc1212;
-      }
-      .note {
-         font-style: italic;
+         padding-left: 20px;
          font-size: 90%;
       }
+      #errorsView {
+         color: #cc1212;
+      }
+
+      .statusMessage {
+         font-style: italic;
+      }
+
+      .errorsScrollView {
+         max-height: 100px;
+         overflow-y: auto;
+         border: solid 1px #ccc;
+      }
    </style>
-
-</body>
-
-</html>
+</div>

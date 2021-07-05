@@ -36,7 +36,8 @@ object CvtManager {
    }
 
    CvtImpl[] convertImpls = {
-      new CvtImpl(new String[]{"js.cvt.javaToJS"}, InputLanguage.Java)
+      new CvtImpl(new String[]{"js.cvt.javaToJS"}, InputLanguage.Java),
+      new CvtImpl(new String[]{"js.cvt.javaToJSNoModules"}, InputLanguage.Java)
    };
 
    CvtImpl getCvtImpl(String layerName) {
@@ -55,36 +56,45 @@ object CvtManager {
 
    void init() {
       int ix = 0;
-      for (CvtImpl cvtImpl:convertImpls) {
-         Options options = new Options();
-         if (cvtImpl.sys != null) {
-            System.err.println("*** Unable to reinit CvtManager!");
-            continue;
-         }
-         options.installLayers = false;
-         LayeredSystem currentSys = LayeredSystem.getCurrent();
-         options.scInstallDir = currentSys.options.scInstallDir;
-         options.mainDir = currentSys.options.mainDir;
-         List cvtLayerList = Arrays.asList(cvtImpl.convertLayerList);
-         // Create a new system using the same layer path
-         LayeredSystem sys = new LayeredSystem(cvtLayerList, null, currentSys.layerPath, options, null, null, false, null, new SystemContext());
-         cvtImpl.sys = sys;
-
-         if (!sys.buildSystem(null, false, true)) {
-            System.err.println("*** Prebuild system for layer list: " + cvtLayerList + " failed");
-         }
-         else {
-            if (!sys.buildSystem(null, false, false)) {
-               System.err.println("*** Build system for layer list: " + cvtLayerList + " failed");
+      LayeredSystem currentSys = LayeredSystem.getCurrent();
+      try {
+         currentSys.acquireDynLock(false);
+         for (CvtImpl cvtImpl:convertImpls) {
+            Options options = new Options();
+            if (cvtImpl.sys != null) {
+               System.err.println("*** Unable to reinit CvtManager!");
+               continue;
             }
-            sys.buildCompleted(true);
-         }
-         if (sys.anyErrors)
-            currentSys.error("Build system for layer list: " + cvtLayerList + " failed");
-         else
-            currentSys.info("Build system for layer list: " + cvtLayerList + " successful");
+            options.installLayers = false;
+            options.scInstallDir = currentSys.options.scInstallDir;
+            options.mainDir = currentSys.options.mainDir;
+            // Need the keep the parse nodes around after transform for memory
+            options.clearParseNodes = false;
+            List cvtLayerList = Arrays.asList(cvtImpl.convertLayerList);
+            // Create a new system using the same layer path
+            LayeredSystem sys = new LayeredSystem(cvtLayerList, null, currentSys.layerPath, options, null, null, false, null, new SystemContext());
+            cvtImpl.sys = sys;
 
-         cvtImpl.jsPrefix = cvtLibURL + sys.buildLayer.layerName.replace('.', '_') + "/";
+            if (!sys.buildSystem(null, false, true)) {
+               System.err.println("*** Prebuild system for layer list: " + cvtLayerList + " failed");
+            }
+            else {
+               if (!sys.buildSystem(null, false, false)) {
+                  System.err.println("*** Build system for layer list: " + cvtLayerList + " failed");
+               }
+               sys.buildCompleted(true);
+            }
+            if (sys.anyErrors)
+               currentSys.error("Build system for layer list: " + cvtLayerList + " failed");
+            else
+               currentSys.info("Build system for layer list: " + cvtLayerList + " successful");
+
+            cvtImpl.jsPrefix = cvtLibURL + sys.buildLayer.layerName.replace('.', '_') + "/";
+         }
+      }
+      finally {
+         LayeredSystem.setCurrent(currentSys);
+         currentSys.releaseDynLock(false);
       }
    }
 
