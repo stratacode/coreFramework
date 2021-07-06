@@ -115,8 +115,8 @@
       <div id="resultsViewContainer"
            visible=":= resultSrcText != null && resultSrcText.length() > 0 && !uploadVisible">
          <div class="sectionTitle">Results</div>
-         <div id="resultsViewInner">
-            <div id="resultJSView" class="indentView">
+         <div id="resultsViewInner" class="indentView">
+            <div id="resultJSView">
                Converted Javascript<br/>
                <textarea id="resultTextArea" rows="24" cols="80"><%= resultSrcText %></textarea>
             </div>
@@ -134,19 +134,19 @@
             <p/>
             Notes on dependencies:
             <ul>
-               <li>sccore.js used by class, interface, etc. apis used in
+               <li>sccore.js includes apis for defining classes. See the file
                   <a href="https://github.com/stratacode/coreFramework/blob/master/js/prebuild/JSTypeTemplate.sctjs" target="scdoctab">
                      JSTypeTemplate
                   </a>
-                  configurable if you download scc.
+                  for customizing the code.
                </li>
-               <li>javasys.js implemnts low-level native Java classes like Object, Number, Integer.</li>
+               <li>javasys.js implements low-level native Java classes like Object, Number, Integer.</li>
                <li>Generated code does not use use modern JS features like class and extends but with some effort this
                 could be changed by customizing the JSTypeTemplate.</li>
                <li>StrataCode provides an awesome <a href="https://www.stratacode.com/articles/javaToJavascript.html" target="scdoctab">web framework</a>
-               but currently no other web frameworks are integrated (maybe GWT would make sense?)
+               but no other web frameworks are yet supported (maybe GWT would make sense?)
             </ul>
-            Also add these files to your site with a script tag to load them before the generated JS code.
+            Add these dependent files to your site with a script tag to load them before the generated JS code.
          </div>
       </div>
       <p/>
