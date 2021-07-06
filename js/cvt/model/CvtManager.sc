@@ -61,6 +61,11 @@ object CvtManager {
       try {
          if (currentSys != null)
             currentSys.acquireDynLock(false);
+         else {
+            // This stops the web framework from getting a hold of these internal systems
+            LayeredSystem.disableDefaultLayeredSystem = true;
+         }
+
          for (CvtImpl cvtImpl:convertImpls) {
             Options options = new Options();
             if (cvtImpl.sys != null) {
@@ -69,8 +74,11 @@ object CvtManager {
             }
             options.installLayers = false;
             String layerPath;
+            // TODO: do we need this? Without now, startSCJetty gets an error
+            options.buildAllFiles = true;
             if (currentSys == null) {
-               options.scInstallDir = "/usr/local/scc";
+               // These paths should exist on the deployment server
+               options.scInstallDir = "/usr/local/scc/builds/release/latest/build/";
                options.mainDir = "/usr/local/scMain";
                layerPath = LayerUtil.getLayerPathFromMainDir(options.mainDir);
             }
@@ -106,10 +114,9 @@ object CvtManager {
          }
       }
       finally {
+         LayeredSystem.setCurrent(currentSys);
          if (currentSys != null) {
-            LayeredSystem.setCurrent(currentSys);
             currentSys.releaseDynLock(false);
-
          }
       }
    }

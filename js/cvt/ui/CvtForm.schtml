@@ -2,26 +2,28 @@
    <h2>Java to Javascript converter</h2>
    <div id="intro">
       Welcome to the free online Java to JS converter.
-      <br/>
+      <p/>
       Java code is converted into readable Javascript code using StrataCode, an
-      <a href="https://github.com/stratacode" target="scdoctab">open source</a> side project by
-      <a href="https://www.stratacode.com/contact.html" target="scdoctab">Jeff Vroom</a>.
+      <a href="https://github.com/stratacode" target="scdoctab">open source</a> build tool with
+      easy-to-code and customize code processing.
       <p/>
       <div class="sectionTitle">Features</div>
       <ul>
-         <li>Java 1.8 syntax, many Java 1.6 utils:
+         <li>Java 1.8 syntax, Java 1.6 subset of the
          <a href="https://github.com/stratacode/coreFramework/tree/master/js/sys/java/lang" target="scdoctab">java.lang</a>, and
-         <a href="https://github.com/stratacode/coreFramework/tree/master/js/sys/java/util" target="scdoctab">java.util</a>
-         Either use a separate module that includes all of the supported java classes, or include only the java classes used in the generated code.
+         <a href="https://github.com/stratacode/coreFramework/tree/master/js/sys/java/util" target="scdoctab">java.util</a> packages.
+         <li>Deploy in two ways: either use a separate module that includes all of the supported java classes, or include only the java classes used in the generated code.
          <li>All Number types in Java represented as the one JS number type.
       </ul>
       <div id="licenseAgreement" visible=":= showTerms">
          <div class="sectionTitle">Terms of use</div>
-         This form is provided free for limited use based on the resources available on a small, private VPS.
+         This form is provided free for use limited by the resources available on a small, private VPS, and a lone developer maintaining
+         this as a side project.
          <br/>
          Conversion is provided 'as is' with no express or implied warranty and we assume no liability for damages caused through the use of this software.
          <br/>
          Uploaded code is held on the server in a session tied to a cookie in your browser until the session expires (after 15 minutes of inactivity).
+         <br/>
          We assume no liability for source code accidentally exposed to 3rd parties due to bugs in the software.
          If you have sensitive code to convert, we recommend that you download scc and do the conversion on your own system.
          <br/>
@@ -112,35 +114,40 @@
       <br/>
       <div id="resultsViewContainer"
            visible=":= resultSrcText != null && resultSrcText.length() > 0 && !uploadVisible">
-         <div id="resultJSView">
-            Result Javascript:<br/>
-            <textarea id="resultTextArea" rows="24" cols="80"><%= resultSrcText %></textarea>
-         </div>
-         <div id="depsView" visible=":= jsFiles != null && jsFiles.size() > 0">
-            Generated code uses these modules:
-            <div id="jsFilesView" repeat=":= jsFiles" repeatVarName="jsFile">
-               <a href=":= jsFilePrefix + jsFile" target="scdoctab"><%= jsFile %></a>
+         <div class="sectionTitle">Results</div>
+         <div id="resultsViewInner">
+            <div id="resultJSView" class="indentView">
+               Converted Javascript<br/>
+               <textarea id="resultTextArea" rows="24" cols="80"><%= resultSrcText %></textarea>
             </div>
+            <div id="depsView" visible=":= jsFiles != null && jsFiles.size() > 0">
+               Generated code uses these modules:
+               <div id="jsFilesView" repeat=":= jsFiles" repeatVarName="jsFile">
+                  <a href=":= jsFilePrefix + jsFile" target="scdoctab"><%= jsFile %></a>
+               </div>
+            </div>
+            <p/>
+            <div id="resetClearButtons">
+               <input id="uploadMoreButton" type="button" visible=":= !uploadVisible"
+                      value="Back to upload" clickEvent='=: doUploadReset()'/>
+            </div>
+            <p/>
+            Notes on dependencies:
+            <ul>
+               <li>sccore.js used by class, interface, etc. apis used in
+                  <a href="https://github.com/stratacode/coreFramework/blob/master/js/prebuild/JSTypeTemplate.sctjs" target="scdoctab">
+                     JSTypeTemplate
+                  </a>
+                  configurable if you download scc.
+               </li>
+               <li>javasys.js implemnts low-level native Java classes like Object, Number, Integer.</li>
+               <li>Generated code does not use use modern JS features like class and extends but with some effort this
+                could be changed by customizing the JSTypeTemplate.</li>
+               <li>StrataCode provides an awesome <a href="https://www.stratacode.com/articles/javaToJavascript.html" target="scdoctab">web framework</a>
+               but currently no other web frameworks are integrated (maybe GWT would make sense?)
+            </ul>
+            Also add these files to your site with a script tag to load them before the generated JS code.
          </div>
-         <p/>
-         <div id="resetClearButtons">
-            <input id="uploadMoreButton" type="button" visible=":= !uploadVisible"
-                   value="Add files, change options" clickEvent='=: doUploadReset()'/>
-         </div>
-         <p/>
-         Notes on dependencies:
-         <ul>
-            <li>sccore.js required for inheritance referenced from the configurable
-               <a href="https://github.com/stratacode/coreFramework/blob/master/js/prebuild/JSTypeTemplate.sctjs" target="scdoctab">
-                  JSTypeTemplate
-               </a>
-            </li>
-            <li>javasys.js required for native Java classes.</li>
-            <li>Generated code does not use use modern JS features like class and extends but with some effort this
-             could be changed by customizing the JSTypeTemplate.</li>
-            <li>StrataCode provides an awesome <a href="https://www.stratacode.com/articles/javaToJavascript.html" target="scdoctab">web framework</a>
-         </ul>
-         Download these files and host use a script tag to load them before the generated JS code.
       </div>
       <p/>
       <div id="contactView">
@@ -152,13 +159,6 @@
          </div>
       </div>
       <p/>
-      <div id="FuturesView">
-         <div class="sectionTitle">Futures</div>
-         <ul>
-            <li>GWT converter for migration to JS source
-            <li>A version of the converter that supports class/extends for more code readability
-         </ul>
-      </div>
    </div>
 
    <style type="text/css">
