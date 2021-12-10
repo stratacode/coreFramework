@@ -2139,7 +2139,7 @@ syncMgr = sc_SyncManager_c = {
                var evName;
                var exProps = null;
                var idProps = null;
-               if (v.constructor === MouseEvent) {
+               if (v.constructor === MouseEvent || (typeof PointerEvent === "function" && v.constructor == PointerEvent)) {
                   evName = "MouseEvent";
                   exProps = ["button", "clientX", "clientY", "screenX", "screenY", "altKey", "metaKey", "shiftKey", "ctrlKey"];
                }

@@ -13,7 +13,7 @@ log4j.core extends sys.std {
 
    // Supplying a default log4j - this can be overridden if frameworks need a specific version (e.g. jetty/lib)
    object log4jPkg extends MvnRepositoryPackage {
-      url = "mvn://org.apache.logging.log4j/log4j-core/2.9.1";
+      url = "mvn://org.apache.logging.log4j/log4j-core/2.15.0-rc1";
    }
 
    // The resourceFileProcessor layer component is defined in sys.std 
