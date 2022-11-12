@@ -8,14 +8,14 @@ jetty.lib extends servlet.lib, log4j.core {
 
    object jettyPkg extends MvnRepositoryPackage {
       //url = "mvn://org.eclipse.jetty/jetty-webapp/8.1.17.v20150415";
-      url = "mvn://org.eclipse.jetty/jetty-webapp/9.4.24.v20191120";
+      url = "mvn://org.eclipse.jetty/jetty-webapp/9.4.49.v20220914";
    }
 
    // TODO: currently the CServer class adds Env processing logic so we go through jetty for 
    // managed data sources but we could just configure those directly as components and avoid
    // this whole thing and make them more manageable
    object jettyPlusPkg extends MvnRepositoryPackage {
-      url = "mvn://org.eclipse.jetty/jetty-plus/9.4.24.v20191120";
+      url = "mvn://org.eclipse.jetty/jetty-plus/9.4.49.v20220914";
    }
 
    object jettySchemas extends MvnRepositoryPackage {
